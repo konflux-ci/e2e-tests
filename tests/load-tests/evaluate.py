@@ -24,7 +24,7 @@ METRICS = [
     "createIntegrationTestScenario",
     "createComponent",
     "getPaCPullNumber",
-    "validateComponentBuildSA",
+    "validateComponent",
     "validatePipelineRunCreation",
     "validatePipelineRunCondition",
     "validatePipelineRunSignature",

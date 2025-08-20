@@ -123,18 +123,37 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 	return nil
 }
 
-func validateComponentBuildSA(f *framework.Framework, namespace, name string) error {
+func validateComponent(f *framework.Framework, namespace, name string) error {
 	interval := time.Second * 10
 	timeout := time.Minute * 30
-	component_sa := "build-pipeline-" + name
 
 	// TODO It would be much better to watch this resource instead querying it
-	err := utils.WaitUntilWithInterval(f.AsKubeDeveloper.CommonController.ServiceAccountPresent(component_sa, namespace), interval, timeout)
-	if err != nil {
-		return fmt.Errorf("Component build SA %s in namespace %s not present: %v", component_sa, namespace, err)
-	}
+	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		comp, err := f.AsKubeDeveloper.HasController.GetComponent(name, namespace)
+		if err != nil {
+			logging.Logger.Debug("Unable to get component %s in namespace %s for its annotations: %v", name, namespace, err)
+			return false, nil
+		}
 
-	return nil
+		// If build.appstudio.openshift.io/request annotation is gone, component finished onboarding
+		_, ok := comp.Annotations["build.appstudio.openshift.io/request"]
+		if ! ok {
+			logging.Logger.Debug("Finished onboarding of component %s in namespace %s", name, namespace)
+			return true, nil
+		}
+
+		// If it is still there, build.appstudio.openshift.io/status will have a reason
+		val, ok := comp.Annotations["build.appstudio.openshift.io/status"]
+		if ok {
+			logging.Logger.Debug("Onboarding of a component %s in namespace %s not finished yet: %s", name, namespace, val)
+		} else {
+			logging.Logger.Debug("Onboarding of a component %s in namespace %s not started yet", name, namespace)
+		}
+
+		return false, nil
+	}, interval, timeout)
+
+	return err
 }
 
 func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, error) {
@@ -322,13 +341,13 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 	// Validate component build service account created
 	_, err = logging.Measure(
-		validateComponentBuildSA,
+		validateComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(65, "Component build SA not present: %v", err)
+		return logging.Logger.Fail(65, "Component failed onboarding: %v", err)
 	}
 
 	// Configure imagePullSecrets needed for component build task images
