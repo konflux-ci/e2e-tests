@@ -303,10 +303,22 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
+
+	return componentObject, nil
+}
+
+// Create a component and check image repository gets created.
+func (h *HasController) CreateComponentCheckImageRepository(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	componentObject, err := h.CreateComponent(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations)
+	if err != nil {
+		return nil, err
+	}
+
 	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
 	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*10, time.Minute*15); err != nil {
 		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
 	}
+
 	return componentObject, nil
 }
 

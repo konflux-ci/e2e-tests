@@ -78,7 +78,7 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 			},
 		},
 	}
-	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
+	component, err := devFw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
 	Expect(err).NotTo(HaveOccurred())
 	return component
 }
@@ -116,7 +116,7 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 		},
 	}
 
-	testComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	testComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return testComponent, testPacBranchName, componentBaseBranchName
