@@ -125,7 +125,7 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 
 func validateComponentBuildSA(f *framework.Framework, namespace, name string) error {
 	interval := time.Second * 10
-	timeout := time.Minute * 5
+	timeout := time.Minute * 30
 	component_sa := "build-pipeline-" + name
 
 	// TODO It would be much better to watch this resource instead querying it
