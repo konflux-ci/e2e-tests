@@ -110,6 +110,7 @@ FAILED_PLR_ERRORS = {
     ("Can not find Dockerfile", r"Cannot find Dockerfile Dockerfile"),
     ("DNF failed to download repodata from Download Devel because could not resolve host", r"Errors during downloading metadata for repository '[^ ]+':   - Curl error .6.: Couldn't resolve host name for http://download.devel.redhat.com/brewroot/repos/[^ ]+ .Could not resolve host: download\.devel\.redhat\.com."),
     ("DNF failed to download repodata from Koji", r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found"),
+    ("Enterprise contract results failed validation", r"^false $"),
     ("Error allocating host as provision TR already exists", r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists"),
     ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
     ("Error allocating host because of provisioning error", r"Error allocating host: failed to provision host"),
