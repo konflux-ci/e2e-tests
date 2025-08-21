@@ -1,6 +1,6 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.22
+go 1.23.0
 
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
@@ -48,7 +48,7 @@ require (
 	github.com/tektoncd/pipeline v0.58.0
 	github.com/xanzy/go-gitlab v0.104.1
 	golang.org/x/crypto v0.31.0
-	golang.org/x/oauth2 v0.20.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/tools v0.23.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.7
