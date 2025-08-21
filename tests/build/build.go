@@ -549,6 +549,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				// Wait for one minute so that all the pipelineruns deleted successfully
+				Eventually(func() bool {
+					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
+					if componentPipelineRun != nil {
+						GinkgoWriter.Printf("found pipelinerun: %s\n", componentPipelineRun.GetName())
+					}
+					return componentPipelineRun == nil
+				}, time.Minute*1, time.Second*2).Should(BeTrue(), "all the pipelineruns are not deleted, still some pipelineruns exists")
+
 				Eventually(func() error {
 					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, customBranchComponentName)
 					if err != nil {
