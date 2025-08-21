@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,7 +43,12 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 		rctx.Parallel = false
 	} else {
 		// Set the number of parallel test processes
-		rctx.CLIConfig.Procs = 20
+		procs := utils.GetEnv("GINKGO_PROCS", "20")
+		procsInt, err := strconv.Atoi(procs)
+		if err != nil {
+			return fmt.Errorf("can't convert %q to an int to configure the amount of ginkgo procs", procs)
+		}
+		rctx.CLIConfig.Procs = procsInt
 		rctx.NoColor = true
 	}
 
