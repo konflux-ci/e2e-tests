@@ -130,6 +130,7 @@ FAILED_PLR_ERRORS = {
     ("RPM build failed: bool cannot be defined via typedef", r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build."),
     ("Script gather-rpms.py failed because of too many values to unpack", r"Handling archdir [^ ]+ Traceback.*File \"/usr/bin/gather-rpms.py\".*nvr, btime, size, sigmd5, _ = .*ValueError: too many values to unpack"),
     ("Script mock-hermetic-repo failed because pull from registry.access.redhat.com failed", r"/usr/bin/mock-hermetic-repo.*Error: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: initializing source docker://registry.access.redhat.com/[^ ]+: unable to retrieve auth token: invalid username/password: unauthorized.*subprocess.CalledProcessError.*Command '.'podman', 'pull', '--arch', '[^ ]+', 'registry.access.redhat.com/[^ ]+'.' returned non-zero exit status 125"),
+    ("Script rpm_verifier failed to access image layer from quay.io because 502 Bad Gateway", r"rpm_verifier --image-url quay.io/.* Image: quay.io/.* error: unable to access the source layer sha256:[0-9a-z]+: received unexpected HTTP status: 502 Bad Gateway"),
 }
 
 FAILED_TR_ERRORS = {
