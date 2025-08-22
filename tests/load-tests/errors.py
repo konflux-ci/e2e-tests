@@ -57,6 +57,7 @@ ERRORS = {
     ("Failed validating release condition", r"Release .* in namespace .* failed: .*Message:Release validation failed.*"),
     ("GitLab token used by test expired", r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh"),
     ("Pipeline failed", r"Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
+    ("Post-test data collection failed", r"Failed to collect application JSONs"),
     ("Post-test data collection failed", r"Failed to collect pipeline run JSONs"),
     ("Post-test data collection failed", r"Failed to collect release related JSONs"),
     ("Release failed in progress without error given", r"Release failed: Release .* in namespace .* failed: .Type:Released Status:False .* Reason:Progressing Message:.$"),
