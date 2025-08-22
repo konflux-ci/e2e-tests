@@ -569,6 +569,32 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 	}
 }
 
+// DeleteAllImageRepositoriesInASpecificNamespace removes all image repository CRs from a specific namespace. Useful when cleaning up a namespace and component cleanup did not cleaned it's image repository
+func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Printf("Start to delete all image repositories in namespace '%s' at %s\n", namespace, start.String())
+
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
+	}
+
+	imageRepositoryList := &imagecontroller.ImageRepositoryList{}
+
+	err := utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(imageRepositoryList.Items) == 0, nil
+	}, timeout)
+
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Printf("Finish to delete all image repositories in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
+
+	return err
+}
+
 // Gets value of a specified annotation in a component
 func (h *HasController) GetComponentAnnotation(componentName, annotationKey, namespace string) (string, error) {
 	component, err := h.GetComponent(componentName, namespace)
