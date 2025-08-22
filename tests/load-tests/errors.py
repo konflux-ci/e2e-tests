@@ -154,6 +154,7 @@ FAILED_TR_ERRORS = {
     ("SKIP", r"\"message\": \".* exited with code 255.*\""),   # Another special error to avoid printing 'Unknown error:' message
     ("Back-off pulling task run image from quay.io", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"quay.io/.*"),
     ("Back-off pulling task run image from registry.access.redhat.com", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.access.redhat.com/.*"),
+    ("Back-off pulling task run image from registry.redhat.io", r"the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.redhat.io/.*"),
     ("Build failed for unspecified reasons", r"build failed for unspecified reasons."),
     ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
     ("Not enough nodes to schedule pod", r".message.: .pod status ..PodScheduled..:..False..; message: ..[0-9/]+ nodes are available: .*: [0-9]+ Preemption is not helpful for scheduling."),
