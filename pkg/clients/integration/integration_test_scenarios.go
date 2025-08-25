@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"strings"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -11,9 +12,24 @@ import (
 )
 
 // CreateIntegrationTestScenario creates beta1 version integrationTestScenario.
-func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicationName, namespace, gitURL, revision, pathInRepo string, contexts []string) (*integrationv1beta2.IntegrationTestScenario, error) {
+func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicationName, namespace, gitURL, revision, pathInRepo, kind string, contexts []string) (*integrationv1beta2.IntegrationTestScenario, error) {
 	if itsName == "" {
 		itsName = "my-integration-test-" + util.GenerateRandomString(4)
+	}
+
+	params := []integrationv1beta2.ResolverParameter{
+		{
+			Name:  "url",
+			Value: gitURL,
+		},
+		{
+			Name:  "revision",
+			Value: revision,
+		},
+		{
+			Name:  "pathInRepo",
+			Value: pathInRepo,
+		},
 	}
 
 	integrationTestScenario := &integrationv1beta2.IntegrationTestScenario{
@@ -26,23 +42,16 @@ func (i *IntegrationController) CreateIntegrationTestScenario(itsName, applicati
 			Application: applicationName,
 			ResolverRef: integrationv1beta2.ResolverRef{
 				Resolver: "git",
-				Params: []integrationv1beta2.ResolverParameter{
-					{
-						Name:  "url",
-						Value: gitURL,
-					},
-					{
-						Name:  "revision",
-						Value: revision,
-					},
-					{
-						Name:  "pathInRepo",
-						Value: pathInRepo,
-					},
-				},
+				Params:   params,
 			},
 			Contexts: []integrationv1beta2.TestContext{},
 		},
+	}
+
+	// Add kind parameter if provided and is "pipelineRun"
+	if strings.EqualFold(kind, "pipelineRun") {
+		integrationTestScenario.Spec.ResolverRef.ResourceKind = "pipelinerun"
+
 	}
 
 	if len(contexts) > 0 {
