@@ -237,6 +237,22 @@ func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNot
 // DeleteRepositoryIfExists deletes a GitLab repository if it exists.
 // Returns an error if the deletion fails except for project not being found (404).
 func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
+	getProj, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+	if getErr != nil {
+		if getResp != nil && getResp.StatusCode == http.StatusNotFound {
+			return nil
+		} else {
+			return fmt.Errorf("Error getting project %s: %v", projectID, getErr)
+		}
+	}
+	if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+		// We asked for repo like "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale"
+		// and got "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale-deleted-138805"
+		// and that means repo was moved by being deleted for a first
+		// time, entering a grace period.
+		return nil
+	}
+
 	resp, err := gc.client.Projects.DeleteProject(projectID)
 
 	if err != nil {
@@ -251,7 +267,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 	}
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-		_, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+		getProj, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
 		if getErr != nil {
 			if getResp != nil && getResp.StatusCode == http.StatusNotFound {
 				return true, nil
@@ -259,6 +275,11 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 				return false, getErr
 			}
 		}
+		if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+			return true, nil
+		}
+
+		fmt.Printf("Repo %s still exists: %v\n", projectID, getResp)
 		return false, nil
 	}, time.Second * 10, time.Minute * 5)
 
