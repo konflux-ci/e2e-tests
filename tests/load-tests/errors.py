@@ -64,6 +64,7 @@ ERRORS = {
     ("Release failure: PipelineRun not created", r"couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace"),
     ("Release Pipeline failed", r"Release pipeline run failed:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,"),
     ("Repo forking failed as GitLab CEE says 401 Unauthorized", r"Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*"),
+    ("Repo forking failed as GitLab CEE says 405 Method Not Allowed", r"Repo forking failed: Error deleting project [^ ]+: DELETE https://gitlab.cee.redhat.com/[^ ]+: 405 .message: Non GET methods are not allowed for moved projects."),
     ("Repo forking failed as GitLab CEE says 500 Internal Server Error", r"Repo forking failed: Error deleting project .*: GET https://gitlab.cee.redhat.com/.*: 500 failed to parse unknown error format.*500: We're sorry, something went wrong on our end"),
     ("Repo forking failed as the target is still being deleted", r"Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted"),
     ("Repo forking failed as we got TLS handshake timeout talking to GitLab CEE", r"Repo forking failed: Error deleting project .*: Delete \"https://gitlab.cee.redhat.com/api/v4/projects/.*\": net/http: TLS handshake timeout"),
