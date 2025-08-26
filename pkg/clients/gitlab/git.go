@@ -69,7 +69,7 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 
 	// If sha is not provided, get the latest commit from the base branch
 	if sha == "" {
-		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch)
+		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch, &gitlab.GetCommitOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to get latest commit from base branch: %v", err)
 		}
@@ -250,10 +250,14 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 		// and got "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale-deleted-138805"
 		// and that means repo was moved by being deleted for a first
 		// time, entering a grace period.
-		return nil
+
+		// Now we need to delete the repository for a second time to limit
+		// number of repos we keep behind as per request in INC3755661
+		err := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
+		return err
 	}
 
-	resp, err := gc.client.Projects.DeleteProject(projectID)
+	resp, err := gc.client.Projects.DeleteProject(projectID, &gitlab.DeleteProjectOptions{})
 
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -268,6 +272,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		getProj, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+
 		if getErr != nil {
 			if getResp != nil && getResp.StatusCode == http.StatusNotFound {
 				return true, nil
@@ -275,7 +280,12 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 				return false, getErr
 			}
 		}
+
 		if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+			errDel := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
+			if errDel != nil {
+				return false, errDel
+			}
 			return true, nil
 		}
 
@@ -284,6 +294,20 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 	}, time.Second * 10, time.Minute * 5)
 
 	return err
+}
+
+// GitLab have a concept of two deletes. First one just renames the repo,
+// and only second one really deletes it. DeleteRepositoryReally is meant for
+// the second deletition.
+func (gc *GitlabClient) DeleteRepositoryReally(projectID string) error {
+	opts := &gitlab.DeleteProjectOptions{
+		PermanentlyRemove: gitlab.Ptr(true),
+	}
+	_, err := gc.client.Projects.DeleteProject(projectID, opts)
+	if err != nil {
+		return fmt.Errorf("Error on permanently deleting project %s: %w", projectID, err)
+	}
+	return nil
 }
 
 // ForkRepository forks a source GitLab repository to a target repository.
