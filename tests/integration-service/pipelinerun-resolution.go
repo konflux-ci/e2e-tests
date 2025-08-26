@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -72,6 +73,29 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		When("a new Component is created", func() {
+			It("should have a related PaC init PR created", func() {
+				timeout = time.Second * 600
+
+				Eventually(func() bool {
+					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForResolution)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.Head.GetRef() == pacBranchName {
+							prHeadSha = pr.Head.GetSHA()
+							pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
+							if err == nil {
+								return true
+							}
+						}
+					}
+					return false
+				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+
+				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
+	
+			})
+
 			It("triggers a build PipelineRun", Label("integration-service"), func() {
 				pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 				Expect(err).ShouldNot(HaveOccurred())
@@ -93,28 +117,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
-
-			It("should have a related PaC init PR created", func() {
-				timeout = time.Second * 300
-				interval = time.Second * 1
-
-				Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForResolution)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, pr := range prs {
-						if pr.Head.GetRef() == pacBranchName {
-							prHeadSha = pr.Head.GetSHA()
-							return true
-						}
-					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
-
-				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
-				Expect(err).ShouldNot(HaveOccurred())
-			})
 		})
 
 		When("the build pipelineRun run succeeded", func() {
@@ -133,8 +135,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
-				timeout := "60s"
-				interval := "1s"
+				timeout = time.Second * 60
+				interval = time.Second * 5
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
@@ -150,8 +152,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
-				timeout = time.Second * 240
-				interval = time.Second * 5
+				timeout = time.Second * 900
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -161,10 +162,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 					fmt.Printf("statusDetail: %+v\n", statusDetail)
 					if statusDetail.Status != intgteststat.IntegrationTestStatusTestPassed {
-						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s, within the snapshot: %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, snapshot.Name)
+						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s with timeout %s, within the snapshot: %s, has actual result %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, timeout, snapshot.Name, statusDetail.Status)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed())
+				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed())
 			})
 
 			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {

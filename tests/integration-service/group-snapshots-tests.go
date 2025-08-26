@@ -26,7 +26,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	var err error
 
 	var prNumber int
-	var timeout, interval time.Duration
+	var timeout time.Duration
 	var prHeadSha, mergeResultSha, mergeMultiResultSha, secondFileSha string
 	var pacBranchNames []string
 	var componentNames []string
@@ -132,7 +132,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for componentA %s", multiComponentContextDirs[0]), func() {
 				timeout = time.Second * 600
-				interval = time.Second * 1
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -157,7 +156,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentA %s", multiComponentContextDirs[0]), func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
 
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentRepoNameForGroupSnapshot)
@@ -171,7 +169,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[0], multiComponentRepoNameForGroupSnapshot))
+				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[0], multiComponentRepoNameForGroupSnapshot))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, prHeadSha)
@@ -199,7 +197,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It("integration pipeline should end up with success", func() {
 				timeout = time.Second * 600
-				interval = time.Second * 1
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -244,7 +241,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for component %s", multiComponentContextDirs[1]), func() {
 				timeout = time.Second * 600
-				interval = time.Second * 1
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -269,7 +265,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for component %s", multiComponentContextDirs[1]), func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
 
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentRepoNameForGroupSnapshot)
@@ -283,7 +278,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[1], multiComponentRepoNameForGroupSnapshot))
+				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[1], multiComponentRepoNameForGroupSnapshot))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, prHeadSha)
@@ -311,7 +306,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It("integration pipeline should end up with success", func() {
 				timeout = time.Second * 600
-				interval = time.Second * 1
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -356,7 +350,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for componentC %s", componentRepoNameForGroupIntegration), func() {
 				timeout = time.Second * 900
-				interval = time.Second * 1
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -381,7 +374,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentC %s", componentRepoNameForGroupIntegration), func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
 
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGroupIntegration)
@@ -395,7 +387,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[2], componentRepoNameForGroupIntegration))
+				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[2], componentRepoNameForGroupIntegration))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, prHeadSha)
@@ -423,7 +415,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			It("integration pipeline should end up with success", func() {
 				timeout = time.Second * 600
-				interval = time.Second * 1
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, "")
 					if err != nil {

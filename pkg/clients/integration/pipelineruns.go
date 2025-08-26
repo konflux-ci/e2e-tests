@@ -272,6 +272,8 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
 func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) (error, string) {
 	var logs string
+	// sllep 5 mins before starting to get build PLR's final state since one build PLR need at 6 mins to reduce the useless calls
+	time.Sleep(5 * time.Minute)
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, sha)
 		if err != nil {
