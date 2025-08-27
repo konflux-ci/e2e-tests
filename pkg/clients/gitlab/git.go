@@ -322,6 +322,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 // the second deletition.
 func (gc *GitlabClient) DeleteRepositoryReally(projectID string) error {
 	opts := &gitlab.DeleteProjectOptions{
+		FullPath: gitlab.Ptr(projectID),
 		PermanentlyRemove: gitlab.Ptr(true),
 	}
 	_, err := gc.client.Projects.DeleteProject(projectID, opts)
