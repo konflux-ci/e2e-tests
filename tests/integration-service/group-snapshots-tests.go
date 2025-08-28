@@ -7,7 +7,6 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -26,7 +25,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	var err error
 
 	var prNumber int
-	var timeout time.Duration
 	var prHeadSha, mergeResultSha, mergeMultiResultSha, secondFileSha string
 	var pacBranchNames []string
 	var componentNames []string
@@ -131,7 +129,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for componentA %s", multiComponentContextDirs[0]), func() {
-				timeout = time.Second * 600
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -142,7 +139,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("build pipelinerunA %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
 			})
 
 			It("does not contain an annotation with a Snapshot Name", func() {
@@ -150,13 +147,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRunA finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentA,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentA.Name, "")
+				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentA.Name, logs))
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentA %s", multiComponentContextDirs[0]), func() {
-				timeout = time.Second * 300
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentRepoNameForGroupSnapshot)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -169,7 +164,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[0], multiComponentRepoNameForGroupSnapshot))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[0], multiComponentRepoNameForGroupSnapshot))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, prHeadSha)
@@ -196,7 +191,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("integration pipeline should end up with success", func() {
-				timeout = time.Second * 600
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -207,7 +201,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
 			})
 		})
 
@@ -216,7 +210,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentRepoNameForGroupSnapshot, prNumber)
 					return err
-				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
 
 				mergeResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -240,7 +234,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for component %s", multiComponentContextDirs[1]), func() {
-				timeout = time.Second * 600
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -251,7 +244,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
 			})
 
 			It("does not contain an annotation with a Snapshot Name", func() {
@@ -259,13 +252,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentB,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentB.Name, "")
+				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentB.Name, logs))
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for component %s", multiComponentContextDirs[1]), func() {
-				timeout = time.Second * 300
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentRepoNameForGroupSnapshot)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -278,7 +269,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[1], multiComponentRepoNameForGroupSnapshot))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[1], multiComponentRepoNameForGroupSnapshot))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, prHeadSha)
@@ -305,7 +296,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("integration pipeline should end up with success", func() {
-				timeout = time.Second * 600
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -316,7 +306,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
 			})
 		})
 
@@ -325,7 +315,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentRepoNameForGroupSnapshot, prNumber)
 					return err
-				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
+				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentRepoNameForGroupSnapshot))
 
 				mergeResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -349,7 +339,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It(fmt.Sprintf("triggers a Build PipelineRun for componentC %s", componentRepoNameForGroupIntegration), func() {
-				timeout = time.Second * 900
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -360,7 +349,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
 			})
 
 			It("does not contain an annotation with a Snapshot Name", func() {
@@ -368,13 +357,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(componentC,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentC.Name, "")
+				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentC.Name, logs))
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentC %s", componentRepoNameForGroupIntegration), func() {
-				timeout = time.Second * 300
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGroupIntegration)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -387,7 +374,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						}
 					}
 					return false
-				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[2], componentRepoNameForGroupIntegration))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchNames[2], componentRepoNameForGroupIntegration))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, prHeadSha)
@@ -414,7 +401,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("integration pipeline should end up with success", func() {
-				timeout = time.Second * 600
 				Eventually(func() error {
 					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, "")
 					if err != nil {
@@ -425,7 +411,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
 			})
 		})
 
@@ -434,7 +420,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(componentRepoNameForGroupIntegration, prNumber)
 					return err
-				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, componentRepoNameForGroupIntegration))
+				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, componentRepoNameForGroupIntegration))
 
 				mergeMultiResultSha = mergeResult.GetSHA()
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeMultiResultSha, prNumber)
@@ -506,7 +492,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return err
 					}
 					return nil
-				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot")
+				}, time.Minute*30, 30 * time.Second).Should(Succeed(), "timeout while waiting for group snapshot")
 
 				// check annotation test.appstudio.openshift.io/group-test-info for each group snapshot
 				annotation := groupSnapshots.Items[0].GetAnnotations()
@@ -572,7 +558,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("older component snasphot/integration test has not been cancelled")
 					}
 					return nil
-				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for component snapshot and integration pipelinerun to be cancelled")
+				}, superLongTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for component snapshot and integration pipelinerun to be cancelled")
 			})
 
 			It("get all group snapshots and check if older group snapshot is cancelled", func() {
@@ -599,7 +585,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("older group snasphot/integration test has not been cancelled")
 					}
 					return nil
-				}, time.Minute*20, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and integration pipelinerun to be cancelled")
+				}, superLongTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and integration pipelinerun to be cancelled")
 			})
 		})
 	})

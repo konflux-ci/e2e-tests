@@ -105,9 +105,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("should have a related PaC init PR created", func() {
-				timeout = time.Second * 300
-				interval = time.Second * 1
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -119,7 +116,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
@@ -159,8 +156,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
-				timeout = time.Second * 240
-				interval = time.Second * 5
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -172,7 +167,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s, within the snapshot: %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, snapshot.Name)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed())
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 			})
 
 			It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
@@ -208,8 +203,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("An snapshot of push event is created", func() {
 			It("checks if the global candidate is updated after push event", func() {
-				timeout = time.Second * 600
-				interval = time.Second * 10
 				Eventually(func() error {
 					snapshotPush, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshotPush.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -219,7 +212,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
 					return nil
 
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
 			})
 
 			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
@@ -278,9 +271,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("should have a related PaC init PR created", func() {
-			timeout = time.Second * 300
-			interval = time.Second * 1
-
 			Eventually(func() bool {
 				prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -292,7 +282,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 				}
 				return false
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+			}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 			// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 			pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
@@ -328,7 +318,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestFail)
 				}
 				return nil
-			}, timeout, interval).Should(Succeed())
+			}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 		})
 
 		It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {

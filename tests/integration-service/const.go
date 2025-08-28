@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -49,6 +50,10 @@ const (
 	snapshotCreationReport                   = "test.appstudio.openshift.io/snapshot-creation-report"
 
 	chainsSignedAnnotation = "chains.tekton.dev/signed"
+
+	shortTimeout = time.Duration(10 * time.Minute)
+	longTimeout = time.Duration(15 * time.Minute)
+	superLongTimeout = time.Duration(20 * time.Minute)
 )
 
 var (

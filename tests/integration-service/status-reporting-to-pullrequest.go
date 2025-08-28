@@ -8,7 +8,6 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -28,7 +27,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var err error
 
 	var prNumber int
-	var timeout, interval time.Duration
 	var mergeResultSha, prHeadSha string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
@@ -62,8 +60,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			timeout = time.Second * 600
-			interval = time.Second * 1
 			Eventually(func() error {
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", "")
 				if err != nil {
@@ -74,7 +70,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 				}
 				return nil
-			}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
+			}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			labels = pipelineRun.GetLabels()
 			annotations = pipelineRun.GetAnnotations()
 			fmt.Print(componentBaseBranchName)
@@ -102,9 +98,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			})
 
 			It("should have a related PaC init PR created", func() {
-				timeout = time.Second * 300
-				interval = time.Second * 1
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForStatusReporting)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -117,7 +110,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -130,12 +123,12 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 						return fmt.Errorf("error occurred when checking pending integration test checkRun %v", err)
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the pending checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the pending checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
+				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component.Name, "")
+				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentName, logs))
 			})
 
 			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
@@ -213,7 +206,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			})
 
 			It("leads to triggering a push PipelineRun", func() {
-				timeout = time.Minute * 5
 				Eventually(func() error {
 					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
 					if err != nil {
@@ -224,7 +216,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 						return fmt.Errorf("push pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 
 			})
 
@@ -294,7 +286,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 						return fmt.Errorf("error occurred when checking failing integration test checkRun text")
 					}
 					return nil
-				}, time.Minute*3, time.Second*5).Should(Succeed(), fmt.Sprintf("timed out when waiting for the failing checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the failing checkrun for the component  %s/%s and integrationTestScenarioPass %s", testNamespace, componentName, integrationTestScenarioPass.Name))
 			})
 		})
 
