@@ -412,7 +412,7 @@ def main():
     data = {
         "error_by_code": error_by_code,
         "error_by_reason": error_by_reason,
-        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items()]),
+        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items() if k != "Post-test data collection failed"]),
         "error_messages": error_messages,
     }
 
