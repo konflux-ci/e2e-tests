@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import collections
 import csv
 import json
+import os
 import re
 import sys
-import collections
-import os
-import time
+import yaml
 
 
 # Column indexes in input data
@@ -173,6 +173,7 @@ FAILED_TR_ERRORS = {
     ("Pod stuck in incorrect status", r".message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown."),
 }
 
+
 def message_to_reason(reasons_and_errors: set, msg: str) -> str:
     """
     Classifies an error message using regular expressions and returns the error name.
@@ -269,12 +270,14 @@ def find_first_failed_build_plr(data_dir, plr_type):
 
             return data
 
+
 def find_trs(plr):
     try:
         for tr in plr["status"]["childReferences"]:
             yield tr["name"]
     except KeyError:
         return
+
 
 def check_failed_taskrun(data_dir, ns, tr_name):
     datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
@@ -306,18 +309,20 @@ def find_failed_containers(data_dir, ns, tr_name):
     except KeyError:
         return
 
+
 def load_container_log(data_dir, ns, pod_name, cont_name):
     datafile = os.path.join(data_dir, ns, "1", "pod-" + pod_name + "-" + cont_name + ".log")
     print(f"Checking errors in {datafile}")
     with open(datafile, "r") as fd:
         return fd.read()
 
+
 def investigate_failed_plr(dump_dir, plr_type="build"):
     reasons = []
 
     try:
         plr = find_first_failed_build_plr(dump_dir, plr_type)
-        if plr == None:
+        if plr is None:
             return ["SORRY PLR not found"]
 
         plr_ns = plr["metadata"]["namespace"]
@@ -347,6 +352,7 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
     reasons = list(set(reasons))   # get unique reasons only
     reasons.sort()   # sort reasons
     return reasons
+
 
 def main():
     input_file = sys.argv[1]
