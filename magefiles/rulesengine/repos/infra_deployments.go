@@ -19,6 +19,7 @@ var InfraDeploymentsDefaultRule = rulesengine.Rule{Name: "Infra Deployments Defa
 		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule,
+		&InfraDeploymentsPipelineServiceComponentChangeRule,
 		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteInfraDeploymentsDefaultTestAction)}}
@@ -40,6 +41,7 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 		&InfraDeploymentsBuildServiceComponentChangeRule,
 		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
+		&InfraDeploymentsPipelineServiceComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		// Adding "konflux" to the label filter when component is updated
@@ -127,6 +129,19 @@ var InfraDeploymentsBuildServiceComponentChangeRule = rulesengine.Rule{Name: "In
 	Actions: []rulesengine.Action{
 		rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 			AddLabelToLabelFilter(rctx, "build-service")
+			return nil
+		}),
+	},
+}
+
+var InfraDeploymentsPipelineServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Pipeline Service component File Change Rule",
+	Description: "Map pipeline service tests files when files in pipeline-service are changed",
+	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
+		return len(rctx.DiffFiles.FilterByDirGlob("components/pipeline-service/**/*")) != 0, nil
+	}),
+	Actions: []rulesengine.Action{
+		rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
+			AddLabelToLabelFilter(rctx, "pipeline-service")
 			return nil
 		}),
 	},
