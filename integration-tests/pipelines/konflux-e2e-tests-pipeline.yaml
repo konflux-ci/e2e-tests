@@ -70,7 +70,7 @@ spec:
           - name: url
             value: https://github.com/psturc/tekton-integration-catalog.git
           - name: revision
-            value: bump-mapt-version-v0.9.7
+            value: kind-improvements
           - name: pathInRepo
             value: tasks/mapt-oci/kind-aws-spot/provision/0.2/kind-aws-provision.yaml
       params:
@@ -110,9 +110,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog
+            value: https://github.com/psturc/tekton-integration-catalog
           - name: revision
-            value: main
+            value: kind-improvements
           - name: pathInRepo
             value: tasks/konflux-ci/deploy/0.3/deploy-konflux-ci.yaml
       params:
