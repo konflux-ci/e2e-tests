@@ -46,7 +46,7 @@ spec:
       default: "none"
     - name: ginkgo-procs
       description: "Number of processes to run in parallel in ginkgo"
-      default: 20
+      default: 2
     - name: sealights-bsid
       description: "A unique identifier (Build Session ID) assigned to the current Sealights build session. This ID is used to associate test results with a specific build in Sealights for detailed analysis and reporting."
       default: ""
