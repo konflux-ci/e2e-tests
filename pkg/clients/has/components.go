@@ -528,7 +528,7 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 			return false, fmt.Errorf("more than one image repositories found for component %s", componentName)
 		}
 		if imageRepositoryList.Items[0].Status.State != "ready" {
-			GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State)
+			GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet but it has status %v.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State, imageRepositoryList.Items[0].Status)
 			return false, nil
 		}
 		return true, nil
