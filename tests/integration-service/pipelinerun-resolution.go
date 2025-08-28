@@ -148,6 +148,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if all of the integrationPipelineRuns passed", Label("slow"), func() {
+				// add a sleep to reduce the call for polling pipelinerun status
+				timeout = time.Second * 600
 				Expect(f.AsKubeDeveloper.IntegrationController.WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName, snapshot, []string{integrationTestScenario.Name})).To(Succeed())
 			})
 
