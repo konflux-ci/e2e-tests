@@ -19,6 +19,7 @@ COLUMN_MESSAGE = 2
 ERRORS = {
     ("Application creation failed because it already exists", r"Application failed creation: Unable to create the Application .*: applications.appstudio.redhat.com .* already exists"),
     ("Application creation failed because of TLS handshake timeout", r"Application failed creation: Unable to create the Application .*: failed to get API group resources: unable to retrieve the complete list of server APIs: appstudio.redhat.com/v1alpha1: Get .*: net/http: TLS handshake timeout"),
+    ("Application creation failed because resourcequota object has been modified", r"Application failed creation: Unable to create the Application [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified; please apply your changes to the latest version and try again"),
     ("Application creation timed out waiting for quota evaluation", r"Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out"),
     ("Build Pipeline Run was cancelled", r"Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:Cancelled.*Message:PipelineRun .* was cancelled"),
     ("Component creation timed out waiting for image-controller annotations", r"Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component"),   # obsolete
