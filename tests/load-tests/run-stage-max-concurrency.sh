@@ -50,7 +50,7 @@ load_test() {
     rm -rvf "$workdir/load-test.log"
 
     options=""
-    [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && options="$options --pipeline-image-pull-secrets $PIPELINE_IMAGE_PULL_SECRETS"
+    [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && for s in $PIPELINE_IMAGE_PULL_SECRETS; do options="$options --pipeline-image-pull-secrets $s"; done
 
     date -Ins --utc >started
     go run loadtest.go \
