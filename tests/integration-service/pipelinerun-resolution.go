@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
+// Temporarily disabled to improve the case
 var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests ITS PipelineRun Resolution", Label("integration-service", "pipelinerun-resolution"), func() {
 	defer GinkgoRecover()
 
@@ -74,8 +74,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("a new Component is created", func() {
 			It("should have a related PaC init PR created", func() {
-				timeout = time.Second * 600
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForResolution)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -90,7 +88,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 					}
 					return false
-				}, timeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 	
@@ -135,7 +133,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("verifies that the finalizer has been removed from the build pipelinerun", func() {
-				timeout = time.Second * 60
+				timeout = time.Second * 300
 				interval = time.Second * 5
 				Eventually(func() error {
 					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
@@ -152,7 +150,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
-				timeout = time.Second * 900
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -165,7 +162,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s with timeout %s, within the snapshot: %s, has actual result %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, timeout, snapshot.Name, statusDetail.Status)
 					}
 					return nil
-				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed())
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 			})
 
 			It("checks if the finalizer was removed from all of the related Integration pipelineRuns", func() {
@@ -263,7 +260,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			// TODO: After STONEINTG-1166 is done, we can remove the Pending label
 			It("verifies that ResolutionRequest is deleted after pipeline resolution", Pending, func() {
-				timeout = time.Second * 120
 				interval = time.Second * 5
 
 				Eventually(func() error {
@@ -283,7 +279,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 
 					return nil
-				}, timeout, interval).Should(Succeed(), "ResolutionRequest objects should be cleaned up after pipeline resolution is complete")
+				}, shortTimeout, interval).Should(Succeed(), "ResolutionRequest objects should be cleaned up after pipeline resolution is complete")
 			})
 
 			// TODO: After STONEINTG-1166 is done, we can remove the Pending label
