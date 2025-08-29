@@ -35,6 +35,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
 )
 
@@ -187,7 +188,7 @@ func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, com
 	return prName
 }
 
-var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS"), func() {
+var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS", "pipeline-service"), func() {
 	var f *framework.Framework
 	var err error
 	AfterEach(framework.ReportFailure(&f))
@@ -431,25 +432,29 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				CheckSourceImage(srcImage, scenario.GitURL, f.AsKubeAdmin, pr)
 			})
 
-			// Temporarily disabled until https://issues.redhat.com/browse/KFLUXDP-373 is done
-			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Pending, Label("pipeline"), func() {
+			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
 				var resultClient *pipeline.ResultClient
 				var pr *tektonpipeline.PipelineRun
 
 				BeforeAll(func() {
-					// create the proxyplugin for tekton-results
-					_, err = f.AsKubeAdmin.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
+					if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
+						Skip("upstream test environment detected, skipping the test")
+					}
+					trRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
 					Expect(err).NotTo(HaveOccurred())
 
-					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
-					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
+					tektonResultsUrl := fmt.Sprintf("https://%s", trRoute.Spec.Host)
+					restConfig, err := config.GetConfig()
+					Expect(err).NotTo(HaveOccurred())
+
+					bearerToken := restConfig.BearerToken
+					if bearerToken == "" {
+						Skip("the bearer token is empty, skipping the test")
+					}
+					resultClient = pipeline.NewClient(tektonResultsUrl, bearerToken)
 
 					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					Expect(err).ShouldNot(HaveOccurred())
-				})
-
-				AfterAll(func() {
-					Expect(f.AsKubeAdmin.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).To(BeTrue())
 				})
 
 				It("should have Pipeline Records", func() {
@@ -460,7 +465,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
 				})
 
-				// Temporarily disabled until https://issues.redhat.com/browse/SRVKP-4348 is resolved
+				// This test is disabled since logs are being stored in s3 which is not available in dev env
 				It("should have Pipeline Logs", Pending, func() {
 					// Verify if result is stored in Database
 					// temporary logs due to RHTAPBUGS-213
