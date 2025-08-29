@@ -175,6 +175,25 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				Expect(err).NotTo(HaveOccurred())
 				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
 			})
+
+			It("verifies that Atlas SBOM URLs in Release artifacts are valid", func() {
+				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				var artifacts releasecommon.RHAdvisoriesArtifacts
+				err := json.Unmarshal(releaseCR.Status.Artifacts.Raw, &artifacts)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(artifacts.SBOMs.Product).To(HaveLen(1), fmt.Sprintf("%+v", artifacts))
+				for _, atlas_url := range artifacts.SBOMs.Product {
+					releasecommon.VerifyAtlasURL(atlas_url)
+				}
+
+				// expect two single-arch image SBOMs
+				Expect(artifacts.SBOMs.Component).To(HaveLen(2), fmt.Sprintf("%+v", artifacts))
+				for _, atlas_url := range artifacts.SBOMs.Component {
+					releasecommon.VerifyAtlasURL(atlas_url)
+				}
+			})
 		})
 	})
 })
