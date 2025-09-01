@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -483,16 +484,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
 
-					if groupSnapshots == nil {
-						GinkgoWriter.Println("No group snapshot exists at the moment: %v", err)
-						return err
-					}
 					if err != nil {
-						GinkgoWriter.Println("failed to get all group snapshots: %v", err)
+						// Use fmt.Sprintf to correctly format the string
+						GinkgoWriter.Println(fmt.Sprintf("Failed to get all group snapshots: %v", err))
 						return err
 					}
+
+					if len(groupSnapshots.Items) == 0 {
+						// Use fmt.Sprintf here as well
+						GinkgoWriter.Println(fmt.Sprintf("No group snapshots exist at the moment: %v", errors.New("no snapshot found")))
+						return errors.New("no snapshots found")
+					}
+
 					return nil
-				}, time.Minute*30, 30 * time.Second).Should(Succeed(), "timeout while waiting for group snapshot")
+				}, time.Minute*30, 30*time.Second).Should(Succeed(), "Timeout while waiting for group snapshot")
 
 				// check annotation test.appstudio.openshift.io/group-test-info for each group snapshot
 				annotation := groupSnapshots.Items[0].GetAnnotations()
