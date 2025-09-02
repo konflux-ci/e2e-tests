@@ -62,13 +62,13 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 }
 
 // GetComponentPipeline returns first pipeline run for a given component labels
-func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*pipeline.PipelineRun, error) {
-	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha)
+func (h *HasController) GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*pipeline.PipelineRun, error) {
+	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha, "")
 }
 
 // GetComponentPipelineRunWithType returns first pipeline run for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha)
+func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string, eventType string) (*pipeline.PipelineRun, error) {
+	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha, eventType)
 	if err != nil {
 		return nil, err
 	} else {
@@ -78,7 +78,7 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 }
 
 // GetComponentPipelineRunsWithType returns all pipeline runs for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunsWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*[]pipeline.PipelineRun, error) {
+func (h *HasController) GetComponentPipelineRunsWithType(componentName string, applicationName string, namespace, pipelineType string, sha string, eventType string) (*[]pipeline.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 	if pipelineType != "" {
 		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
@@ -86,6 +86,10 @@ func (h *HasController) GetComponentPipelineRunsWithType(componentName string, a
 
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
+	}
+
+	if eventType != "" {
+		pipelineRunLabels["pipelinesascode.tekton.dev/event-type"] = eventType
 	}
 
 	list := &pipeline.PipelineRunList{}
@@ -179,14 +183,14 @@ type RetryOptions struct {
 // For that case this function gives an option to pass in a pointer to a related PLR object (`prToUpdate`) which will be updated (with a valid PLR object) before the end of this function
 // and the PLR object can be then used for making assertions later in the test.
 // If there's no intention for using the original PLR object later in the test, use `nil` instead of the pointer.
-func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, pipelineType, sha, eventType string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
 	attempts := 1
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
+			pr, err = h.GetComponentPipelineRunWithType(component.GetName(), app, component.GetNamespace(), pipelineType, sha, eventType)
 
 			if err != nil {
 				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())

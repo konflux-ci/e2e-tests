@@ -350,7 +350,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
 				prHeadSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
@@ -482,7 +482,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("PipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA,
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", createdFileSHA, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
 				createdFileSHA = plr.Labels["pipelinesascode.tekton.dev/sha"]
@@ -530,8 +530,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("pipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					mergeResultSha, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				mergeResultSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 
@@ -580,6 +580,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
+			})
+			It("retrigger the pipeline manually", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(customBranchComponentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, testNamespace)).To(Succeed())
+				// Check the pipelinerun is triggered
+				Eventually(func() error {
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(customBranchComponentName, applicationName, testNamespace, "build", "", "incoming")
+					if err != nil {
+						GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", testNamespace, customBranchComponentName)
+						return err
+					}
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", plr.GetNamespace(), plr.GetName())
+					}
+					return nil
+				}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", testNamespace, customBranchComponentName))
+			})
+			It("retriggered pipelineRun should eventually finish", func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 			})
 		})
 
@@ -775,7 +793,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				})
 
 				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 				})
 
@@ -1419,7 +1437,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", ParentComponentDef.componentName, testNamespace))
 			})
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), "")
 				Expect(err).ShouldNot(HaveOccurred())
 				for _, result := range pr.Status.PipelineRunStatusFields.Results {
@@ -1431,7 +1449,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for child component %s", ChildComponentDef.componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for child component %s", ChildComponentDef.componentName), func() {
@@ -1543,7 +1561,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// Wait for this PR to be done and store the digest, we will need it to verify that the nudge was correct
 			It(fmt.Sprintf("PAC PipelineRun for parent component %s is successful", ParentComponentDef.componentName), func() {
 				pr := &pipeline.PipelineRun{}
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, pr)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", mergeResultSha, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, pr)).To(Succeed())
 
 				for _, result := range pr.Status.PipelineRunStatusFields.Results {
 					if result.Name == "IMAGE_DIGEST" {

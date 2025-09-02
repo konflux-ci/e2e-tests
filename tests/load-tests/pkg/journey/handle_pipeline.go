@@ -1,14 +1,18 @@
 package journey
 
-import "fmt"
-import "strings"
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
-import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+
+	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
+
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+)
 
 func validatePipelineRunCreation(f *framework.Framework, namespace, appName, compName string) error {
 	interval := time.Second * 20
@@ -16,7 +20,7 @@ func validatePipelineRunCreation(f *framework.Framework, namespace, appName, com
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		_, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "")
+		_, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "", "")
 		if err != nil {
 			logging.Logger.Debug("Unable to get created PipelineRun for component %s in namespace %s: %v", compName, namespace, err)
 			return false, nil
@@ -34,7 +38,7 @@ func validatePipelineRunCondition(f *framework.Framework, namespace, appName, co
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "")
+		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "", "")
 		if err != nil {
 			logging.Logger.Debug("Unable to get created PipelineRun for component %s in namespace %s: %v", compName, namespace, err)
 			return false, nil
@@ -73,7 +77,7 @@ func validatePipelineRunSignature(f *framework.Framework, namespace, appName, co
 
 	// TODO It would be much better to watch this resource for a condition
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "")
+		pr, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunWithType(compName, appName, namespace, "build", "", "")
 		if err != nil {
 			logging.Logger.Debug("Unable to get created PipelineRun for component %s in namespace %s: %v", compName, namespace, err)
 			return false, nil

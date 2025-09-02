@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/konflux-ci/build-service/controllers"
 	buildcontrollers "github.com/konflux-ci/build-service/controllers"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 
@@ -260,7 +261,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					Expect(pipelineRun.Annotations["appstudio.openshift.io/snapshot"]).To(Equal(""))
 				})
 				It("should eventually complete successfully", func() {
-					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, headSHA,
+					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", headSHA, "",
 						fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 5, Always: true}, pipelineRun)).To(Succeed())
 
 					// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
@@ -317,6 +318,26 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 					}, pipelineRunStartedTimeout, defaultPollingInterval).Should(Succeed())
 					Expect(testPipelinerun.Labels["appstudio.openshift.io/snapshot"]).To(ContainSubstring(snapshot.Name))
 					Expect(testPipelinerun.Labels["test.appstudio.openshift.io/scenario"]).To(ContainSubstring(integrationTestScenario.Name))
+				})
+			})
+
+			When("push pipelinerun is retriggered", Label(upstreamKonfluxTestLabel), func() {
+				It("should eventually succeed", func() {
+					Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, userNamespace)).To(Succeed())
+					// Check the pipelinerun is triggered
+					Eventually(func() error {
+						testPipelinerun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(component.GetName(), appSpec.ApplicationName, userNamespace, "build", "", "incoming")
+						if err != nil {
+							GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", userNamespace, component.GetName())
+							return err
+						}
+						if !testPipelinerun.HasStarted() {
+							return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
+						}
+						return nil
+					}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", userNamespace, component.GetName()))
+					// Should succeed
+					Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, testPipelinerun)).To(Succeed())
 				})
 			})
 

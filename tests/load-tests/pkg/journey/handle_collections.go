@@ -1,14 +1,16 @@
 package journey
 
-import "fmt"
-import "os"
-import "errors"
-import "path/filepath"
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+)
 
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
@@ -75,7 +77,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 			return fmt.Errorf("Failed to dump Pod JSON: %v", err)
 		}
 
-		err = writeToFile(dirPath, "collected-pod-" + pod.Name + ".json", podJSON)
+		err = writeToFile(dirPath, "collected-pod-"+pod.Name+".json", podJSON)
 		if err != nil {
 			return fmt.Errorf("Failed to write Pod: %v", err)
 		}
@@ -86,7 +88,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, component string
 }
 
 func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component string) error {
-	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "")
+	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "", "")
 	if err != nil {
 		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
 	}
@@ -97,7 +99,7 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 			return fmt.Errorf("Failed to dump PipelineRun JSON: %v", err)
 		}
 
-		err = writeToFile(dirPath, "collected-pipelinerun-" + pr.Name + ".json", prJSON)
+		err = writeToFile(dirPath, "collected-pipelinerun-"+pr.Name+".json", prJSON)
 		if err != nil {
 			return fmt.Errorf("Failed to write PipelineRun: %v", err)
 		}
@@ -122,7 +124,7 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 				return fmt.Errorf("Failed to dump TaskRun JSON: %v", err)
 			}
 
-			err = writeToFile(dirPath, "collected-taskrun-" + tr.Name + ".json", trJSON)
+			err = writeToFile(dirPath, "collected-taskrun-"+tr.Name+".json", trJSON)
 			if err != nil {
 				return fmt.Errorf("Failed to write TaskRun: %v", err)
 			}
@@ -164,7 +166,7 @@ func collectApplicationComponentJSONs(f *framework.Framework, dirPath, namespace
 		return fmt.Errorf("Failed to dump Component JSON: %v", err)
 	}
 
-	err = writeToFile(dirPath, "collected-component-" + component + ".json", compJSON)
+	err = writeToFile(dirPath, "collected-component-"+component+".json", compJSON)
 	if err != nil {
 		return fmt.Errorf("Failed to write Component: %v", err)
 	}
