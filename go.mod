@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
 	github.com/IBM/vpc-go-sdk v0.48.0
-	github.com/argoproj/argo-cd/v2 v2.11.6
+	github.com/argoproj/argo-cd/v2 v2.14.15
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.32.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
