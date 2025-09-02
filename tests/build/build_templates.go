@@ -89,6 +89,15 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		}
 	}
 
+	if scenario.WorkingDirMount != "" {
+		//Update the pipeline bundle to apply WORKINGDIR_MOUNT
+		customBuildBundle, err = addWorkingDirMountInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.WorkingDirMount)
+		if err != nil {
+			GinkgoWriter.Printf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
+			return
+		}
+	}
+
 	if customBuildBundle == "" {
 		// "latest" is a special value that causes the build service to consult the use one of the
 		// bundles specified in the build-pipeline-config ConfigMap in the build-service Namespace.
@@ -860,6 +869,45 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelin
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
 	return newDockerBuildPipeline.String(), nil
+}
+
+// this function takes a bundle and workindDirMount string as inputs
+// and creates a bundle with added WORKINDDIR_MOUNT param in the buildah task
+// and then pushes the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
+func addWorkingDirMountInPipelineBundle(customDockerBuildBundle string, pipelineBundleName constants.BuildPipelineType, workingDirMount string) (string, error) {
+	var tektonObj runtime.Object
+	var err error
+	var newPipelineYaml []byte
+	// Extract docker-build pipeline as tekton object from the bundle
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
+	// Update WORKINGDIR_MOUNT param value for build-container task
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		if t.Name == "build-container" {
+			t.Params = append(t.Params, tektonpipeline.Param{Name: "WORKINGDIR_MOUNT", Value: tektonpipeline.ParamValue{
+				Type:      tektonpipeline.ParamTypeString,
+				StringVal: workingDirMount,
+			}})
+		}
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
+	authOption := remoteimg.WithAuthFromKeychain(keychain)
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
+	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
+	// Build and Push the tekton bundle
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	return newDockerBuildPipeline.String(), nil
+
 }
 
 func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpipeline.PipelineRun) {
