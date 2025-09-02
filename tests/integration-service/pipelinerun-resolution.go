@@ -20,8 +20,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-// Temporarily disabled to improve the case
-var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests ITS PipelineRun Resolution", Label("integration-service", "pipelinerun-resolution"), func() {
+
+// Pending temporarily disabled till STONEINTG-1333 is resolved
+var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests ITS PipelineRun Resolution", Pending, Label("integration-service", "pipelinerun-resolution"), func() {
 	defer GinkgoRecover()
 
 	var f *framework.Framework
@@ -91,7 +92,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 				}, longTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
-	
+
 			})
 
 			It("triggers a build PipelineRun", Label("integration-service"), func() {
