@@ -461,6 +461,9 @@ func (d *Dockerfile) ConvertParentImagesToBuildahOutputForm() ([]string, error) 
 		if imagePullspec == "scratch" {
 			continue
 		}
+		if strings.HasPrefix(imagePullspec, "oci-archive:") {
+			continue
+		}
 		if _, exists := seen[imagePullspec]; exists {
 			continue
 		}

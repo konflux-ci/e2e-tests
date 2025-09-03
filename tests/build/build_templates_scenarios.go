@@ -17,6 +17,7 @@ type ComponentScenarioSpec struct {
 	PrefetchInput       string
 	CheckAdditionalTags bool
 	ManifestMediaType   string
+	WorkingDirMount     string
 }
 
 func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
@@ -32,6 +33,7 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 		PrefetchInput:       s.PrefetchInput,
 		CheckAdditionalTags: s.CheckAdditionalTags,
 		ManifestMediaType:   s.ManifestMediaType,
+		WorkingDirMount:     s.WorkingDirMount,
 	}
 }
 
@@ -146,6 +148,16 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
+	},
+	{
+		GitURL:              "https://github.com/konflux-qe-bd/oci-archive-test",
+		Revision:            "a63b71ce92cee3a8d4624ef15a232d43f93b42b9",
+		ContextDir:          ".",
+		DockerFilePath:      "Dockerfile",
+		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
+		EnableHermetic:      false,
+		PrefetchInput:       "",
+		WorkingDirMount:     "/buildcontext",
 	},
 }
 
