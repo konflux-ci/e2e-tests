@@ -9,17 +9,38 @@ The Integration Service manages the lifecycle, deployment, and integration testi
 ### 1. Basic E2E Tests within `integration.go`
 These tests cover the end-to-end integration service workflow, verifying the successful execution of key processes such as component creation, pipeline runs, snapshot generation, and release management under ideal conditions.
 
+**Repositories:**
+- `https://github.com/redhat-appstudio-qe/konflux-test-integration`
+- `https://github.com/konflux-ci/integration-examples`
+
 ### 2. E2E Tests within `status-reporting-to-pullrequest.go`
 This suite tests the status reporting of integration tests to GitHub Pull Requests (PRs). It ensures that integration test outcomes are reflected accurately in the PR's CheckRuns, including both successful and failed tests.
+
+**Repositories:**
+- `https://github.com/redhat-appstudio-qe/konflux-test-integration-status-report`
+- `https://github.com/konflux-ci/integration-examples`
 
 ### 3. E2E Tests within `gitlab-integration-reporting.go`
 This suite verifies the reporting of integration test statuses to GitLab Merge Requests (MRs). It ensures the proper status updates for both successful and failed tests are reflected in the MR's CommitStatus.
 
+**Repositories:**
+- `https://gitlab.com/redhat-appstudio-qe/hacbs-test-project-integration`
+- `https://github.com/konflux-ci/integration-examples`
+
 ### 4. E2E Tests within `group-snapshots-tests.go`
 This suite tests the creation of group snapshots for both monorepo and multiple repositories scenarios. It verifies the integration service's ability to handle multiple components across different repository structures, including proper group snapshot creation, component coordination, and snapshot lifecycle management.
 
+**Repositories:**
+- `https://github.com/redhat-appstudio-qe/group-snapshot-multi-component`
+- `https://github.com/redhat-appstudio-qe/konflux-test-integration-clone`
+- `https://github.com/konflux-ci/integration-examples`
+
 ### 5. E2E Tests within `pipelinerun-resolution.go`
 This suite tests the integration service's pipeline resolution functionality, focusing on ResolutionRequest lifecycle management and ensuring proper cleanup of resolution resources after pipeline execution.
+
+**Repositories:**
+- `https://github.com/redhat-appstudio-qe/konflux-test-integration-resolution`
+- `https://github.com/konflux-ci/integration-examples`
 
 ---
 
