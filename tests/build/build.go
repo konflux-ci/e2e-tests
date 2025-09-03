@@ -1445,7 +1445,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						parentFirstDigest = result.Value.StringVal
 					}
 				}
-				Expect(parentFirstDigest).ShouldNot(BeEmpty())
+				Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun status results: %v", pr.Status.PipelineRunStatusFields.Results))
 			})
 
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for child component %s", ChildComponentDef.componentName), func() {
