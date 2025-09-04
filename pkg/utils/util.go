@@ -31,9 +31,7 @@ import (
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	"github.com/magefile/mage/sh"
 	"github.com/mitchellh/go-homedir"
 	"k8s.io/klog/v2"
 
@@ -429,39 +427,6 @@ func FilterSliceUsingPattern(pattern string, lString []string) []string {
 	return results
 }
 
-func GetChangedFiles(repo string) (rulesengine.Files, error) {
-	var gitDiff = sh.OutCmd("git", "diff")
-	// If the repo is infra-deployments then we check changed files in path tmp/infra-deployments
-	// else it will run locally which is from e2e-tests directory
-	if repo == "infra-deployments" {
-		wd, _ := os.Getwd()
-		gitDiff = sh.OutCmd("git", "-C", fmt.Sprintf("%s/tmp/%s", wd, repo), "diff")
-	}
-	output, err := gitDiff("--name-status", "upstream/main..HEAD")
-
-	if err != nil {
-		klog.Error("Failed to run git status locally")
-		return nil, err
-	}
-
-	if output == "" {
-		klog.Info("Found no changed files.")
-		return rulesengine.Files{}, nil
-	}
-	var changes rulesengine.Files
-	var file rulesengine.File
-	for _, line := range strings.Split(output, "\n") {
-
-		fileAttr := strings.Split(line, "\t")
-		file = rulesengine.File{Status: fileAttr[0], Name: fileAttr[1]}
-
-		changes = append(changes, file)
-	}
-	klog.Infof("The following files, %s, were changed!", changes.String())
-
-	return changes, nil
-}
-
 // getAuthForImageRef searches a given Docker configuration file for authentication credentials
 // that match the provided image reference. It attempts to find the most specific match first
 // (e.g., full repository name), then falls back to less specific matches (e.g., namespace,
@@ -489,6 +454,15 @@ func getAuthForImageRef(cfg *dockerconfigfile.ConfigFile, imageRef name.Referenc
 		if err != nil {
 			return authConfig, fmt.Errorf("failed to get auth config for %s: %+v", entry, err)
 		}
+		// Match only in case the entry is EQUAL to the name of the auth from the authConfig
+		// e.g. "quay.io" entry matches
+		//   "quay.io": {
+		//         "auth": "<redacted>"
+		//    }
+		// but does NOT match
+		//   "quay.io/my-namespace": {
+		//         "auth": "<redacted>"
+		//    }
 		if authConfig.ServerAddress == entry && authConfig.Username != "" {
 			return authConfig, nil
 		}

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
-	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"k8s.io/klog"
 )
 
@@ -318,7 +317,7 @@ var E2ERepoCIRuleChain = rulesengine.Rule{Name: "E2E Repo CI Workflow Rule Chain
 		&E2ERepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&BootstrapClusterRuleChain,
+		rulesengine.Any{rulesengine.None{&BootstrapClusterWithSprayProxyRuleChain}, &BootstrapClusterWithSprayProxyRuleChain},
 		rulesengine.Any{&NonTestFilesRule, &NonTestFilesRuleWithReleasePipelines, &TestFilesOnlyRule}},
 }
 
@@ -334,7 +333,7 @@ var E2ERepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Required Set
 		rctx.RequiresSprayProxyRegistering = true
 		klog.Info("multi-platform tests and require sprayproxy registering are set to TRUE")
 
-		rctx.DiffFiles, err = utils.GetChangedFiles(rctx.RepoName)
+		rctx.DiffFiles, err = GetChangedFiles(rctx.RepoName)
 		return err
 	})},
 }

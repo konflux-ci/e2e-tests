@@ -101,7 +101,6 @@ sealights_scan() {
 }
 
 trap post_actions EXIT
-
 load_envs
 sealights_scan
 
