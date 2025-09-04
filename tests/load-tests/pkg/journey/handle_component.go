@@ -186,7 +186,7 @@ func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, com
 	timeout := time.Minute * 60
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
-		prs, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(compName, appName, namespace, "build", sha)
+		prs, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(compName, appName, namespace, "build", sha, "")
 		if err != nil {
 			logging.Logger.Debug("Waiting for PipelineRun for component %s in namespace %s", compName, namespace)
 			return false, nil
@@ -365,7 +365,6 @@ func HandleComponent(ctx *PerComponentContext) error {
 			return logging.Logger.Fail(64, "Failed to configure pipeline imagePullSecrets: %v", err)
 		}
 	}
-
 
 	return nil
 }

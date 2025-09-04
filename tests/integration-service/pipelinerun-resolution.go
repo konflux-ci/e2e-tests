@@ -113,7 +113,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
-				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 		})

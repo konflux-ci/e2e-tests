@@ -137,7 +137,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "",
 					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, buildPipelineRun)).To(Succeed())
 			})
 
@@ -161,7 +161,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 			})
 

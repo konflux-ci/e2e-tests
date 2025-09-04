@@ -343,7 +343,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 			})
 			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
@@ -636,7 +636,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
-						component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+						component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 
 					imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 					Expect(err).NotTo(HaveOccurred())
@@ -729,7 +729,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			component, err := f.AsKubeAdmin.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 

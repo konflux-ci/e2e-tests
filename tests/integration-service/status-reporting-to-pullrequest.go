@@ -61,7 +61,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Eventually(func() error {
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", "")
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", "", "")
 				if err != nil {
 					GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 					return err
@@ -112,7 +112,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 					return false
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha)
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha, "")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -176,10 +176,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 		When("Integration PipelineRuns completes successfully", func() {
 			It("should lead to Snapshot CR being marked as failed", FlakeAttempts(3), func() {
 				// Snapshot marked as Failed because one of its Integration test failed (as expected)
-				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha)
+				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha, "")
 				Expect(err).Should(Succeed())
 				Eventually(func() bool {
-					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha)
+					pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(componentName, applicationName, testNamespace, "build", prHeadSha, "")
 					if err != nil {
 						return false
 					}
