@@ -182,6 +182,7 @@ FAILED_TR_ERRORS = {
     ("Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev", r"failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*"),
     ("Not enough nodes to schedule pod", r".message.: .pod status ..PodScheduled..:..False..; message: ..[0-9/]+ nodes are available: .*: [0-9]+ Preemption is not helpful for scheduling."),
     ("Pod creation failed because resource quota evaluation timed out", r".message.: .failed to create task run pod [^ ]+: Internal error occurred: resource quota evaluation timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed."),
+    ("Pod creation failed with reason error", r"\"message\": \".* exited with code 2: Error\""),
     ("Pod stuck in incorrect status", r".message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown."),
 }
 
