@@ -233,9 +233,9 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 func HandleRepoForking(ctx *MainContext) error {
 	var suffix string
 	if ctx.Opts.Stage {
-		suffix = ctx.Opts.UsernamePrefix + "-" + ctx.Username
+		suffix = ctx.Opts.RunPrefix + "-" + ctx.Namespace
 	} else {
-		suffix = ctx.Username
+		suffix = ctx.Namespace
 	}
 	logging.Logger.Debug("Forking repository %s with suffix %s to %s", ctx.Opts.ComponentRepoUrl, suffix, ctx.Opts.ForkTarget)
 

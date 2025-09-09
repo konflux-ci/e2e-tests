@@ -8,8 +8,6 @@ import (
 
 	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
-	util "github.com/devfile/library/v2/pkg/util"
-
 	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
@@ -41,7 +39,7 @@ func HandleIntegrationTestScenario(ctx *PerApplicationContext) error {
 
 	var err error
 
-	name := fmt.Sprintf("%s-its-%s", ctx.ParentContext.Username, util.GenerateRandomString(5))
+	name := fmt.Sprintf("%s-its", ctx.ApplicationName)
 	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	_, err = logging.Measure(

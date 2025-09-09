@@ -155,24 +155,14 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
-func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl, keycloakUrl, offlineToken string, isSA bool) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) ReconcileUserCreationStage(userName, apiUrl, token string) (*SandboxUserAuthInfo, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	kubeconfigPath := utils.GetEnv(constants.USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
-	var userToken string
-	if isSA {
-		userToken = offlineToken
-	} else {
-		userToken, err = s.GetKeycloakTokenStage(userName, keycloakUrl, offlineToken)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return s.GetKubeconfigPathForSpecificUser(true, toolchainApiUrl, userName, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(true, apiUrl, userName, kubeconfigPath, token)
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
