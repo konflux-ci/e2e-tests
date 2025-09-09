@@ -128,7 +128,7 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 			PerApplicationWG: perApplicationWG,
 			ApplicationIndex: applicationIndex,
 			ParentContext:    parentContext,
-			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Username, util.GenerateRandomString(5)),
+			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Opts.RunPrefix, util.GenerateRandomString(5)),
 		}
 
 		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)

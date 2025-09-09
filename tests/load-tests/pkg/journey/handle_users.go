@@ -2,6 +2,7 @@ package journey
 
 import "fmt"
 import "time"
+import "strings"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
@@ -14,17 +15,16 @@ func HandleUser(ctx *MainContext) error {
 	// TODO E.g. when token is incorrect, timeout does not work as expected
 	if ctx.Opts.Stage {
 		user := (*ctx.StageUsers)[ctx.ThreadIndex]
-		ctx.Username = user.Username
+		ctx.Username = strings.TrimSuffix(user.Namespace, "-tenant")
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(
 			ctx.Username,
 			time.Minute*60,
 			utils.Options{
-				ToolchainApiUrl: user.APIURL,
-				KeycloakUrl:     user.SSOURL,
-				OfflineToken:    user.Token,
+				ApiUrl: user.APIURL,
+				Token:  user.Token,
 			})
 	} else {
-		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.UsernamePrefix, ctx.ThreadIndex)
+		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.RunPrefix, ctx.ThreadIndex)
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.Username, time.Minute*60)
 	}
 
@@ -47,9 +47,8 @@ func HandleNewFrameworkForComp(ctx *PerComponentContext) error {
 			ctx.ParentContext.ParentContext.Username,
 			time.Minute*60,
 			utils.Options{
-				ToolchainApiUrl: user.APIURL,
-				KeycloakUrl:     user.SSOURL,
-				OfflineToken:    user.Token,
+				ApiUrl: user.APIURL,
+				Token:  user.Token,
 			})
 	} else {
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.ParentContext.Username, time.Minute*60)
@@ -72,9 +71,8 @@ func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
 			ctx.ParentContext.Username,
 			time.Minute*60,
 			utils.Options{
-				ToolchainApiUrl: user.APIURL,
-				KeycloakUrl:     user.SSOURL,
-				OfflineToken:    user.Token,
+				ApiUrl: user.APIURL,
+				Token:  user.Token,
 			})
 	} else {
 		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.Username, time.Minute*60)

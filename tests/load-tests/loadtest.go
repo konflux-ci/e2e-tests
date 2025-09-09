@@ -40,7 +40,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.ComponentContainerContext, "component-repo-container-context", "/", "the context for image build")
 	rootCmd.Flags().StringVar(&opts.ForkTarget, "fork-target", "", "the target namespace (GitLab) or organization (GitHub) to fork component repository to (if empty, will use MY_GITHUB_ORG env variable)")
 	rootCmd.Flags().StringVar(&opts.QuayRepo, "quay-repo", "redhat-user-workloads-stage", "the target quay repo for PaC templated image pushes")
-	rootCmd.Flags().StringVar(&opts.UsernamePrefix, "username", "testuser", "identifier used for prefix of usersignup names and as suffix when forking repo")
+	rootCmd.Flags().StringVar(&opts.RunPrefix, "runprefix", "testuser", "identifier used for prefix of usersignup names and as suffix when forking repo")
 	rootCmd.Flags().BoolVarP(&opts.Stage, "stage", "s", false, "is you want to run the test on stage")
 	rootCmd.Flags().BoolVarP(&opts.Purge, "purge", "p", false, "purge all users or resources (on stage) after test is done")
 	rootCmd.Flags().BoolVarP(&opts.PurgeOnly, "purge-only", "u", false, "do not run test, only purge resources (this implies --purge)")

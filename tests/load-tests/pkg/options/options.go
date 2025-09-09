@@ -38,11 +38,11 @@ type Opts struct {
 	ReleasePipelineServiceAccount   string
 	ReleasePipelineUrl              string
 	ReleasePolicy                   string
+	RunPrefix                       string
 	Stage                           bool
 	TestScenarioGitURL              string
 	TestScenarioPathInRepo          string
 	TestScenarioRevision            string
-	UsernamePrefix                  string
 	WaitIntegrationTestsPipelines   bool
 	WaitPipelines                   bool
 	WaitRelease                     bool
