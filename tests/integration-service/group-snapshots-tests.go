@@ -8,6 +8,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -28,7 +29,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	var prNumber int
 	var prHeadSha, mergeResultSha, mergeMultiResultSha, secondFileSha string
 	var pacBranchNames []string
-	var componentNames []string
+	var componentsList []*appstudioApi.Component
 	var snapshot *appstudioApi.Snapshot
 	var componentA *appstudioApi.Component
 	var componentB *appstudioApi.Component
@@ -148,8 +149,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRunA finishing successfully", func() {
-				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentA.Name, "")
-				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentA.Name, logs))
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(componentA, "", "", "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentA %s", multiComponentContextDirs[0]), func() {
@@ -198,8 +199,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentA %s/%s\n", testNamespace, componentA.Name)
 						return err
 					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
+					if !integrationPipelineRun.HasStarted() {
+						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
 					}
 					return nil
 				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
@@ -253,8 +254,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentB.Name, "")
-				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentB.Name, logs))
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(componentB, "", "", "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for component %s", multiComponentContextDirs[1]), func() {
@@ -303,8 +304,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentB %s/%s\n", testNamespace, componentB.Name)
 						return err
 					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
+					if !integrationPipelineRun.HasStarted() {
+						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
 					}
 					return nil
 				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
@@ -358,8 +359,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("should lead to build PipelineRun finishing successfully", func() {
-				isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentC.Name, "")
-				Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, componentC.Name, logs))
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(componentC, "", "", "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for componentC %s", componentRepoNameForGroupIntegration), func() {
@@ -408,8 +409,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentC %s/%s\n", testNamespace, componentC.Name)
 						return err
 					}
-					if !pipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s/%s hasn't started yet", integrationPipelineRun.GetNamespace(), pipelineRun.GetName())
+					if !integrationPipelineRun.HasStarted() {
+						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
 					}
 					return nil
 				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
@@ -472,10 +473,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), createdFileSha.GetSHA())
 			})
 			It("wait for the last components build to finish", func() {
-				componentNames = []string{componentA.Name, componentB.Name, componentC.Name}
-				for _, component := range componentNames {
-					isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, "")
-					Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component %s/%s/%s with logs: %s", testNamespace, applicationName, component, logs))
+				componentsList = []*appstudioApi.Component{componentA, componentB, componentC}
+				for _, component := range componentsList {
+					Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 				}
 			})
 
@@ -512,8 +513,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			})
 			It("make sure that group snapshot contains last build pipelinerun for each component", func() {
-				for _, component := range componentNames {
-					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(component, applicationName, testNamespace, false, "")
+				for _, component := range componentsList {
+					pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(component.Name, applicationName, testNamespace, false, "")
 					Expect(err).ShouldNot(HaveOccurred())
 					annotation := groupSnapshots.Items[0].GetAnnotations()
 					if annotation, ok := annotation[testGroupSnapshotAnnotation]; ok {
@@ -531,11 +532,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			It("wait for the components A and B build to finish", func() {
-				GinkgoWriter.Println("Waiting for build pipelineRun created yet for app %s/%s, sha: %s", testNamespace, applicationName, secondFileSha)
-				componentNames = []string{componentA.Name, componentB.Name}
-				for _, component := range componentNames {
-					isPass, logs := f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineToBeFinished(testNamespace, applicationName, component, secondFileSha)
-					Expect(isPass).Should(Succeed(), fmt.Sprintf("build pipelinerun fails for NameSpace/Application/Component/sha %s/%s/%s/%s with logs: %s", testNamespace, applicationName, component, secondFileSha, logs))
+				GinkgoWriter.Printf("Waiting for build pipelineRun to be created for app %s/%s, sha: %s\n", testNamespace, applicationName, secondFileSha)
+				componentsList = []*appstudioApi.Component{componentA, componentB}
+				for _, component := range componentsList {
+					Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 				}
 			})
 
