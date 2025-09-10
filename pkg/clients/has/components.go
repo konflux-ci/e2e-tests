@@ -369,7 +369,7 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339))
+	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339Nano))
 
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -388,7 +388,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
@@ -397,7 +397,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.String())
+	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
 
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
@@ -414,7 +414,7 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
@@ -573,7 +573,7 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all image repositories in namespace '%s' at %s\n", namespace, start.String())
+	GinkgoWriter.Printf("Start to delete all image repositories in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
 
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
@@ -590,7 +590,7 @@ func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all image repositories in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete all image repositories in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
