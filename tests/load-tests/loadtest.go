@@ -42,6 +42,8 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.QuayRepo, "quay-repo", "redhat-user-workloads-stage", "the target quay repo for PaC templated image pushes")
 	rootCmd.Flags().StringVar(&opts.RunPrefix, "runprefix", "testuser", "identifier used for prefix of usersignup names and as suffix when forking repo")
 	rootCmd.Flags().BoolVarP(&opts.Stage, "stage", "s", false, "is you want to run the test on stage")
+	rootCmd.Flags().DurationVar(&opts.StartupDelay, "startup-delay", 0, "when starting per user/per application/per client treads, wait for this duration")
+	rootCmd.Flags().DurationVar(&opts.StartupJitter, "startup-jitter", 3*time.Second, "when applying startup delay, add or remove half of jitter with this maximum value")
 	rootCmd.Flags().BoolVarP(&opts.Purge, "purge", "p", false, "purge all users or resources (on stage) after test is done")
 	rootCmd.Flags().BoolVarP(&opts.PurgeOnly, "purge-only", "u", false, "do not run test, only purge resources (this implies --purge)")
 	rootCmd.Flags().StringVar(&opts.TestScenarioGitURL, "test-scenario-git-url", "https://github.com/konflux-ci/integration-examples.git", "test scenario GIT URL (set to \"\" to disable creating these)")
@@ -134,6 +136,8 @@ func main() {
 // Single user journey
 func perUserThread(threadCtx *journey.MainContext) {
 	defer threadCtx.ThreadsWG.Done()
+
+	time.Sleep(threadCtx.StartupPause)
 
 	var err error
 
@@ -249,6 +253,8 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 		}
 	}()
 
+	time.Sleep(perApplicationCtx.StartupPause)
+
 	var err error
 
 	// Create framework so we do not have to share framework with parent thread
@@ -296,6 +302,8 @@ func perComponentThread(perComponentCtx *journey.PerComponentContext) {
 			logging.Logger.Error("Per component thread failed: %v", err)
 		}
 	}()
+
+	time.Sleep(perComponentCtx.StartupPause)
 
 	var err error
 

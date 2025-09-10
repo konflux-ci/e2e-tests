@@ -2,6 +2,8 @@ package journey
 
 import "fmt"
 import "sync"
+import "time"
+import "math/rand"
 
 import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
@@ -17,6 +19,7 @@ var MainContexts []*MainContext
 type MainContext struct {
 	ThreadsWG              *sync.WaitGroup
 	ThreadIndex            int
+	StartupPause           time.Duration
 	JourneyRepeatsCounter  int
 	Opts                   *options.Opts
 	StageUsers             *[]loadtestutils.User
@@ -41,6 +44,19 @@ func initUserThread(threadCtx *MainContext) {
 	}
 }
 
+// Helper function to compute duration to delay startup of some threads based on StartupDelay and StartupJitter command-line options
+// If this is a first thread, delay will be skipped as it would not help
+func computeStartupPause(index int, delay, jitter time.Duration) time.Duration {
+	if index == 0 || delay == 0 {
+		return time.Duration(0)
+	} else {
+		// For delay = 10s and jitter = 3s, this computes random number from 8.5 to 11.5 seconds
+		jitterSec := rand.Float64() * jitter.Seconds() - jitter.Seconds() / 2
+		jitterDur := time.Duration(jitterSec) * time.Second
+		return delay + jitterDur
+	}
+}
+
 // Start all the user journey threads
 // TODO split this to two functions and get PurgeOnly code out
 func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
@@ -58,11 +74,14 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 
 	// Initialize all user thread contexts
 	for threadIndex := 0; threadIndex < opts.Concurrency; threadIndex++ {
-		logging.Logger.Info("Initiating thread %d", threadIndex)
+		startupPause := computeStartupPause(threadIndex, opts.StartupDelay, opts.StartupJitter)
+
+		logging.Logger.Info("Initiating per user thread %d with pause %v", threadIndex, startupPause)
 
 		threadCtx := &MainContext{
 			ThreadsWG:        threadsWG,
 			ThreadIndex:      threadIndex,
+			StartupPause:     startupPause,
 			Opts:             opts,
 			StageUsers:       &stageUsers,
 			Username:         "",
@@ -109,6 +128,7 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 type PerApplicationContext struct {
 	PerApplicationWG            *sync.WaitGroup
 	ApplicationIndex            int
+	StartupPause                time.Duration
 	Framework                   *framework.Framework
 	ParentContext               *MainContext
 	ApplicationName             string
@@ -122,11 +142,14 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 	perApplicationWG.Add(parentContext.Opts.ApplicationsCount)
 
 	for applicationIndex := 0; applicationIndex < parentContext.Opts.ApplicationsCount; applicationIndex++ {
-		logging.Logger.Info("Initiating per application thread %d-%d", parentContext.ThreadIndex, applicationIndex)
+		startupPause := computeStartupPause(applicationIndex, parentContext.Opts.StartupDelay, parentContext.Opts.StartupJitter)
+
+		logging.Logger.Info("Initiating per application thread %d-%d with pause %v", parentContext.ThreadIndex, applicationIndex, startupPause)
 
 		perApplicationCtx := &PerApplicationContext{
 			PerApplicationWG: perApplicationWG,
 			ApplicationIndex: applicationIndex,
+			StartupPause:     startupPause,
 			ParentContext:    parentContext,
 			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Opts.RunPrefix, util.GenerateRandomString(5)),
 		}
@@ -145,6 +168,7 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 type PerComponentContext struct {
 	PerComponentWG     *sync.WaitGroup
 	ComponentIndex     int
+	StartupPause       time.Duration
 	Framework          *framework.Framework
 	ParentContext      *PerApplicationContext
 	ComponentName      string
@@ -159,11 +183,14 @@ func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicat
 	perComponentWG.Add(parentContext.ParentContext.Opts.ComponentsCount)
 
 	for componentIndex := 0; componentIndex < parentContext.ParentContext.Opts.ComponentsCount; componentIndex++ {
-		logging.Logger.Info("Initiating per component thread %d-%d-%d", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex)
+		startupPause := computeStartupPause(componentIndex, parentContext.ParentContext.Opts.StartupDelay, parentContext.ParentContext.Opts.StartupJitter)
+
+		logging.Logger.Info("Initiating per component thread %d-%d-%d with pause %s", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex, startupPause)
 
 		perComponentCtx := &PerComponentContext{
 			PerComponentWG: perComponentWG,
 			ComponentIndex: componentIndex,
+			StartupPause:   startupPause,
 			ParentContext:  parentContext,
 			ComponentName:  fmt.Sprintf("%s-comp-%d", parentContext.ApplicationName, componentIndex),
 		}

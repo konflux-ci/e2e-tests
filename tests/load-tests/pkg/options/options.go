@@ -40,6 +40,8 @@ type Opts struct {
 	ReleasePolicy                   string
 	RunPrefix                       string
 	Stage                           bool
+	StartupDelay                    time.Duration
+	StartupJitter                   time.Duration
 	TestScenarioGitURL              string
 	TestScenarioPathInRepo          string
 	TestScenarioRevision            string
@@ -80,6 +82,14 @@ func (o *Opts) ProcessOptions() error {
 		o.ForkTarget = os.Getenv("MY_GITHUB_ORG")
 		if o.ForkTarget == "" {
 			return fmt.Errorf("Was not able to get fork target")
+		}
+	}
+
+	// If startup delay specified, make sure jitter is not bigger than 2 * delay
+	if o.StartupDelay != 0 {
+		if o.StartupJitter > o.StartupDelay * 2 {
+			fmt.Print("Warning: Lowering startup jitter as it was bigger than delay\n")
+			o.StartupJitter = o.StartupDelay * 2
 		}
 	}
 
