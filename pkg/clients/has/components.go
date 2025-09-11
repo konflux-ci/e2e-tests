@@ -147,6 +147,24 @@ func (h *HasController) GetAllGroupSnapshotsForApplication(applicationName, name
 	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
 }
 
+// GetAllComponentSnapshotsForApplication returns the gcomponentSnapshots for a given application in the namespace
+func (h *HasController) GetAllComponentSnapshotsForApplication(applicationName, namespace string) (*appservice.SnapshotList, error) {
+	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "component"}
+
+	list := &appservice.SnapshotList{}
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(snapshotLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing snapshots in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return list, nil
+	}
+
+	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
+}
+
 // GetAllComponentSnapshotsForApplicationAndComponent returns the component Snapshots for a given application and component in the namespace
 func (h *HasController) GetAllComponentSnapshotsForApplicationAndComponent(applicationName, namespace, componentName string) (*[]appservice.Snapshot, error) {
 	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "component", "appstudio.openshift.io/component": componentName}
