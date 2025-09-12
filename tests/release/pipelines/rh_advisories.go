@@ -63,12 +63,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
-			pyxisFieldEnvMap := map[string]string{
-				"key":  constants.PYXIS_STAGE_KEY_ENV,
-				"cert": constants.PYXIS_STAGE_CERT_ENV,
-			}
-			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
-
 			atlasFieldEnvMap := map[string]string{
 				"sso_account": constants.ATLAS_STAGE_ACCOUNT_ENV,
 				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
@@ -79,6 +73,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-retry-s3-staging-secret", atlasAWSFieldEnvMap)
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
