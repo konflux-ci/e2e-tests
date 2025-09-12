@@ -106,12 +106,12 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
 
 	deletedRepos := []quay.Repository{
-		{Name: "rhtap-demo/test-old"},
-		{Name: "multi-platform/test-old"},
+		{Name: "rhtap-demo/test-old", LastModified: int(time.Now().Unix()) - 25*3600},
+		{Name: "multi-platform/test-old", LastModified: int(time.Now().Unix()) - 25*3600},
 	}
 	preservedRepos := []quay.Repository{
-		{Name: "konflux-demo/test-new"},
-		{Name: "multi-platform/test-new"},
+		{Name: "konflux-demo/test-new", LastModified: int(time.Now().Unix()) - 21*3600},
+		{Name: "multi-platform/test-new", LastModified: int(time.Now().Unix()) - 15*3600},
 		{Name: "other/test-new"},
 		{Name: "other/test-old"},
 	}

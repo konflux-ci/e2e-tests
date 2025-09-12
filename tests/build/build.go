@@ -115,7 +115,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
 
-			Expect(gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)).To(Succeed())
+			err = gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+			}
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
@@ -1405,7 +1408,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
 				}
 				// Cleanup webhooks
-				Expect(gitClient.CleanupWebhooks(repositories[i], f.ClusterAppDomain)).To(Succeed())
+				err = gitClient.CleanupWebhooks(repositories[i], f.ClusterAppDomain)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
 			}
 		})
 
