@@ -115,7 +115,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
 
-			Expect(gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)).To(Succeed())
+			if gitProvider == git.GitLabProvider {
+				err = gitClient.CleanupWebhooks(strings.Split(helloWorldRepository, "/")[1], f.ClusterAppDomain)
+			} else {
+				err = gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)
+			}
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+			}
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
@@ -1404,8 +1411,17 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				if err != nil {
 					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
 				}
-				// Cleanup webhooks
-				Expect(gitClient.CleanupWebhooks(repositories[i], f.ClusterAppDomain)).To(Succeed())
+				// Cleanup parent repo webhooks
+				err = gitClient.CleanupWebhooks(componentDependenciesParentRepoName, f.ClusterAppDomain)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
+
+				// Cleanup child repo webhooks
+				err = gitClient.CleanupWebhooks(componentDependenciesChildRepoName, f.ClusterAppDomain)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
 			}
 		})
 

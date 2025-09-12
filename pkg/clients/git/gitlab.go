@@ -6,6 +6,7 @@ import (
 	gitlab2 "github.com/xanzy/go-gitlab"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 )
 
 type GitLabClient struct {
@@ -110,7 +111,8 @@ func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base str
 }
 
 func (g *GitLabClient) CleanupWebhooks(repository, clusterAppDomain string) error {
-	return g.DeleteWebhooks(repository, clusterAppDomain)
+	projectId := constants.GetGitLabProjectId(repository)
+	return g.DeleteWebhooks(projectId, clusterAppDomain)
 }
 
 func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {

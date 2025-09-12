@@ -134,7 +134,7 @@ func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error
 	// List project hooks
 	webhooks, _, err := gc.client.Projects.ListProjectHooks(projectID, nil)
 	if err != nil {
-		return fmt.Errorf("failed to list project hooks: %v", err)
+		return fmt.Errorf("failed to list project hooks for project id: %s with error: %v", projectID, err)
 	}
 
 	// Delete matching webhooks
