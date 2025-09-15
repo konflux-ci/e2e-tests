@@ -41,6 +41,11 @@ METRICS = [
     "validateReleaseCondition",
 ]
 
+# These metrics will be ignored if running on non-CI cluster
+METRICS_CI = [
+    "HandleUser",
+]
+
 # These metrics will be ignored if ITS was skipped
 METRICS_ITS = [
     "createIntegrationTestScenario",
@@ -118,6 +123,9 @@ def main():
 
     # Determine what metrics we need to skip based on options
     METRICS_to_skip = []
+    if options["Stage"]:
+        print("NOTE: Ignoring CI cluster related metrics because running against non-CI cluster")
+        METRICS_to_skip += METRICS_CI
     if options["TestScenarioGitURL"] == "":
         print("NOTE: Ignoring ITS related metrics because they were disabled at test run")
         METRICS_to_skip += METRICS_ITS
@@ -154,6 +162,7 @@ def main():
 
     stats = {}
     kpi_mean = 0.0
+    kpi_successes = sys.maxsize
     kpi_errors = 0
 
     for m in [m for m in METRICS if m not in METRICS_to_skip]:
@@ -173,6 +182,9 @@ def main():
             else:
                 kpi_mean += stats[m]["pass"]["duration"]["mean"]
 
+        if stats[m]["pass"]["duration"]["samples"] < kpi_successes:
+            kpi_successes = stats[m]["pass"]["duration"]["samples"]
+
         if stats[m]["pass"]["duration"]["samples"] == 0:
             if kpi_errors == 0:
                 kpi_errors += 1
@@ -187,12 +199,14 @@ def main():
 
     stats["KPI"] = {}
     stats["KPI"]["mean"] = kpi_mean
+    stats["KPI"]["successes"] = kpi_successes
     stats["KPI"]["errors"] = kpi_errors
 
     #print("Final stats:")
     #print(json.dumps(stats, indent=4))
 
     print(f"KPI mean: {stats['KPI']['mean']}")
+    print(f"KPI successes: {stats['KPI']['successes']}")
     print(f"KPI errors: {stats['KPI']['errors']}")
 
     with open(output_file, "w") as fp:
