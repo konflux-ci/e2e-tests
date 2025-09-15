@@ -184,10 +184,17 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			}
 			_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
 			if err != nil {
-				return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+				// Handle race condition - another parallel test may have created it between our Get() and Create()
+				if k8sErrors.IsAlreadyExists(err) {
+					// This is fine - the rolebinding already exists, which is what we wanted
+					fmt.Printf("RoleBinding %s already exists in namespace %s (created by parallel test)\n",
+						constants.DefaultPipelineServiceAccountRoleBinding, name)
+				} else {
+					return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+				}
 			}
 		} else {
-			return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+			return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
 		}
 	}
 	// Create a rolebinding to allow default konflux-ci user
@@ -212,10 +219,17 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 				}
 				_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
 				if err != nil {
-					return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+					if k8sErrors.IsAlreadyExists(err) {
+						// This is fine - the rolebinding already exists, which is what we wanted
+						fmt.Printf("RoleBinding %s already exists in namespace %s (created by parallel test)\n",
+							constants.DefaultKonfluxAdminRoleBindingName, name)
+					} else {
+
+						return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultKonfluxAdminRoleBindingName, err)
+					}
 				}
 			} else {
-				return nil, fmt.Errorf("error when getting the '%s' roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+				return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultKonfluxAdminRoleBindingName, err)
 			}
 		}
 	}

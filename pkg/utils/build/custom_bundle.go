@@ -21,7 +21,7 @@ import (
 
 const (
 	testTaskName = "buildah-min"
-	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.4"
+	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.5"
 )
 
 func GetBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {

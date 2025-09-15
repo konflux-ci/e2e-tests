@@ -144,8 +144,12 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 			// Create an IntegrationTestScenario for the App
 			It("creates an IntegrationTestScenario for the app", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
 				its := appSpec.ComponentSpec.IntegrationTestScenario
-				integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, "", []string{})
-				Expect(err).ShouldNot(HaveOccurred())
+				// Use Eventually to handle race condition where admission webhook hasn't indexed the application yet
+				Eventually(func() error {
+					var err error
+					integrationTestScenario, err = fw.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", appSpec.ApplicationName, userNamespace, its.GitURL, its.GitRevision, its.TestPath, "", []string{})
+					return err
+				}, time.Minute*2, time.Second*5).Should(Succeed())
 			})
 
 			It("creates new branch for the build", Label(devEnvTestLabel, upstreamKonfluxTestLabel), func() {
