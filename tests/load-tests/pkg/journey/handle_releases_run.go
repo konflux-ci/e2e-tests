@@ -148,6 +148,10 @@ func HandleReleaseRun(ctx *types.PerComponentContext) error {
 	var err error
 
 	iface, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validateReleaseCreation,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -163,6 +167,10 @@ func HandleReleaseRun(ctx *types.PerComponentContext) error {
 	}
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validateReleasePipelineRunCreation,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -173,6 +181,10 @@ func HandleReleaseRun(ctx *types.PerComponentContext) error {
 	}
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validateReleasePipelineRunCondition,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -183,6 +195,10 @@ func HandleReleaseRun(ctx *types.PerComponentContext) error {
 	}
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validateReleaseCondition,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,

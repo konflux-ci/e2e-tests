@@ -11,8 +11,6 @@ import "os"
 import "encoding/csv"
 import "sync"
 
-import "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
-
 var measurementsQueue chan MeasurementEntry // channel to send measurements to
 var errorsQueue chan ErrorEntry             // chanel to send failures to
 
@@ -170,12 +168,8 @@ func errorsWriter() {
 // Measure duration of a given function run with given parameters and return what function returned
 // This only returns first (data) and last (error) returned value. Maybe this
 // can be generalized completely, but it is good enough for our needs.
-func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
+func Measure(perUserId, perAppId, perCompId, repeatsCounter int, fn interface{}, params ...interface{}) (interface{}, error) {
 	funcValue := reflect.ValueOf(fn)
-	perUserId := -1
-	perAppId := -1
-	perCompId := -1
-	repeatsCounter := -1
 
 	// Construct arguments for the function call
 	numParams := len(params)
@@ -191,24 +185,6 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	paramsStorable := make(map[string]string)
 	for i := 0; i < numParams; i++ {
 		x := 1
-
-		// If the parameter we are processing now is per user/app/comp
-		// context, extract additional metadata about this function call.
-		if casted, ok := params[i].(*types.MainContext); ok {
-			perUserId = casted.ThreadIndex
-			repeatsCounter = casted.JourneyRepeatsCounter
-		}
-		if casted, ok := params[i].(*types.PerApplicationContext); ok {
-			perUserId = casted.ParentContext.ThreadIndex
-			perAppId = casted.ApplicationIndex
-			repeatsCounter = casted.ParentContext.JourneyRepeatsCounter
-		}
-		if casted, ok := params[i].(*types.PerComponentContext); ok {
-			perUserId = casted.ParentContext.ParentContext.ThreadIndex
-			perAppId = casted.ParentContext.ApplicationIndex
-			perCompId = casted.ComponentIndex
-			repeatsCounter = casted.ParentContext.ParentContext.JourneyRepeatsCounter
-		}
 
 		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
 		value := fmt.Sprintf("%+v", reflect.ValueOf(params[i]))
