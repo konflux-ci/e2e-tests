@@ -120,6 +120,10 @@ func HandlePipelineRun(ctx *types.PerComponentContext) error {
 	logging.Logger.Debug("Waiting for build pipeline run for component %s in namespace %s to be created", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validatePipelineRunCreation,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -133,6 +137,10 @@ func HandlePipelineRun(ctx *types.PerComponentContext) error {
 	logging.Logger.Debug("Waiting for build pipeline run for component %s in namespace %s to finish", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validatePipelineRunCondition,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -146,6 +154,10 @@ func HandlePipelineRun(ctx *types.PerComponentContext) error {
 	logging.Logger.Debug("Waiting for build pipeline run for component %s in namespace %s to be signed", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	_, err = logging.Measure(
+		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ApplicationIndex,
+		ctx.ComponentIndex,
+		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
 		validatePipelineRunSignature,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,

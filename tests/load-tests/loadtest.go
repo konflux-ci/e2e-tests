@@ -119,13 +119,27 @@ func main() {
 	logging.MeasurementsStart(opts.OutputDir)
 
 	// Start given number of `perUserThread()` threads using `journey.Setup()` and wait for them to finish
-	_, err = logging.Measure(journey.Setup, perUserThread, &opts)
+	_, err = logging.Measure(
+		-1,
+		-1,
+		-1,
+		-1,
+		journey.Setup,
+		perUserThread,
+		&opts,
+	)
 	if err != nil {
 		logging.Logger.Fatal("Threads setup failed: %v", err)
 	}
 
 	// Cleanup resources
-	_, err = logging.Measure(journey.Purge)
+	_, err = logging.Measure(
+		-1,
+		-1,
+		-1,
+		-1,
+		journey.Purge,
+	)
 	if err != nil {
 		logging.Logger.Error("Purging failed: %v", err)
 	}
@@ -222,7 +236,15 @@ func perUserThread(threadCtx *types.MainContext) {
 	for threadCtx.JourneyRepeatsCounter = 1; threadCtx.JourneyRepeatsCounter <= threadCtx.Opts.JourneyRepeats; threadCtx.JourneyRepeatsCounter++ {
 
 		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
-		_, err = logging.Measure(journey.PerApplicationSetup, perApplicationThread, threadCtx)
+		_, err = logging.Measure(
+			threadCtx.ThreadIndex,
+			-1,
+			-1,
+			threadCtx.JourneyRepeatsCounter,
+			journey.PerApplicationSetup,
+			perApplicationThread,
+			threadCtx,
+		)
 		if err != nil {
 			logging.Logger.Fatal("Per application threads setup failed: %v", err)
 		}
@@ -236,7 +258,14 @@ func perUserThread(threadCtx *types.MainContext) {
 	}
 
 	// Collect info about PVCs
-	_, err = logging.Measure(journey.HandlePersistentVolumeClaim, threadCtx)
+	_, err = logging.Measure(
+		threadCtx.ThreadIndex,
+		-1,
+		-1,
+		threadCtx.JourneyRepeatsCounter,
+		journey.HandlePersistentVolumeClaim,
+		threadCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
@@ -248,7 +277,14 @@ func perUserThread(threadCtx *types.MainContext) {
 func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 	defer perApplicationCtx.PerApplicationWG.Done()
 	defer func() {
-		_, err := logging.Measure(journey.HandlePerApplicationCollection, perApplicationCtx)
+		_, err := logging.Measure(
+			perApplicationCtx.ParentContext.ThreadIndex,
+			perApplicationCtx.ApplicationIndex,
+			-1,
+			perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+			journey.HandlePerApplicationCollection,
+			perApplicationCtx,
+		)
 		if err != nil {
 			logging.Logger.Error("Per application thread failed: %v", err)
 		}
@@ -259,35 +295,71 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 	var err error
 
 	// Create framework so we do not have to share framework with parent thread
-	_, err = logging.Measure(journey.HandleNewFrameworkForApp, perApplicationCtx)
+	_, err = logging.Measure(
+		perApplicationCtx.ParentContext.ThreadIndex,
+		perApplicationCtx.ApplicationIndex,
+		-1,
+		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		journey.HandleNewFrameworkForApp,
+		perApplicationCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Create application
-	_, err = logging.Measure(journey.HandleApplication, perApplicationCtx)
+	_, err = logging.Measure(
+		perApplicationCtx.ParentContext.ThreadIndex,
+		perApplicationCtx.ApplicationIndex,
+		-1,
+		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		journey.HandleApplication,
+		perApplicationCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Create integration test scenario
-	_, err = logging.Measure(journey.HandleIntegrationTestScenario, perApplicationCtx)
+	_, err = logging.Measure(
+		perApplicationCtx.ParentContext.ThreadIndex,
+		perApplicationCtx.ApplicationIndex,
+		-1,
+		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		journey.HandleIntegrationTestScenario,
+		perApplicationCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Create release plan and release plan admission
-	_, err = logging.Measure(journey.HandleReleaseSetup, perApplicationCtx)
+	_, err = logging.Measure(
+		perApplicationCtx.ParentContext.ThreadIndex,
+		perApplicationCtx.ApplicationIndex,
+		-1,
+		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		journey.HandleReleaseSetup,
+		perApplicationCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per application thread failed: %v", err)
 		return
 	}
 
 	// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
-	_, err = logging.Measure(journey.PerComponentSetup, perComponentThread, perApplicationCtx)
+	_, err = logging.Measure(
+		perApplicationCtx.ParentContext.ThreadIndex,
+		perApplicationCtx.ApplicationIndex,
+		-1,
+		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		journey.PerComponentSetup,
+		perComponentThread,
+		perApplicationCtx,
+	)
 	if err != nil {
 		logging.Logger.Fatal("Per component threads setup failed: %v", err)
 	}
@@ -298,7 +370,14 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 func perComponentThread(perComponentCtx *types.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
 	defer func() {
-		_, err := logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)
+		_, err := logging.Measure(
+			perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+			perComponentCtx.ParentContext.ApplicationIndex,
+			perComponentCtx.ComponentIndex,
+			perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			journey.HandlePerComponentCollection,
+			perComponentCtx,
+		)
 		if err != nil {
 			logging.Logger.Error("Per component thread failed: %v", err)
 		}
@@ -309,35 +388,70 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 	var err error
 
 	// Create framework so we do not have to share framework with parent thread
-	_, err = logging.Measure(journey.HandleNewFrameworkForComp, perComponentCtx)
+	_, err = logging.Measure(
+		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+		perComponentCtx.ParentContext.ApplicationIndex,
+		perComponentCtx.ComponentIndex,
+		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		journey.HandleNewFrameworkForComp,
+		perComponentCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Create component
-	_, err = logging.Measure(journey.HandleComponent, perComponentCtx)
+	_, err = logging.Measure(
+		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+		perComponentCtx.ParentContext.ApplicationIndex,
+		perComponentCtx.ComponentIndex,
+		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		journey.HandleComponent,
+		perComponentCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Wait for build pipiline run
-	_, err = logging.Measure(journey.HandlePipelineRun, perComponentCtx)
+	_, err = logging.Measure(
+		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+		perComponentCtx.ParentContext.ApplicationIndex,
+		perComponentCtx.ComponentIndex,
+		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		journey.HandlePipelineRun,
+		perComponentCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Wait for test pipiline run
-	_, err = logging.Measure(journey.HandleTest, perComponentCtx)
+	_, err = logging.Measure(
+		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+		perComponentCtx.ParentContext.ApplicationIndex,
+		perComponentCtx.ComponentIndex,
+		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		journey.HandleTest,
+		perComponentCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
 	}
 
 	// Wait for release to finish
-	_, err = logging.Measure(journey.HandleReleaseRun, perComponentCtx)
+	_, err = logging.Measure(
+		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
+		perComponentCtx.ParentContext.ApplicationIndex,
+		perComponentCtx.ComponentIndex,
+		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		journey.HandleReleaseRun,
+		perComponentCtx,
+	)
 	if err != nil {
 		logging.Logger.Error("Per component thread failed: %v", err)
 		return
