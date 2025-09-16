@@ -321,7 +321,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(Label(devEnvTestLabel), func() {
 				})
 			})
 
-			When("push pipelinerun is retriggered", Label(upstreamKonfluxTestLabel), func() {
+			When("push pipelinerun is retriggered", func() {
 				It("should eventually succeed", func() {
 					Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, userNamespace)).To(Succeed())
 					// Check the pipelinerun is triggered
