@@ -5,6 +5,7 @@ import (
 	"time"
 
 	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
@@ -31,7 +32,7 @@ func createIntegrationTestScenario(f *framework.Framework, namespace, name, appN
 	return nil
 }
 
-func HandleIntegrationTestScenario(ctx *PerApplicationContext) error {
+func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
 	if ctx.ParentContext.Opts.TestScenarioGitURL == "" {
 		logging.Logger.Debug("Integration Test Scenario GIT not provided, not creating it")
 		return nil

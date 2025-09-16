@@ -5,6 +5,7 @@ import "strings"
 import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -95,7 +96,7 @@ func validateTestPipelineRunCondition(f *framework.Framework, namespace, itsName
 	return err
 }
 
-func HandleTest(ctx *PerComponentContext) error {
+func HandleTest(ctx *types.PerComponentContext) error {
 	if !ctx.ParentContext.ParentContext.Opts.WaitPipelines || !ctx.ParentContext.ParentContext.Opts.WaitIntegrationTestsPipelines {
 		return nil
 	}

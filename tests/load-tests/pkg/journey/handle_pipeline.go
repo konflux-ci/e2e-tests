@@ -6,6 +6,7 @@ import (
 	"time"
 
 	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 
@@ -109,7 +110,7 @@ func validatePipelineRunSignature(f *framework.Framework, namespace, appName, co
 	return err
 }
 
-func HandlePipelineRun(ctx *PerComponentContext) error {
+func HandlePipelineRun(ctx *types.PerComponentContext) error {
 	if !ctx.ParentContext.ParentContext.Opts.WaitPipelines {
 		return nil
 	}

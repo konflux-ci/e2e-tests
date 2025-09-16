@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 
 	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+
+	k8s_api_errors "k8s.io/apimachinery/pkg/api/errors"
 )
-
-import k8s_api_errors "k8s.io/apimachinery/pkg/api/errors"
-
 
 func getDirName(baseDir, namespace, iteration string) string {
 	return filepath.Join(baseDir, "collected-data", namespace, iteration) + "/"
@@ -283,7 +283,7 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 	return nil
 }
 
-func HandlePerApplicationCollection(ctx *PerApplicationContext) error {
+func HandlePerApplicationCollection(ctx *types.PerApplicationContext) error {
 	if ctx.ApplicationName == "" {
 		logging.Logger.Debug("Application name not populated, so skipping per-application collections in %s", ctx.ParentContext.Namespace)
 		return nil
@@ -311,7 +311,7 @@ func HandlePerApplicationCollection(ctx *PerApplicationContext) error {
 	return nil
 }
 
-func HandlePerComponentCollection(ctx *PerComponentContext) error {
+func HandlePerComponentCollection(ctx *types.PerComponentContext) error {
 	if ctx.ComponentName == "" {
 		logging.Logger.Debug("Component name not populated, so skipping per-component collections in %s", ctx.ParentContext.ParentContext.Namespace)
 		return nil

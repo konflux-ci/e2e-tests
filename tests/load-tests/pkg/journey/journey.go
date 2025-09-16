@@ -8,30 +8,15 @@ import "math/rand"
 import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
-var MainContexts []*MainContext
-
-// Struct to hold user journey thread data
-type MainContext struct {
-	ThreadsWG              *sync.WaitGroup
-	ThreadIndex            int
-	StartupPause           time.Duration
-	JourneyRepeatsCounter  int
-	Opts                   *options.Opts
-	StageUsers             *[]loadtestutils.User
-	Framework              *framework.Framework
-	Username               string
-	Namespace              string
-	ComponentRepoUrl       string // overrides same value from Opts, needed when templating repos
-	PerApplicationContexts []*PerApplicationContext
-}
+var MainContexts []*types.MainContext
 
 // Just to create user
-func initUserThread(threadCtx *MainContext) {
+func initUserThread(threadCtx *types.MainContext) {
 	defer threadCtx.ThreadsWG.Done()
 
 	var err error
@@ -59,7 +44,7 @@ func computeStartupPause(index int, delay, jitter time.Duration) time.Duration {
 
 // Start all the user journey threads
 // TODO split this to two functions and get PurgeOnly code out
-func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
+func Setup(fn func(*types.MainContext), opts *options.Opts) (string, error) {
 	threadsWG := &sync.WaitGroup{}
 	threadsWG.Add(opts.Concurrency)
 
@@ -78,7 +63,7 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 
 		logging.Logger.Info("Initiating per user thread %d with pause %v", threadIndex, startupPause)
 
-		threadCtx := &MainContext{
+		threadCtx := &types.MainContext{
 			ThreadsWG:        threadsWG,
 			ThreadIndex:      threadIndex,
 			StartupPause:     startupPause,
@@ -124,20 +109,8 @@ func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
 	return "", nil
 }
 
-// Struct to hold data for thread to process each application
-type PerApplicationContext struct {
-	PerApplicationWG            *sync.WaitGroup
-	ApplicationIndex            int
-	StartupPause                time.Duration
-	Framework                   *framework.Framework
-	ParentContext               *MainContext
-	ApplicationName             string
-	IntegrationTestScenarioName string
-	PerComponentContexts        []*PerComponentContext
-}
-
 // Start all the threads to process all applications per user
-func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainContext) (string, error) {
+func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *types.MainContext) (string, error) {
 	perApplicationWG := &sync.WaitGroup{}
 	perApplicationWG.Add(parentContext.Opts.ApplicationsCount)
 
@@ -146,7 +119,7 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 
 		logging.Logger.Info("Initiating per application thread %d-%d with pause %v", parentContext.ThreadIndex, applicationIndex, startupPause)
 
-		perApplicationCtx := &PerApplicationContext{
+		perApplicationCtx := &types.PerApplicationContext{
 			PerApplicationWG: perApplicationWG,
 			ApplicationIndex: applicationIndex,
 			StartupPause:     startupPause,
@@ -164,21 +137,8 @@ func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainCon
 	return "", nil
 }
 
-// Struct to hold data for thread to process each component
-type PerComponentContext struct {
-	PerComponentWG     *sync.WaitGroup
-	ComponentIndex     int
-	StartupPause       time.Duration
-	Framework          *framework.Framework
-	ParentContext      *PerApplicationContext
-	ComponentName      string
-	SnapshotName       string
-	MergeRequestNumber int
-	ReleaseName        string
-}
-
 // Start all the threads to process all components per application
-func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicationContext) (string, error) {
+func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types.PerApplicationContext) (string, error) {
 	perComponentWG := &sync.WaitGroup{}
 	perComponentWG.Add(parentContext.ParentContext.Opts.ComponentsCount)
 
@@ -187,7 +147,7 @@ func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicat
 
 		logging.Logger.Info("Initiating per component thread %d-%d-%d with pause %s", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex, startupPause)
 
-		perComponentCtx := &PerComponentContext{
+		perComponentCtx := &types.PerComponentContext{
 			PerComponentWG: perComponentWG,
 			ComponentIndex: componentIndex,
 			StartupPause:   startupPause,

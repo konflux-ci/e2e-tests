@@ -4,6 +4,7 @@ import "fmt"
 import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import meta "k8s.io/apimachinery/pkg/api/meta"
@@ -11,7 +12,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 import releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
 import tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
-
 
 // Create ReleasePlan CR
 func createReleasePlan(f *framework.Framework, namespace, appName string) (string, error) {
@@ -129,7 +129,7 @@ func validateReleasePlanAdmission(f *framework.Framework, namespace, name string
 }
 
 
-func HandleReleaseSetup(ctx *PerApplicationContext) error {
+func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 	if ctx.ParentContext.Opts.ReleasePolicy == "" {
 		logging.Logger.Info("Skipping setting up releases because policy was not provided")
 		return nil

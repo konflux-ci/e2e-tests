@@ -11,11 +11,13 @@ import "os"
 import "encoding/csv"
 import "sync"
 
+import "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
+
 var measurementsQueue chan MeasurementEntry // channel to send measurements to
-var errorsQueue chan ErrorEntry // chanel to send failures to
+var errorsQueue chan ErrorEntry             // chanel to send failures to
 
 var measurementsOutput string // path to CSV where to save measurements
-var errorsOutput string // path to CSV where to save measurements
+var errorsOutput string       // path to CSV where to save measurements
 
 var writerWaitGroup sync.WaitGroup
 
@@ -46,7 +48,6 @@ type ErrorEntry struct {
 func (e *ErrorEntry) GetSliceOfStrings() []string {
 	return []string{e.Timestamp.Format(time.RFC3339Nano), fmt.Sprintf("%d", e.Code), e.Message}
 }
-
 
 // Initialize channels and start functions that are processing records
 func MeasurementsStart(directory string) {
@@ -183,6 +184,9 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	for i := 0; i < numParams; i++ {
 		x := 1
 		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
+		if casted, ok := params[i].(*types.MainContext); ok {
+			fmt.Printf(">>> %s --- %s --- %v \n", runtime.FuncForPC(funcValue.Pointer()).Name(), key, casted.ThreadIndex)
+		}
 		value := fmt.Sprintf("%+v", reflect.ValueOf(params[i]))
 		for {
 			keyFull := key + fmt.Sprint(x)

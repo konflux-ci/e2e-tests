@@ -6,6 +6,7 @@ import "time"
 import journey "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/journey"
 import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import cobra "github.com/spf13/cobra"
 import klog "k8s.io/klog/v2"
@@ -134,7 +135,7 @@ func main() {
 }
 
 // Single user journey
-func perUserThread(threadCtx *journey.MainContext) {
+func perUserThread(threadCtx *types.MainContext) {
 	defer threadCtx.ThreadsWG.Done()
 
 	time.Sleep(threadCtx.StartupPause)
@@ -244,7 +245,7 @@ func perUserThread(threadCtx *journey.MainContext) {
 }
 
 // Single application journey (there can be multiple parallel apps per user)
-func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
+func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 	defer perApplicationCtx.PerApplicationWG.Done()
 	defer func() {
 		_, err := logging.Measure(journey.HandlePerApplicationCollection, perApplicationCtx)
@@ -294,7 +295,7 @@ func perApplicationThread(perApplicationCtx *journey.PerApplicationContext) {
 }
 
 // Single component journey (there can be multiple parallel comps per app)
-func perComponentThread(perComponentCtx *journey.PerComponentContext) {
+func perComponentThread(perComponentCtx *types.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
 	defer func() {
 		_, err := logging.Measure(journey.HandlePerComponentCollection, perComponentCtx)

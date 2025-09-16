@@ -4,6 +4,7 @@ import "context"
 import "fmt"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +26,7 @@ func collectPersistentVolumeClaims(f *framework.Framework, namespace string) err
 	return nil
 }
 
-func HandlePersistentVolumeClaim(ctx *MainContext) error {
+func HandlePersistentVolumeClaim(ctx *types.MainContext) error {
 	if !ctx.Opts.WaitPipelines {
 		return nil // if build pipeline runs are not done yet, it does not make sense to collect PV timings
 	}
