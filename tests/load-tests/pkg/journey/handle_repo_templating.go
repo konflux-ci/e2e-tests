@@ -6,6 +6,7 @@ import "regexp"
 import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import github "github.com/google/go-github/v44/github"
@@ -230,7 +231,7 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 	return shaMap, nil
 }
 
-func HandleRepoForking(ctx *MainContext) error {
+func HandleRepoForking(ctx *types.MainContext) error {
 	var suffix string
 	if ctx.Opts.Stage {
 		suffix = ctx.Opts.RunPrefix + "-" + ctx.Namespace

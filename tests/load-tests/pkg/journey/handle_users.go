@@ -5,6 +5,7 @@ import "time"
 import "strings"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
 
 import "github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -35,7 +36,7 @@ func provisionFramework(stageUsers []loadtestutils.User, threadIndex int, userna
 	return f, f.UserNamespace, nil
 }
 
-func HandleUser(ctx *MainContext) error {
+func HandleUser(ctx *types.MainContext) error {
 	var err error
 
 	if ctx.Opts.Stage {
@@ -57,7 +58,7 @@ func HandleUser(ctx *MainContext) error {
 	return nil
 }
 
-func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
+func HandleNewFrameworkForApp(ctx *types.PerApplicationContext) error {
 	var err error
 
 	ctx.Framework, _, err = provisionFramework(
@@ -73,7 +74,7 @@ func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
 	return nil
 }
 
-func HandleNewFrameworkForComp(ctx *PerComponentContext) error {
+func HandleNewFrameworkForComp(ctx *types.PerComponentContext) error {
 	var err error
 
 	ctx.Framework, _, err = provisionFramework(

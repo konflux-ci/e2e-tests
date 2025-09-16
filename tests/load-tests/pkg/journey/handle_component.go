@@ -9,6 +9,7 @@ import (
 	"time"
 
 	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 	constants "github.com/konflux-ci/e2e-tests/pkg/constants"
 
@@ -316,7 +317,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	return nil
 }
 
-func HandleComponent(ctx *PerComponentContext) error {
+func HandleComponent(ctx *types.PerComponentContext) error {
 	var err error
 
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)

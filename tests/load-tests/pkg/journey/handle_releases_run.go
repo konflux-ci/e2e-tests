@@ -5,11 +5,11 @@ import "strings"
 import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 import pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-
 
 // Wait for Release CR to be created
 func validateReleaseCreation(f *framework.Framework, namespace, snapshotName string) (string, error) {
@@ -137,7 +137,7 @@ func validateReleaseCondition(f *framework.Framework, namespace, releaseName str
 }
 
 
-func HandleReleaseRun(ctx *PerComponentContext) error {
+func HandleReleaseRun(ctx *types.PerComponentContext) error {
 	if ctx.ParentContext.ParentContext.Opts.ReleasePolicy == "" || !ctx.ParentContext.ParentContext.Opts.WaitRelease {
 		logging.Logger.Info("Skipping waiting for releases because policy was not provided or waiting was disabled")
 		return nil
