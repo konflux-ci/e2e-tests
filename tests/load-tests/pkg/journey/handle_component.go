@@ -324,10 +324,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 
 	// Create component
 	_, err = logging.Measure(
-		ctx.ParentContext.ParentContext.ThreadIndex,
-		ctx.ParentContext.ApplicationIndex,
-		ctx.ComponentIndex,
-		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		createComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -346,10 +343,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 
 	// Validate component build service account created
 	_, err = logging.Measure(
-		ctx.ParentContext.ParentContext.ThreadIndex,
-		ctx.ParentContext.ApplicationIndex,
-		ctx.ComponentIndex,
-		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		validateComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -362,10 +356,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 	// Configure imagePullSecrets needed for component build task images
 	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
 		_, err = logging.Measure(
-			ctx.ParentContext.ParentContext.ThreadIndex,
-			ctx.ParentContext.ApplicationIndex,
-			ctx.ComponentIndex,
-			ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			ctx,
 			configurePipelineImagePullSecrets,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,
@@ -379,10 +370,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 
 	var pullIface interface{}
 	pullIface, err = logging.Measure(
-		ctx.ParentContext.ParentContext.ThreadIndex,
-		ctx.ParentContext.ApplicationIndex,
-		ctx.ComponentIndex,
-		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		getPaCPullNumber,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -415,10 +403,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 
 		// Skip what we do not care about, merge PR, graft pipeline yamls
 		_, err = logging.Measure(
-			ctx.ParentContext.ParentContext.ThreadIndex,
-			ctx.ParentContext.ApplicationIndex,
-			ctx.ComponentIndex,
-			ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			ctx,
 			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,

@@ -41,10 +41,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 	logging.Logger.Debug("Creating application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	_, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		createApplication,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
@@ -56,10 +53,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 	}
 
 	_, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		validateApplication,
 		ctx.Framework,
 		ctx.ApplicationName,

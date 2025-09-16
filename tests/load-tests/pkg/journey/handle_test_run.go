@@ -105,10 +105,7 @@ func HandleTest(ctx *types.PerComponentContext) error {
 	var ok bool
 
 	result1, err1 := logging.Measure(
-		ctx.ParentContext.ParentContext.ThreadIndex,
-		ctx.ParentContext.ApplicationIndex,
-		ctx.ComponentIndex,
-		ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		validateSnapshotCreation,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -128,10 +125,7 @@ func HandleTest(ctx *types.PerComponentContext) error {
 		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to be created", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 		_, err = logging.Measure(
-			ctx.ParentContext.ParentContext.ThreadIndex,
-			ctx.ParentContext.ApplicationIndex,
-			ctx.ComponentIndex,
-			ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			ctx,
 			validateTestPipelineRunCreation,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,
@@ -145,10 +139,7 @@ func HandleTest(ctx *types.PerComponentContext) error {
 		logging.Logger.Debug("Waiting for test pipeline run for component %s in namespace %s to finish", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 		_, err = logging.Measure(
-			ctx.ParentContext.ParentContext.ThreadIndex,
-			ctx.ParentContext.ApplicationIndex,
-			ctx.ComponentIndex,
-			ctx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			ctx,
 			validateTestPipelineRunCondition,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,

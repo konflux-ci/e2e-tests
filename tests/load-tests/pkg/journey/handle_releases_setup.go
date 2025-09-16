@@ -142,10 +142,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 	var err error
 
 	iface, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		createReleasePlan,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
@@ -161,10 +158,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 	}
 
 	iface, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		createReleasePlanAdmission,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
@@ -185,10 +179,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 	}
 
 	iface, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		validateReleasePlan,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
@@ -199,10 +190,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 	}
 
 	iface, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		validateReleasePlanAdmission,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,

@@ -120,10 +120,7 @@ func main() {
 
 	// Start given number of `perUserThread()` threads using `journey.Setup()` and wait for them to finish
 	_, err = logging.Measure(
-		-1,
-		-1,
-		-1,
-		-1,
+		nil,
 		journey.Setup,
 		perUserThread,
 		&opts,
@@ -134,10 +131,7 @@ func main() {
 
 	// Cleanup resources
 	_, err = logging.Measure(
-		-1,
-		-1,
-		-1,
-		-1,
+		nil,
 		journey.Purge,
 	)
 	if err != nil {
@@ -237,10 +231,7 @@ func perUserThread(threadCtx *types.MainContext) {
 
 		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
 		_, err = logging.Measure(
-			threadCtx.ThreadIndex,
-			-1,
-			-1,
-			threadCtx.JourneyRepeatsCounter,
+			threadCtx,
 			journey.PerApplicationSetup,
 			perApplicationThread,
 			threadCtx,
@@ -259,10 +250,7 @@ func perUserThread(threadCtx *types.MainContext) {
 
 	// Collect info about PVCs
 	_, err = logging.Measure(
-		threadCtx.ThreadIndex,
-		-1,
-		-1,
-		threadCtx.JourneyRepeatsCounter,
+		threadCtx,
 		journey.HandlePersistentVolumeClaim,
 		threadCtx,
 	)
@@ -278,10 +266,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 	defer perApplicationCtx.PerApplicationWG.Done()
 	defer func() {
 		_, err := logging.Measure(
-			perApplicationCtx.ParentContext.ThreadIndex,
-			perApplicationCtx.ApplicationIndex,
-			-1,
-			perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+			perApplicationCtx,
 			journey.HandlePerApplicationCollection,
 			perApplicationCtx,
 		)
@@ -296,10 +281,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 
 	// Create framework so we do not have to share framework with parent thread
 	_, err = logging.Measure(
-		perApplicationCtx.ParentContext.ThreadIndex,
-		perApplicationCtx.ApplicationIndex,
-		-1,
-		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		perApplicationCtx,
 		journey.HandleNewFrameworkForApp,
 		perApplicationCtx,
 	)
@@ -310,10 +292,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 
 	// Create application
 	_, err = logging.Measure(
-		perApplicationCtx.ParentContext.ThreadIndex,
-		perApplicationCtx.ApplicationIndex,
-		-1,
-		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		perApplicationCtx,
 		journey.HandleApplication,
 		perApplicationCtx,
 	)
@@ -324,10 +303,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 
 	// Create integration test scenario
 	_, err = logging.Measure(
-		perApplicationCtx.ParentContext.ThreadIndex,
-		perApplicationCtx.ApplicationIndex,
-		-1,
-		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		perApplicationCtx,
 		journey.HandleIntegrationTestScenario,
 		perApplicationCtx,
 	)
@@ -338,10 +314,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 
 	// Create release plan and release plan admission
 	_, err = logging.Measure(
-		perApplicationCtx.ParentContext.ThreadIndex,
-		perApplicationCtx.ApplicationIndex,
-		-1,
-		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		perApplicationCtx,
 		journey.HandleReleaseSetup,
 		perApplicationCtx,
 	)
@@ -352,10 +325,7 @@ func perApplicationThread(perApplicationCtx *types.PerApplicationContext) {
 
 	// Start given number of `perComponentThread()` threads using `journey.PerComponentSetup()` and wait for them to finish
 	_, err = logging.Measure(
-		perApplicationCtx.ParentContext.ThreadIndex,
-		perApplicationCtx.ApplicationIndex,
-		-1,
-		perApplicationCtx.ParentContext.JourneyRepeatsCounter,
+		perApplicationCtx,
 		journey.PerComponentSetup,
 		perComponentThread,
 		perApplicationCtx,
@@ -371,10 +341,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 	defer perComponentCtx.PerComponentWG.Done()
 	defer func() {
 		_, err := logging.Measure(
-			perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-			perComponentCtx.ParentContext.ApplicationIndex,
-			perComponentCtx.ComponentIndex,
-			perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+			perComponentCtx,
 			journey.HandlePerComponentCollection,
 			perComponentCtx,
 		)
@@ -389,10 +356,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 
 	// Create framework so we do not have to share framework with parent thread
 	_, err = logging.Measure(
-		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-		perComponentCtx.ParentContext.ApplicationIndex,
-		perComponentCtx.ComponentIndex,
-		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		perComponentCtx,
 		journey.HandleNewFrameworkForComp,
 		perComponentCtx,
 	)
@@ -403,10 +367,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 
 	// Create component
 	_, err = logging.Measure(
-		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-		perComponentCtx.ParentContext.ApplicationIndex,
-		perComponentCtx.ComponentIndex,
-		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		perComponentCtx,
 		journey.HandleComponent,
 		perComponentCtx,
 	)
@@ -417,10 +378,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 
 	// Wait for build pipiline run
 	_, err = logging.Measure(
-		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-		perComponentCtx.ParentContext.ApplicationIndex,
-		perComponentCtx.ComponentIndex,
-		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		perComponentCtx,
 		journey.HandlePipelineRun,
 		perComponentCtx,
 	)
@@ -431,10 +389,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 
 	// Wait for test pipiline run
 	_, err = logging.Measure(
-		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-		perComponentCtx.ParentContext.ApplicationIndex,
-		perComponentCtx.ComponentIndex,
-		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		perComponentCtx,
 		journey.HandleTest,
 		perComponentCtx,
 	)
@@ -445,10 +400,7 @@ func perComponentThread(perComponentCtx *types.PerComponentContext) {
 
 	// Wait for release to finish
 	_, err = logging.Measure(
-		perComponentCtx.ParentContext.ParentContext.ThreadIndex,
-		perComponentCtx.ParentContext.ApplicationIndex,
-		perComponentCtx.ComponentIndex,
-		perComponentCtx.ParentContext.ParentContext.JourneyRepeatsCounter,
+		perComponentCtx,
 		journey.HandleReleaseRun,
 		perComponentCtx,
 	)
