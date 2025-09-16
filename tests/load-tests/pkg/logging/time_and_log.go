@@ -25,16 +25,20 @@ var batchSize int // when we accumulate this many of records, we dump them to CS
 
 // Represents the data about measurement we want to store to CSV
 type MeasurementEntry struct {
-	Timestamp  time.Time
-	Metric     string
-	Duration   time.Duration
-	Parameters string
-	Error      error
+	Timestamp      time.Time
+	PerUserId      int
+	PerAppId       int
+	PerCompId      int
+	RepeatsCounter int
+	Metric         string
+	Duration       time.Duration
+	Parameters     string
+	Error          error
 }
 
 // Helper function to convert struct to slice of string which is needed when converting to CSV
 func (e *MeasurementEntry) GetSliceOfStrings() []string {
-	return []string{e.Timestamp.Format(time.RFC3339Nano), e.Metric, fmt.Sprintf("%f", e.Duration.Seconds()), e.Parameters, fmt.Sprintf("%v", e.Error)}
+	return []string{e.Timestamp.Format(time.RFC3339Nano), fmt.Sprintf("%d", e.PerUserId), fmt.Sprintf("%d", e.PerAppId), fmt.Sprintf("%d", e.PerCompId), fmt.Sprintf("%d", e.RepeatsCounter), e.Metric, fmt.Sprintf("%f", e.Duration.Seconds()), e.Parameters, fmt.Sprintf("%v", e.Error)}
 }
 
 // Represents the data about failure we want to store to CSV
@@ -168,6 +172,10 @@ func errorsWriter() {
 // can be generalized completely, but it is good enough for our needs.
 func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	funcValue := reflect.ValueOf(fn)
+	perUserId := -1
+	perAppId := -1
+	perCompId := -1
+	repeatsCounter := -1
 
 	// Construct arguments for the function call
 	numParams := len(params)
@@ -183,11 +191,28 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 	paramsStorable := make(map[string]string)
 	for i := 0; i < numParams; i++ {
 		x := 1
-		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
+
+		// If the parameter we are processing now is per user/app/comp
+		// context, extract additional metadata about this function call.
 		if casted, ok := params[i].(*types.MainContext); ok {
-			fmt.Printf(">>> %s --- %s --- %v \n", runtime.FuncForPC(funcValue.Pointer()).Name(), key, casted.ThreadIndex)
+			perUserId = casted.ThreadIndex
+			repeatsCounter = casted.JourneyRepeatsCounter
 		}
+		if casted, ok := params[i].(*types.PerApplicationContext); ok {
+			perUserId = casted.ParentContext.ThreadIndex
+			perAppId = casted.ApplicationIndex
+			repeatsCounter = casted.ParentContext.JourneyRepeatsCounter
+		}
+		if casted, ok := params[i].(*types.PerComponentContext); ok {
+			perUserId = casted.ParentContext.ParentContext.ThreadIndex
+			perAppId = casted.ParentContext.ApplicationIndex
+			perCompId = casted.ComponentIndex
+			repeatsCounter = casted.ParentContext.ParentContext.JourneyRepeatsCounter
+		}
+
+		key := fmt.Sprintf("%v", reflect.TypeOf(params[i]))
 		value := fmt.Sprintf("%+v", reflect.ValueOf(params[i]))
+
 		for {
 			keyFull := key + fmt.Sprint(x)
 			if _, ok := paramsStorable[keyFull]; !ok {
@@ -208,7 +233,7 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 
 	defer func() {
 		elapsed := time.Since(startTime)
-		LogMeasurement(funcName, paramsStorable, elapsed, fmt.Sprintf("%+v", resultInterValue), errInterValue)
+		LogMeasurement(funcName, perUserId, perAppId, perCompId, repeatsCounter, paramsStorable, elapsed, fmt.Sprintf("%+v", resultInterValue), errInterValue)
 	}()
 
 	// Call the function with provided arguments
@@ -228,7 +253,7 @@ func Measure(fn interface{}, params ...interface{}) (interface{}, error) {
 }
 
 // Store given measurement
-func LogMeasurement(metric string, params map[string]string, elapsed time.Duration, result string, err error) {
+func LogMeasurement(metric string, perUserId, perAppId, perCompId, repeatsCounter int, params map[string]string, elapsed time.Duration, result string, err error) {
 	// Extract parameter keys into a slice so we can sort them
 	var paramsKeys []string
 	for k := range params {
@@ -249,13 +274,17 @@ func LogMeasurement(metric string, params map[string]string, elapsed time.Durati
 	}
 	params_string = strings.TrimLeft(params_string, " ")
 
-	Logger.Trace("Measured function: %s, Duration: %s, Params: %s, Result: %s, Error: %v\n", metric, elapsed, params_string, result, err)
+	Logger.Trace("Measured function: %s, Thread: %d/%d/%d, Repeat: %d, Duration: %s, Params: %s, Result: %s, Error: %v\n", metric, perUserId, perAppId, perCompId, repeatsCounter, elapsed, params_string, result, err)
 	data := MeasurementEntry{
-		Timestamp:  time.Now(),
-		Metric:     metric,
-		Duration:   elapsed,
-		Parameters: params_string,
-		Error:      err,
+		Timestamp:      time.Now(),
+		Metric:         metric,
+		PerUserId:      perUserId,
+		PerAppId:       perAppId,
+		PerCompId:      perCompId,
+		RepeatsCounter: repeatsCounter,
+		Duration:       elapsed,
+		Parameters:     params_string,
+		Error:          err,
 	}
 	measurementsQueue <- data
 }
