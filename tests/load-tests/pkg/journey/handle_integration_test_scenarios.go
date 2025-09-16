@@ -44,10 +44,7 @@ func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
 	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	_, err = logging.Measure(
-		ctx.ParentContext.ThreadIndex,
-		ctx.ApplicationIndex,
-		-1,
-		ctx.ParentContext.JourneyRepeatsCounter,
+		ctx,
 		createIntegrationTestScenario,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,

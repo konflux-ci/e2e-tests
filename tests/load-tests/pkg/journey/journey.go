@@ -23,10 +23,7 @@ func initUserThread(threadCtx *types.MainContext) {
 
 	// Create user if needed
 	_, err = logging.Measure(
-		threadCtx.ThreadIndex,
-		-1,
-		-1,
-		threadCtx.JourneyRepeatsCounter,
+		threadCtx,
 		HandleUser,
 		threadCtx,
 	)
@@ -99,10 +96,7 @@ func Setup(fn func(*types.MainContext), opts *options.Opts) (string, error) {
 	// Fork repositories sequentially as GitHub do not allow more than 3 running forks in parallel anyway
 	for _, threadCtx := range MainContexts {
 		_, err = logging.Measure(
-			threadCtx.ThreadIndex,
-			-1,
-			-1,
-			threadCtx.JourneyRepeatsCounter,
+			threadCtx,
 			HandleRepoForking,
 			threadCtx,
 		)
