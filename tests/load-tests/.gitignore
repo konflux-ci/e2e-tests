@@ -10,5 +10,8 @@ users*.json
 loadtest
 
 OLD/
+run-*/
 videos/
 collected-data/
+mystoneinst/
+secrets/
