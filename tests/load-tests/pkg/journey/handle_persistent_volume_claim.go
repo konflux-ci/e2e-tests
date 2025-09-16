@@ -21,7 +21,7 @@ func collectPersistentVolumeClaims(f *framework.Framework, namespace string) err
 			continue
 		}
 		waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
-		logging.LogMeasurement("PVC_to_PV_CreationTimestamp", map[string]string{"pv.Name": pv.Name}, waittime, "", nil)
+		logging.LogMeasurement("PVC_to_PV_CreationTimestamp", -1, -1, -1, -1, map[string]string{"pv.Name": pv.Name}, waittime, "", nil)
 	}
 	return nil
 }
