@@ -53,6 +53,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			}
 
 			applicationName = createApp(*f, testNamespace)
+
+			// Wait for application to be available before creating integration test scenarios
+			Eventually(func() error {
+				_, err := f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
+				return err
+			}, time.Minute*2, time.Second*5).Should(Succeed(),
+				fmt.Sprintf("Application %s should be available in namespace %s", applicationName, testNamespace))
+
 			component, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForStatusReporting, componentGitSourceURLForStatusReporting)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})

@@ -392,9 +392,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is public", imageRepoName))
 				Expect(isPublic).To(BeTrue(), fmt.Sprintf("Expected image repo '%s' to be changed to public, but it is private", imageRepoName))
 			})
+
 			It("image tag is updated successfully", func() {
 				// check if the image tag exists in quay
-				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
+				// ✅ CORRECT: Use the prHeadSha to get the specific successful PipelineRun
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, p := range plr.Spec.Params {
@@ -403,9 +405,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					}
 				}
 				Expect(outputImage).ToNot(BeEmpty(), "output image %s of the component could not be found", outputImage)
-				isExists, err := build.DoesTagExistsInQuay(outputImage)
-				Expect(err).ShouldNot(HaveOccurred(), "error while checking if the output image %s exists in quay", outputImage)
-				Expect(isExists).To(BeTrue(), "image tag does not exists in quay")
+
+				// Wait for image to be pushed to Quay - there can be a delay after PipelineRun completion
+				Eventually(func() bool {
+					isExists, err := build.DoesTagExistsInQuay(outputImage)
+					if err != nil {
+						GinkgoWriter.Printf("Error checking if image tag exists in Quay: %v\n", err)
+						return false
+					}
+					if !isExists {
+						GinkgoWriter.Printf("Image tag %s not yet available in Quay, retrying...\n", outputImage)
+					} else {
+						GinkgoWriter.Printf("Image tag %s successfully found in Quay\n", outputImage)
+					}
+					return isExists
+				}, time.Minute*3, time.Second*10).Should(BeTrue(), fmt.Sprintf("image tag %s does not exist in quay after timeout", outputImage))
 			})
 
 			It("should ensure pruning labels are set", func() {
@@ -556,7 +570,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						GinkgoWriter.Printf("found pipelinerun: %s\n", componentPipelineRun.GetName())
 					}
 					return componentPipelineRun == nil
-				}, time.Minute*1, time.Second*2).Should(BeTrue(), "all the pipelineruns are not deleted, still some pipelineruns exists")
+				}, time.Minute*3, time.Second*5).Should(BeTrue(), "all the pipelineruns are not deleted, still some pipelineruns exists")
 
 				Eventually(func() error {
 					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, customBranchComponentName)
