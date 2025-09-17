@@ -236,6 +236,31 @@ def load(datafile):
     return data
 
 
+def find_all_failed_plrs(data_dir):
+    for currentpath, folders, files in os.walk(data_dir):
+        for datafile in files:
+            if not datafile.startswith("collected-pipelinerun-"):
+                continue
+
+            datafile = os.path.join(currentpath, datafile)
+            data = load(datafile)
+
+            # Skip PLRs that did not failed
+            try:
+                succeeded = True
+                for c in data["status"]["conditions"]:
+                    if c["type"] == "Succeeded":
+                        if c["status"] == "False":   # possibly switch this to `!= "True"` but that might be too big change for normal runs
+                            succeeded = False
+                            break
+                if succeeded:
+                    continue
+            except KeyError:
+                continue
+
+            yield data
+
+
 def find_first_failed_build_plr(data_dir, plr_type):
     """ This function is intended for jobs where we only run one concurrent
     builds, so no more than one can failed: our load test probes.
@@ -249,42 +274,24 @@ def find_first_failed_build_plr(data_dir, plr_type):
     a "build" PLR and it is failed one.
     """
 
-    for currentpath, folders, files in os.walk(data_dir):
-        for datafile in files:
-            if not datafile.startswith("collected-pipelinerun-"):
+    for data in find_all_failed_plrs(data_dir):
+        data = load(datafile)
+
+        if plr_type == "build":
+            plr_type_label = "build"
+        elif plr_type == "release":
+            plr_type_label = "managed"
+        else:
+            raise Exception("Unknown PLR type")
+
+        # Skip PLRs that do not have expected type
+        try:
+            if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
                 continue
+        except KeyError:
+            continue
 
-            datafile = os.path.join(currentpath, datafile)
-            data = load(datafile)
-
-            if plr_type == "build":
-                plr_type_label = "build"
-            elif plr_type == "release":
-                plr_type_label = "managed"
-            else:
-                raise Exception("Unknown PLR type")
-
-            # Skip PLRs that do not have expected type
-            try:
-                if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
-                    continue
-            except KeyError:
-                continue
-
-            # Skip PLRs that did not failed
-            try:
-                succeeded = True
-                for c in data["status"]["conditions"]:
-                    if c["type"] == "Succeeded":
-                        if c["status"] == "False":
-                            succeeded = False
-                            break
-                if succeeded:
-                    continue
-            except KeyError:
-                continue
-
-            return data
+        return data
 
 
 def find_trs(plr):
@@ -442,5 +449,71 @@ def main():
     print(f"Data dumped to {output_file}")
 
 
+def investigate_all_failed_plr(dump_dir):
+    reasons = []
+
+    for plr in find_all_failed_plrs(dump_dir):
+        plr_ns = plr["metadata"]["namespace"]
+
+        for tr_name in find_trs(plr):
+            tr_ok, tr_message = check_failed_taskrun(dump_dir, plr_ns, tr_name)
+
+            if tr_ok:
+                try:
+                    for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
+                        log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
+                        reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+
+                        if reason == "SKIP":
+                            continue
+
+                        reasons.append(reason)
+                except FileNotFoundError as e:
+                    print(f"Failed to locate required files: {e}")
+
+            reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
+            if reason != "SKIP":
+                reasons.append(reason)
+
+    return sorted(reasons)
+
+
+def main_custom():
+    dump_dir = sys.argv[1]
+    output_file = os.path.join(dump_dir, "errors-output.json")
+
+    error_messages = []  # list of error messages
+    error_by_code = collections.defaultdict(
+        lambda: 0
+    )  # key: numeric error code, value: number of such errors
+    error_by_reason = collections.defaultdict(
+        lambda: 0
+    )  # key: textual error reason, value: number of such errors
+
+    reasons = investigate_all_failed_plr(dump_dir)
+    for r in reasons:
+        add_reason(error_messages, error_by_code, error_by_reason, r)
+
+    data = {
+        "error_by_code": error_by_code,
+        "error_by_reason": error_by_reason,
+        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items() if k != "Post-test data collection failed"]),
+        "error_messages": error_messages,
+    }
+
+    print(f"Errors detected: {len(error_messages)}")
+    print("Errors by reason:")
+    for k, v in error_by_reason.items():
+        print(f"   {v}x {k}")
+
+    with open(output_file, "w") as fp:
+        json.dump(data, fp, indent=4)
+    print(f"Data dumped to {output_file}")
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    if len(sys.argv) == 2:
+        # When examining just custom collected-data directory
+        sys.exit(main_custom())
+    else:
+        sys.exit(main())
