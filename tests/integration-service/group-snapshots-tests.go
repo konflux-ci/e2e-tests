@@ -604,7 +604,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				Eventually(func() error {
 					relatedResolutionRequests, err := f.AsKubeDeveloper.IntegrationController.GetRelatedResolutionRequests(testNamespace, integrationTestScenarioPass)
 					if err != nil {
-						// If ResolutionRequest CRD doesn't exist, consider this as success since the feature might not be enabled
 						if strings.Contains(err.Error(), "ResolutionRequest CRD not available") {
 							return nil
 						}
@@ -685,7 +684,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 					}
 
 					return nil
-				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and integration pipelinerun with resolution")
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and failing integration pipelinerun with invalid resolution")
 
 			})
 		})
