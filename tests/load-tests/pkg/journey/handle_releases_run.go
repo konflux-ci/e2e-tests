@@ -122,6 +122,9 @@ func validateReleaseCondition(f *framework.Framework, namespace, releaseName str
 
 		// Check right condition status
 		for _, condition := range release.Status.Conditions {
+			if condition.Type == "Released" && condition.Reason == "Progressing" {
+				return false, nil
+			}
 			if condition.Type == "Released" && condition.Status == "False" {
 				return false, fmt.Errorf("Release %s in namespace %s failed: %+v", releaseName, namespace, condition)
 			}
