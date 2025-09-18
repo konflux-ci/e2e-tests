@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/integration"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -36,9 +38,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	var componentC *appstudioApi.Component
 	var groupSnapshots *appstudioApi.SnapshotList
 	var componentSnapshots *[]appstudioApi.Snapshot
+	var groupSnapshot *appstudioApi.Snapshot
 	var mergeResult *github.PullRequestMergeResult
 	var pipelineRun, testPipelinerun *pipeline.PipelineRun
-	var integrationTestScenarioPass *integrationv1beta2.IntegrationTestScenario
+	var integrationTestScenarioPass, invalidIntegrationTestScenario *integrationv1beta2.IntegrationTestScenario
 	var applicationName, testNamespace, multiComponentBaseBranchName, multiComponentPRBranchName string
 
 	AfterEach(framework.ReportFailure(&f))
@@ -71,7 +74,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			//Branch for creating pull request
 			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
-			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
+			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPassPipelinerun, "pipelinerun", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -592,6 +595,97 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 					}
 					return nil
 				}, superLongTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and integration pipelinerun to be cancelled")
+			})
+
+		})
+
+		When("ResolutionRequest is deleted after pipeline completes", func() {
+			It("verifies that ResolutionRequest is deleted after pipeline resolution", func() {
+				Eventually(func() error {
+					relatedResolutionRequests, err := f.AsKubeDeveloper.IntegrationController.GetRelatedResolutionRequests(testNamespace, integrationTestScenarioPass)
+					if err != nil {
+						if strings.Contains(err.Error(), "ResolutionRequest CRD not available") {
+							return nil
+						}
+						return fmt.Errorf("failed to get related ResolutionRequests: %v", err)
+					}
+
+					if len(relatedResolutionRequests) > 0 {
+						names := f.AsKubeDeveloper.IntegrationController.GetResolutionRequestNames(relatedResolutionRequests)
+						return fmt.Errorf("found %d ResolutionRequest(s) still present in namespace %s for scenario %s: %v",
+							len(relatedResolutionRequests), testNamespace, integrationTestScenarioPass.Name, names)
+					}
+
+					return nil
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "ResolutionRequest objects should be cleaned up after pipeline resolution is complete")
+			})
+
+			It("verifies that no orphaned ResolutionRequests remain in namespace after test completion", func() {
+				// Check for any ResolutionRequests that might have been left behind
+				relatedResolutionRequests, err := f.AsKubeDeveloper.IntegrationController.GetRelatedResolutionRequests(testNamespace, integrationTestScenarioPass)
+				if err != nil {
+					// Skip if ResolutionRequest CRD is not available
+					if strings.Contains(err.Error(), "ResolutionRequest CRD not available") {
+						Skip("ResolutionRequest CRD not available in cluster, skipping orphan check")
+						return
+					}
+					Expect(err).NotTo(HaveOccurred(), "Failed to check for orphaned ResolutionRequests")
+				}
+
+				// Should be nil or empty at this point
+				if len(relatedResolutionRequests) > 0 {
+					names := f.AsKubeDeveloper.IntegrationController.GetResolutionRequestNames(relatedResolutionRequests)
+					// Log for debugging but only fail if these are old ResolutionRequests (older than 5 minutes)
+					fmt.Printf("Found %d ResolutionRequest(s) in namespace %s: %v\n", len(relatedResolutionRequests), testNamespace, names)
+
+					// Check if any are older than expected cleanup time
+					currentTime := time.Now()
+					oldResolutionRequests := []string{}
+
+					for _, rr := range relatedResolutionRequests {
+						creationTime := rr.GetCreationTimestamp()
+						if currentTime.Sub(creationTime.Time) > 5*time.Minute {
+							oldResolutionRequests = append(oldResolutionRequests, rr.GetName())
+						}
+					}
+
+					Expect(oldResolutionRequests).To(BeEmpty(), "Found old ResolutionRequest objects that should have been cleaned up")
+				}
+			})
+		})
+
+
+		When("IntegrationTestScenario reference to task as pipelinerun resolution", func() {
+			BeforeAll(func() {
+				invalidIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "pipelinerun", []string{"application"})
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("trigger pipelinerun for invalid integrationTestScenario by annotating snapshot and verify failing to create integration pipelinerun", func() {
+				groupSnapshot = &groupSnapshots.Items[0]
+				Eventually(func() error {
+					err = f.AsKubeAdmin.IntegrationController.AddIntegrationTestRerunLabel(groupSnapshot, invalidIntegrationTestScenario.Name)
+					if err != nil {
+						return fmt.Errorf("failed to set annotation %s to group snapshot %s/%s", integration.SnapshotIntegrationTestRun, groupSnapshot.Namespace, groupSnapshot.Name)
+					}
+
+					groupSnapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(groupSnapshot.Name, "", "", testNamespace)
+					if err != nil {
+						return fmt.Errorf("failing to get snapshot %s/%s", groupSnapshot.Namespace, groupSnapshot.Name)
+					}
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(groupSnapshot, invalidIntegrationTestScenario.Name)
+					if err != nil {
+						return fmt.Errorf("failing to get snapshot integration test status detail %s/%s", groupSnapshot.Namespace, groupSnapshot.Name)
+					}
+
+					if !strings.Contains(statusDetail.Details, "denied the request: validation failed: expected exactly one, got neither: spec.pipelineRef, spec.pipelineSpec.") {
+						return fmt.Errorf("failing to find the integration test status detail %s/%s for invalid resolution", groupSnapshot.Namespace, groupSnapshot.Name)
+					}
+
+					return nil
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "timeout while waiting for group snapshot and failing integration pipelinerun with invalid resolution")
+
 			})
 		})
 	})
