@@ -285,10 +285,22 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
+
+	return componentObject, nil
+}
+
+// Create a component and check image repository gets created.
+func (h *HasController) CreateComponentCheckImageRepository(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	componentObject, err := h.CreateComponent(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations)
+	if err != nil {
+		return nil, err
+	}
+
 	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
-	if err := utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*15); err != nil {
+	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*10, time.Minute*15); err != nil {
 		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
 	}
+
 	return componentObject, nil
 }
 
@@ -339,7 +351,7 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339))
+	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339Nano))
 
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
@@ -358,7 +370,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
@@ -367,7 +379,7 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
 	// temporary logs
 	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.String())
+	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
 
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
@@ -384,7 +396,7 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 
 	// temporary logs
 	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
+	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
@@ -537,6 +549,32 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 		}
 		return true, nil
 	}
+}
+
+// DeleteAllImageRepositoriesInASpecificNamespace removes all image repository CRs from a specific namespace. Useful when cleaning up a namespace and component cleanup did not cleaned it's image repository
+func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Printf("Start to delete all image repositories in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
+
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
+	}
+
+	imageRepositoryList := &imagecontroller.ImageRepositoryList{}
+
+	err := utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(imageRepositoryList.Items) == 0, nil
+	}, timeout)
+
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Printf("Finish to delete all image repositories in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
+
+	return err
 }
 
 // Gets value of a specified annotation in a component
