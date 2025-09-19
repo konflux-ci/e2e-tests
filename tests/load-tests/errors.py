@@ -197,8 +197,8 @@ FAILED_TR_ERRORS = {
     ("Pod creation failed with reason error", r"\"message\": \".* exited with code 2: Error\""),
     ("Pod stuck in incorrect status", r".message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown."),
     ("TaskRun resolution failed because validation.webhook.pipeline.tekton.dev returned EOF", r".message.: .error requesting remote resource: error updating resource request [^ ]+ with data: Internal error occurred: failed calling webhook .*validation.webhook.pipeline.tekton.dev.*: failed to call webhook: Post .*https://tekton-pipelines-webhook.openshift-pipelines.svc:443/resource-validation.timeout=10s.*: EOF., .reason.: .TaskRunResolutionFailed."),
-    ("TaskRun was cancelled as its PipelineRun was cancelled", r"TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has been cancelled."),
     ("TaskRun was cancelled as its PipelineRun timeouted", r".message.: .TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has timed out.., .reason.: .TaskRunCancelled."),
+    ("TaskRun was cancelled as its PipelineRun was cancelled", r"TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has been cancelled."),
     ("TaskRun was cancelled because it timeouted", r".message.: .TaskRun [^ ]+ failed to finish within [^ ]+., .reason.: .TaskRunTimeout."),
 }
 
