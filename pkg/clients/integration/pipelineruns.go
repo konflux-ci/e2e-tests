@@ -20,11 +20,14 @@ import (
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 )
 
 var (
 	shortTimeout = time.Duration(10 * time.Minute)
 	superLongTimeout = time.Duration(20 * time.Minute)
+	// SnapshotIntegrationTestRun contains name of test we want to trigger run
+	SnapshotIntegrationTestRun = "test.appstudio.openshift.io/run"
 )
 // CreateIntegrationPipelineRun creates new integrationPipelineRun.
 func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1.PipelineRun, error) {
@@ -312,4 +315,21 @@ func (i *IntegrationController) IsIntegrationPipelinerunCancelled(integrationTes
 		return true, nil
 	}
 	return true, nil
+}
+
+// AddIntegrationTestRerunLabel adding re-run label to snapshot
+func (i *IntegrationController) AddIntegrationTestRerunLabel(snapshot *appstudioApi.Snapshot, integrationTestScenarioName string) error {
+	patch := client.MergeFrom(snapshot.DeepCopy())
+	newLabel := map[string]string{}
+	newLabel[SnapshotIntegrationTestRun] = integrationTestScenarioName
+	err := metadata.AddLabels(snapshot, newLabel)
+	if err != nil {
+		return fmt.Errorf("failed to add label %s: %w", SnapshotIntegrationTestRun, err)
+	}
+	err = i.KubeRest().Patch(context.Background(), snapshot, patch)
+	if err != nil {
+		return fmt.Errorf("failed to patch snapshot: %w", err)
+	}
+
+	return nil
 }
