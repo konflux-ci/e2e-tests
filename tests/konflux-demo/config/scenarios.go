@@ -16,7 +16,7 @@ var ApplicationSpecs = []ApplicationSpec{
 			Name:                       "konflux-demo-component",
 			Language:                   "Java",
 			GitSourceUrl:               fmt.Sprintf("https://github.com/%s/%s", utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe"), "hacbs-test-project-konflux-demo"),
-			GitSourceRevision:          "4df701406d34012034dd490fd38d779717582df7",
+			GitSourceRevision:          "79402df023e646c5ad108abc879ad1b28799cbc4",
 			GitSourceContext:           "",
 			GitSourceDefaultBranchName: "main",
 			DockerFilePath:             "Dockerfile",

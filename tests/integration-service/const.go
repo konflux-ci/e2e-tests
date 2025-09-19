@@ -30,7 +30,7 @@ const (
 	multiRepoComponentGitRevision             = "2e41cf5a68674503c86b6637de35eeedc2893794"
 	gitlabComponentRepoName                   = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "main"
-	componentRevision                         = "34da5a8f51fba6a8b7ec75a727d3c72ebb5e1274"
+	componentRevision                         = "79402df023e646c5ad108abc879ad1b28799cbc4"
 	referenceDoesntExist                      = "Reference does not exist"
 	checkrunStatusCompleted                   = "completed"
 	checkrunConclusionSuccess                 = "success"
@@ -51,8 +51,8 @@ const (
 
 	chainsSignedAnnotation = "chains.tekton.dev/signed"
 
-	shortTimeout = time.Duration(10 * time.Minute)
-	longTimeout = time.Duration(15 * time.Minute)
+	shortTimeout     = time.Duration(10 * time.Minute)
+	longTimeout      = time.Duration(15 * time.Minute)
 	superLongTimeout = time.Duration(20 * time.Minute)
 )
 
