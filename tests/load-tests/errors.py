@@ -176,6 +176,7 @@ FAILED_PLR_ERRORS = {
 
 FAILED_TR_ERRORS = {
     ("Missing expected fields in TaskRun", r"Missing expected fields in TaskRun"),   # This is special error, meaning everithing failed basically
+    ("Missing expected TaskRun file", r"Missing expected TaskRun file"),   # Another special error, meaning everithing failed as well
     ("SKIP", r"\"message\": \"All Steps have completed executing\""),   # Another special error to avoid printing 'Unknown error:' message
     ("SKIP", r"\"message\": \".* exited with code 1.*\""),   # Another special error to avoid printing 'Unknown error:' message
     ("SKIP", r"\"message\": \".* exited with code 255.*\""),   # Another special error to avoid printing 'Unknown error:' message
@@ -213,7 +214,6 @@ def message_to_reason(reasons_and_errors: set, msg: str) -> str:
 def add_reason(error_messages, error_by_code, error_by_reason, message, reason="", code=0):
     if reason == "":
         reason = message
-    print("Added", message, reason, code)
     error_messages.append(message)
     error_by_code[code] += 1
     error_by_reason[reason] += 1
@@ -306,7 +306,11 @@ def find_trs(plr):
 
 def check_failed_taskrun(data_dir, ns, tr_name):
     datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
-    data = load(datafile)
+    try:
+        data = load(datafile)
+    except FileNotFoundError as e:
+        print(f"ERROR: Missing file: {str(e)}")
+        return False, "Missing expected TaskRun file"
 
     try:
         pod_name = data["status"]["podName"]
