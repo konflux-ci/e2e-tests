@@ -191,6 +191,7 @@ FAILED_TR_ERRORS = {
     ("Pod creation failed with reason error", r"\"message\": \".* exited with code 2: Error\""),
     ("Pod stuck in incorrect status", r".message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown."),
     ("TaskRun was cancelled as its PipelineRun was cancelled", r"TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has been cancelled."),
+    ("TaskRun was cancelled as its PipelineRun timeouted", r".message.: .TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has timed out.., .reason.: .TaskRunCancelled."),
 }
 
 
