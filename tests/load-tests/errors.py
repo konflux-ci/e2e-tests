@@ -139,6 +139,7 @@ FAILED_PLR_ERRORS = {
     ("Failed downloading rpms for hermetic builds due to 504 errors", r"mock-hermetic-repo.*urllib3.exceptions.MaxRetryError: HTTPSConnectionPool.*: Max retries exceeded with url: .*.rpm .Caused by ResponseError..too many 504 error responses..."),
     ("Failed downloading rpms for hermetic builds", r"mock-hermetic-repo.*ERROR:__main__:RPM deps downloading failed"),
     ("Failed reading signatures from access.redhat.com due to 500", r"internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: copying system image from manifest list: reading signatures: reading signature from https://access.redhat.com/webassets/docker/content/sigstore/[^ ]+: received unexpected HTTP status: 500 Internal Server Error"),
+    ("Failed to compile with clang", r"ERROR: [^ ]+: Compiling [^ ]+.c failed: .Exit 1.: clang-[0-9]+ failed: error executing CppCompile command"),
     ("Failed to connect to MPC VM", r"ssh: connect to host [0-9]+.[0-9]+.[0-9]+.[0-9]+ port 22: Connection timed out"),
     ("Failed to prefetch dependencies due to download timeout", r"ERROR Unsuccessful download: .* ERROR FetchError: exception_name: TimeoutError.*If the issue seems to be on the cachi2 side, please contact the maintainers."),
     ("Failed to provision MPC VM due to resource quota evaluation timed out", r"cat /ssh/error Error allocating host: Internal error occurred: resource quota evaluation timed out"),   # KONFLUX-9798
