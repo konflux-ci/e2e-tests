@@ -27,7 +27,7 @@ const (
 	multiComponentRepoNameForGroupSnapshot    = "group-snapshot-multi-component"
 	multiComponentDefaultBranch               = "main"
 	multiComponentGitRevision                 = "0d1835404efb8ab7bb1ab5b5b82cda1ebfda4b25"
-	multiRepoComponentGitRevision             = "2e41cf5a68674503c86b6637de35eeedc2893794"
+	multiRepoComponentGitRevision             = "79402df023e646c5ad108abc879ad1b28799cbc4"
 	gitlabComponentRepoName                   = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "main"
 	componentRevision                         = "79402df023e646c5ad108abc879ad1b28799cbc4"
