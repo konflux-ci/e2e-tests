@@ -39,7 +39,7 @@ const (
 
 	componentDependenciesParentRepoName      = "build-nudge-parent"
 	componentDependenciesParentDefaultBranch = "main"
-	componentDependenciesParentGitRevision   = "a8dce08dbdf290e5d616a83672ad3afcb4b455ef"
+	componentDependenciesParentGitRevision   = "cb87720e960c9d1d7f591dc69d75cfa7ef6b3b4a"
 	componentDependenciesChildRepoName       = "build-nudge-child"
 	componentDependenciesChildDefaultBranch  = "main"
 	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
