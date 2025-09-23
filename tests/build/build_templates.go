@@ -71,9 +71,9 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 			return
 		}
 	}
-	if scenario.ManifestMediaType == "docker" {
-		// Update the pipeline bundle with updating BUILDAH_FORMAT value to "docker"
-		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, "docker")
+	if scenario.OverrideMediaType != "" {
+		// Update the pipeline bundle with updating BUILDAH_FORMAT value
+		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.OverrideMediaType)
 		if err != nil {
 			GinkgoWriter.Printf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
 			return
@@ -377,7 +377,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 				It("image manifest mediaType is correct", Label(buildTemplatesTestLabel), func() {
 					builtImage := build.GetBinaryImage(pr)
-					if scenario.ManifestMediaType == "docker" {
+					switch scenario.ManifestMediaType {
+					case "docker":
 						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
 							// Check for docker.manifest.list mediaType
 							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifestList), "mediaType of the image manifest is not of type docker.manifest.list")
@@ -385,7 +386,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							// Check for docker.manifest mediaType
 							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifest), "mediaType of the image manifest is not of type docker.manifest")
 						}
-					} else {
+					case "oci":
 						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
 							// Check for oci image index mediaType
 							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciImageIndex), "mediaType of the image manifest is not of type oci.image.index")
@@ -393,7 +394,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							// Check for oci image manifest mediaType
 							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciManifest), "mediaType of the image is not of type oci.image.manifest")
 						}
+					default:
+						Fail(fmt.Sprintf("Unknown ManifestMediaType value %s in scenario \n", scenario.ManifestMediaType))
 					}
+
 				})
 
 				It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
