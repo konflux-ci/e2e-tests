@@ -357,8 +357,11 @@ def find_failed_containers(data_dir, ns, tr_name):
     try:
         pod_name = data["status"]["podName"]
         for sr in data["status"]["steps"]:
-            if sr["terminated"]["exitCode"] != 0:
-                yield (pod_name, sr["container"])
+            if sr["terminated"]["exitCode"] == 0:
+                continue
+            if sr["terminated"]["reason"] == "TaskRunCancelled":
+                continue
+            yield (pod_name, sr["container"])
     except KeyError:
         return
 
