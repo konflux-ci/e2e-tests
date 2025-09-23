@@ -131,7 +131,7 @@ FAILED_PLR_ERRORS = {
     ("DNF failed to download repodata from Download Devel because timeout", r"dnf.exceptions.RepoError: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .* CRITICAL Error: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .*/mock/.*Failed to connect to download.devel.redhat.com"),
     ("DNF failed to download repodata from Koji", r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found"),
     ("DNF failed to install package because GPG check failed", r"dnf -y install .* is not signed.*Error: GPG check FAILED.*exit status 1"),
-    ("Enterprise contract results failed validation", r"^false $"),
+    ("Enterprise contract results failed validation", r"^false *$"),
     ("Error allocating host as provision TR already exists", r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists"),
     ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
     ("Error allocating host because of provisioning error", r"Error allocating host: failed to provision host"),
