@@ -1,7 +1,7 @@
 package contract
 
 import (
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 )
 
 // PolicySpecWithSourceConfig returns a new EnterpriseContractPolicySpec which is a deep copy of

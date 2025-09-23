@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/release"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"

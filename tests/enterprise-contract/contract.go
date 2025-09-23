@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
