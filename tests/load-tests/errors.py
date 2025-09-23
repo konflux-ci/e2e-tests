@@ -117,6 +117,7 @@ ERRORS = {
     ("Unable to connect to server", r"Error: Unable to connect to server"),
 }
 
+# Generic guideline on constructing error reasons: <who - which tool failed> <what - what action failed> <why - why it failed>
 FAILED_PLR_ERRORS = {
     ("SKIP", r"Skipping step because a previous step failed"),   # This is a special "wildcard" error, let's keep it on top and do not change "SKIP" reason as it is used in the code
     ("Bad Gateway when pulling container image from quay.io", r"Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 502 Bad Gateway "),
@@ -129,6 +130,7 @@ FAILED_PLR_ERRORS = {
     ("DNF failed to download repodata from Download Devel because timeout", r"dnf.exceptions.RepoError: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .* CRITICAL Error: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried [^ ]+/mock/.*Failed to connect to download-[0-9]+.beak-[0-9]+.prod.iad2.dc.redhat.com"),
     ("DNF failed to download repodata from Download Devel because timeout", r"dnf.exceptions.RepoError: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .* CRITICAL Error: Failed to download metadata for repo 'build': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .*/mock/.*Failed to connect to download.devel.redhat.com"),
     ("DNF failed to download repodata from Koji", r"ERROR Command returned error: Failed to download metadata (baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]*\") for repository \"build\": Usable URL not found"),
+    ("DNF failed to install package because GPG check failed", r"dnf -y install .* is not signed.*Error: GPG check FAILED.*exit status 1"),
     ("Enterprise contract results failed validation", r"^false $"),
     ("Error allocating host as provision TR already exists", r"Error allocating host: taskruns.tekton.dev \".*provision\" already exists"),
     ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
