@@ -175,6 +175,7 @@ FAILED_PLR_ERRORS = {
     ("Introspection failed because of incomplete .docker/config.json", r".* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\""),
     ("Invalid reference when processing SBOM", r"SBOM .* error during command execution: could not parse reference: quay.io/[^ ]+"),
     ("No podman installed on a MPC VM", r"remote_cmd podman unshare setfacl .* \+ ssh -o StrictHostKeyChecking=no [^ ]+ podman unshare setfacl .* bash: line 1: podman: command not found"),   # KONFLUX-9944
+    ("oras failed to fetch blob from Quay.io because it was terminated", r"Executing: oras blob fetch --registry-config [^ ]+ quay.io/[^ ]+ --output [^ ]+ Terminated"),
     ("Release failed because unauthorized when pulling policy", r"Error: pulling policy: GET .https://quay.io/v2/konflux-ci/konflux-vanguard/data-acceptable-bundles/blobs/sha256:[0-9a-z]+.: response status code 401: Unauthorized"),
     ("Release failed because unauthorized when pushing artifact", r"Prepared artifact from /var/workdir/release .* Token not found for quay.io/konflux-ci/release-service-trusted-artifacts Uploading [0-9a-z]+ sourceDataArtifact Error response from registry: unauthorized: access to the requested resource is not authorized: map.. Command exited with non-zero status 1"),
     ("RPM build failed: bool cannot be defined via typedef", r"error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build."),
