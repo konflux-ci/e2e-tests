@@ -815,7 +815,19 @@ func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipel
 	for i := range dockerPipelineObject.PipelineSpec().Tasks {
 		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
 		if t.Name == "build-container" || t.Name == "build-image-index" || t.Name == "sast-coverity-check" || t.Name == "build-images" {
-			t.Params = append(t.Params, tektonpipeline.Param{Name: "BUILDAH_FORMAT", Value: *tektonpipeline.NewStructuredValues(mediaType)})
+			exist := false
+			for param_idx := range t.Params {
+				param := &t.Params[param_idx]
+				if param.Name == "BUILDAH_FORMAT" {
+					param.Value = *tektonpipeline.NewStructuredValues(mediaType)
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				// param wasn't updated, add it as new param
+				t.Params = append(t.Params, tektonpipeline.Param{Name: "BUILDAH_FORMAT", Value: *tektonpipeline.NewStructuredValues(mediaType)})
+			}
 		}
 	}
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
