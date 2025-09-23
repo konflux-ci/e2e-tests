@@ -8,6 +8,7 @@ import (
 )
 
 type ComponentScenarioSpec struct {
+	Name                string
 	GitURL              string
 	Revision            string
 	ContextDir          string
@@ -24,6 +25,7 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 	pipelineBundleNames := make([]constants.BuildPipelineType, len(s.PipelineBundleNames))
 	copy(pipelineBundleNames, s.PipelineBundleNames)
 	return ComponentScenarioSpec{
+		Name:                s.Name,
 		GitURL:              s.GitURL,
 		Revision:            s.Revision,
 		ContextDir:          s.ContextDir,
@@ -39,6 +41,7 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 
 var componentScenarios = []ComponentScenarioSpec{
 	{
+		Name:                "sample-python-basic-oci",
 		GitURL:              "https://github.com/konflux-qe-bd/devfile-sample-python-basic",
 		Revision:            "47fc22092005aabebce233a9b6eab994a8152bbd",
 		ContextDir:          ".",
@@ -48,6 +51,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "sample-python-basic-docker",
 		GitURL:              "https://github.com/konflux-qe-bd/devfile-sample-python-basic-clone",
 		Revision:            "47fc22092005aabebce233a9b6eab994a8152bbd",
 		ContextDir:          ".",
@@ -58,6 +62,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		ManifestMediaType:   "docker",
 	},
 	{
+		Name:                "multiarch-oci",
 		GitURL:              "https://github.com/konflux-qe-bd/multiarch-sample-repo",
 		Revision:            "bc0452861279eb59da685ba86918938c6c9d8310",
 		ContextDir:          ".",
@@ -67,6 +72,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "multiarch-docker",
 		GitURL:              "https://github.com/konflux-qe-bd/multiarch-sample-repo-clone",
 		Revision:            "bc0452861279eb59da685ba86918938c6c9d8310",
 		ContextDir:          ".",
@@ -77,6 +83,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		ManifestMediaType:   "docker",
 	},
 	{
+		Name:                "prefetch-gomod",
 		GitURL:              "https://github.com/konflux-qe-bd/retrodep",
 		Revision:            "d8e3195d1ab9dbee1f621e3b0625a589114ac80f",
 		ContextDir:          ".",
@@ -86,6 +93,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "gomod",
 	},
 	{
+		Name:                "prefetch-pip",
 		GitURL:              "https://github.com/konflux-qe-bd/pip-e2e-test",
 		Revision:            "1ecda839ba9ca55070d75c86c26a1bb07d777bba",
 		ContextDir:          ".",
@@ -96,6 +104,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		CheckAdditionalTags: true,
 	},
 	{
+		Name:                "fbc",
 		GitURL:              "https://github.com/konflux-qe-bd/fbc-sample-repo",
 		Revision:            "8e374e107fecf03f3c64c528bb53798039661414",
 		ContextDir:          "4.13",
@@ -105,6 +114,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "from-scratch",
 		GitURL:              "https://github.com/konflux-qe-bd/docker-file-from-scratch",
 		Revision:            "34de8caa4952b6214700699e6df4bb53d6f799e6",
 		ContextDir:          ".",
@@ -114,6 +124,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "source-build-parent-image-with-digest-only",
 		GitURL:              "https://github.com/konflux-qe-bd/source-build-parent-image-with-digest-only",
 		Revision:            "a4f744581c0768eb84a4345f11d04090bb14bdff",
 		ContextDir:          ".",
@@ -123,6 +134,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "source-build-use-latest-parent-image",
 		GitURL:              "https://github.com/konflux-qe-bd/source-build-use-latest-parent-image",
 		Revision:            "b4584ac47e1df84114a10debf262b6d40f6a95f8",
 		ContextDir:          ".",
@@ -132,6 +144,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "source-build-parent-image-from-registry-rh-io",
 		GitURL:              "https://github.com/konflux-qe-bd/source-build-parent-image-from-registry-rh-io",
 		Revision:            "3f5dcac703a35dcb7b29312be72f86221d0f10ee",
 		ContextDir:          ".",
@@ -141,6 +154,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "source-build-base-on-konflux-image",
 		GitURL:              "https://github.com/konflux-qe-bd/source-build-base-on-konflux-image",
 		Revision:            "b6960c7602f21c531e3ead4df1dd1827e6f208f6",
 		ContextDir:          ".",
@@ -150,6 +164,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 	},
 	{
+		Name:                "oci-archive",
 		GitURL:              "https://github.com/konflux-qe-bd/oci-archive-test",
 		Revision:            "a63b71ce92cee3a8d4624ef15a232d43f93b42b9",
 		ContextDir:          ".",
