@@ -36,6 +36,7 @@ func (s ComponentScenarioSpec) DeepCopy() ComponentScenarioSpec {
 		PrefetchInput:       s.PrefetchInput,
 		CheckAdditionalTags: s.CheckAdditionalTags,
 		ManifestMediaType:   s.ManifestMediaType,
+		OverrideMediaType:   s.OverrideMediaType,
 		WorkingDirMount:     s.WorkingDirMount,
 	}
 }
