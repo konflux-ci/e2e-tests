@@ -156,7 +156,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(c.Name).Should(Equal(componentName))
 
-	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %, baseBranchName: %s, pacBranchName: %s",
+	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
 		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
 }
 

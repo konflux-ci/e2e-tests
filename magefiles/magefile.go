@@ -1184,7 +1184,7 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
-	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", "--no-color",
+	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color",
 		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 
