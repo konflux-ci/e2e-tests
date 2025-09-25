@@ -155,6 +155,9 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(c.Name).Should(Equal(componentName))
+
+	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %, baseBranchName: %s, pacBranchName: %s",
+		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
 }
 
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
@@ -324,7 +327,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			scenario := scenario
 			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
 			pipelineBundleName := scenario.PipelineBundleNames[0]
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+			It(fmt.Sprintf("scenario %s triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.Name, scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 				timeout := time.Minute * 20
 				prName := WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, componentName, testNamespace, timeout)
