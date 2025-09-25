@@ -124,6 +124,10 @@ def count_stats(data):
     if len(data) == 0:
         return {
             "samples": 0,
+            "min": -1,
+            "max": -1,
+            "mean": -1,
+            "stdev": -1,
         }
     else:
         return {
@@ -131,6 +135,7 @@ def count_stats(data):
             "min": min(data),
             "mean": statistics.mean(data),
             "max": max(data),
+            "stdev": statistics.stdev(data) if len(data) >= 2 else -1,
         }
 
 def count_stats_when(data):
@@ -254,7 +259,7 @@ def main():
             kpi_errors += 1
 
     stats["KPI"] = {}
-    stats["KPI"]["mean"] = sum(kpi_mean_data) / kpi_successes if kpi_successes > 0 else -1
+    stats["KPI"] = count_stats(kpi_mean_data)
     stats["KPI"]["successes"] = kpi_successes
     stats["KPI"]["errors"] = kpi_errors
 
