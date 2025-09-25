@@ -282,4 +282,14 @@ var (
 	DefaultDockerBuildPipelineBundleAnnotation  = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
 	DefaultFbcBuilderPipelineBundle             = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "fbc-builder", "bundle": "latest"}`}
 	ComponentMintmakerDisabledAnnotation        = map[string]string{"mintmaker.appstudio.redhat.com/disabled": "true"}
+	GitLabProjectIdsMap                         = map[string]string{"hacbs-test-project-integration": "56586709", "devfile-sample-hello-world": "60038001", "build-nudge-parent": "62134305", "build-nudge-child": "62134341"}
 )
+
+func GetGitLabProjectId(repoName string) string {
+	for name, id := range GitLabProjectIdsMap {
+		if name == repoName {
+			return id
+		}
+	}
+	return ""
+}
