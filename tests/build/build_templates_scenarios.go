@@ -7,6 +7,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
+// FOR FRODO!
+
 type ComponentScenarioSpec struct {
 	Name                string
 	GitURL              string
