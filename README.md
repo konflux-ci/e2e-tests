@@ -12,6 +12,8 @@ It is recommended to install AppStudio in E2E mode, but the E2E suite can be als
 
 ## Start running E2E tests
 
+Just trying to run e2e test from main to see if they even work
+
 All the instructions about installing Konflux locally/CI and running tests locally/CI can be found in this [Documentation](docs/Installation.md), which contains also information about how to pair Pull Requests when breaking changes are introduced.
 
 ## Start developing tests
