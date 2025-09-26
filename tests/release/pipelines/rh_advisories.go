@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
