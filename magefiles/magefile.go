@@ -360,7 +360,7 @@ func (ci CI) UnregisterSprayproxy() {
 
 func RunE2ETests() error {
 	var err error
-	rctx.DiffFiles, err = utils.GetChangedFiles(rctx.RepoName)
+	rctx.DiffFiles, err = repos.GetChangedFiles(rctx.RepoName)
 	if err != nil {
 		return err
 	}
@@ -1244,7 +1244,7 @@ func isValidPacHost(server string) bool {
 func (Local) PreviewTestSelection() error {
 
 	rctx := rulesengine.NewRuleCtx()
-	files, err := utils.GetChangedFiles("e2e-tests")
+	files, err := repos.GetChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1263,7 +1263,7 @@ func (Local) PreviewTestSelection() error {
 
 func (Local) RunRuleDemo() error {
 	rctx := rulesengine.NewRuleCtx()
-	files, err := utils.GetChangedFiles("e2e-tests")
+	files, err := repos.GetChangedFiles("e2e-tests")
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -1291,7 +1291,7 @@ func (Local) RunInfraDeploymentsRuleDemo() error {
 	rctx.JobType = ""
 	rctx.DryRun = true
 
-	files, err := utils.GetChangedFiles("infra-deployments")
+	files, err := repos.GetChangedFiles("infra-deployments")
 	if err != nil {
 		return err
 	}

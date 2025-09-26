@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/onsi/ginkgo/v2/types"
 	"k8s.io/klog"
 )
@@ -482,9 +483,13 @@ func NewRuleCtx() *RuleCtx {
 		false,
 		false}
 
-	//init defaults we've used so far
-	t, _ := time.ParseDuration("90m")
-	r.Timeout = t
+	timeout := utils.GetEnv("E2E_TIMEOUT", "90m")
+	timeoutDuration, err := time.ParseDuration(timeout)
+	if err != nil {
+		timeoutDuration = time.Hour + time.Minute*30
+		klog.Warningf("Error parsing timeout duration %q for e2e tests: %+v, sticking with default timeout %q", timeout, err, timeoutDuration)
+	}
+	r.Timeout = timeoutDuration
 	r.OutputInterceptorMode = "none"
 
 	return r
