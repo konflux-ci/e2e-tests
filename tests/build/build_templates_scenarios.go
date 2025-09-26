@@ -52,6 +52,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 		ManifestMediaType:   "oci",
+		OverrideMediaType:   "oci",
 	},
 	{
 		Name:                "sample-python-basic-docker",
@@ -63,7 +64,6 @@ var componentScenarios = []ComponentScenarioSpec{
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 		ManifestMediaType:   "docker",
-		OverrideMediaType:   "docker",
 	},
 	{
 		Name:                "multiarch-oci",
@@ -75,6 +75,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 		ManifestMediaType:   "oci",
+		OverrideMediaType:   "oci",
 	},
 	{
 		Name:                "multiarch-docker",
@@ -86,7 +87,6 @@ var componentScenarios = []ComponentScenarioSpec{
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 		ManifestMediaType:   "docker",
-		OverrideMediaType:   "docker",
 	},
 	{
 		Name:                "prefetch-gomod",
@@ -97,7 +97,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      true,
 		PrefetchInput:       "gomod",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "prefetch-pip",
@@ -109,7 +109,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		EnableHermetic:      true,
 		PrefetchInput:       "pip",
 		CheckAdditionalTags: true,
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "fbc",
@@ -131,7 +131,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "source-build-parent-image-with-digest-only",
@@ -142,7 +142,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "source-build-use-latest-parent-image",
@@ -153,7 +153,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "source-build-parent-image-from-registry-rh-io",
@@ -164,7 +164,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "source-build-base-on-konflux-image",
@@ -175,7 +175,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
-		ManifestMediaType:   "oci",
+		ManifestMediaType:   "docker",
 	},
 	{
 		Name:                "oci-archive",
@@ -188,6 +188,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		PrefetchInput:       "",
 		WorkingDirMount:     "/buildcontext",
 		ManifestMediaType:   "oci",
+		OverrideMediaType:   "oci",
 	},
 }
 
