@@ -493,7 +493,7 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 			},
 		},
 	}
-	component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
+	component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
 	return
 }

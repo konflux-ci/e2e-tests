@@ -9,6 +9,7 @@ import (
 	"time"
 
 	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 	constants "github.com/konflux-ci/e2e-tests/pkg/constants"
 
@@ -73,6 +74,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 
 		// Get "merge-url"
 		if data, ok = pac["merge-url"].(string); ok {
+			logging.Logger.Debug("Found PaC merge request URL: %s", data)
 			return data, nil
 		} else {
 			return "", fmt.Errorf("Failed parsing state: %s", buildStatusValue)
@@ -122,6 +124,39 @@ func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevis
 	return nil
 }
 
+func validateComponent(f *framework.Framework, namespace, name string) error {
+	interval := time.Second * 10
+	timeout := time.Minute * 30
+
+	// TODO It would be much better to watch this resource instead querying it
+	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		comp, err := f.AsKubeDeveloper.HasController.GetComponent(name, namespace)
+		if err != nil {
+			logging.Logger.Debug("Unable to get component %s in namespace %s for its annotations: %v", name, namespace, err)
+			return false, nil
+		}
+
+		// If build.appstudio.openshift.io/request annotation is gone, component finished onboarding
+		_, ok := comp.Annotations["build.appstudio.openshift.io/request"]
+		if ! ok {
+			logging.Logger.Debug("Finished onboarding of component %s in namespace %s", name, namespace)
+			return true, nil
+		}
+
+		// If it is still there, build.appstudio.openshift.io/status will have a reason
+		val, ok := comp.Annotations["build.appstudio.openshift.io/status"]
+		if ok {
+			logging.Logger.Debug("Onboarding of a component %s in namespace %s not finished yet: %s", name, namespace, val)
+		} else {
+			logging.Logger.Debug("Onboarding of a component %s in namespace %s not started yet", name, namespace)
+		}
+
+		return false, nil
+	}, interval, timeout)
+
+	return err
+}
+
 func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, error) {
 	interval := time.Second * 20
 	timeout := time.Minute * 15
@@ -140,7 +175,8 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 		// Check for right annotation
 		pull, err = getPaCPull(comp.Annotations)
 		if err != nil {
-			return false, fmt.Errorf("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
+			logging.Logger.Debug("PaC component %s in namespace %s failed on PR annotation: %v", name, namespace, err)
+			return false, nil
 		}
 		if pull == "" {
 			logging.Logger.Debug("PaC component %s in namespace %s do not have PR yet", name, namespace)
@@ -168,7 +204,6 @@ func configurePipelineImagePullSecrets(f *framework.Framework, namespace, compon
 
 	component_sa := "build-pipeline-" + component
 	for _, secret := range secrets {
-		println("-", secret)
 		err := f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(namespace, secret, component_sa, true)
 		if err != nil {
 			return fmt.Errorf("Unable to add secret %s to service account %s: %v", secret, component_sa, err)
@@ -183,7 +218,7 @@ func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, com
 	var err error
 
 	interval := time.Second * 20
-	timeout := time.Minute * 60
+	timeout := time.Minute * 30
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		prs, err = f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(compName, appName, namespace, "build", sha, "")
@@ -225,8 +260,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 }
 
 // This handles post-component creation tasks for multi-arch PaC workflow
-func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev string, mergeReqNum int, placeholders *map[string]string) error {
-	var repoName string
+func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, appName, compName, repoUrl, repoRev, sourceRepo, sourceRepoDir string, mergeReqNum int, placeholders *map[string]string) error {
 	var err error
 
 	// Delete on-pull-request default pipeline run
@@ -237,19 +271,23 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Merge default PaC pipelines PR
-	repoName, err = getRepoNameFromRepoUrl(repoUrl)
-	if err != nil {
-		return fmt.Errorf("Failed parsing repo name: %v", err)
-	}
 	if strings.Contains(repoUrl, "gitlab.") {
-		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoName, mergeReqNum)
+		repoId, err := getRepoIdFromRepoUrl(repoUrl)
+		if err != nil {
+			return fmt.Errorf("Failed parsing repo org/name: %v", err)
+		}
+		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoId, mergeReqNum)
 	} else {
+		repoName, err := getRepoNameFromRepoUrl(repoUrl)
+		if err != nil {
+			return fmt.Errorf("Failed parsing repo name: %v", err)
+		}
 		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
 	}
 	if err != nil {
 		return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
 	}
-	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoName)
+	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoUrl)
 
 	// Delete all pipeline runs as we do not care about these
 	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
@@ -259,7 +297,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Template our multi-arch PaC files
-	shaMap, err := templateFiles(f, repoUrl, repoRev, placeholders)
+	shaMap, err := templateFiles(f, repoUrl, repoRev, sourceRepo, sourceRepoDir, placeholders)
 	if err != nil {
 		return fmt.Errorf("Error templating PaC files: %v", err)
 	}
@@ -279,13 +317,14 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	return nil
 }
 
-func HandleComponent(ctx *PerComponentContext) error {
+func HandleComponent(ctx *types.PerComponentContext) error {
 	var err error
 
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	// Create component
 	_, err = logging.Measure(
+		ctx,
 		createComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
@@ -302,22 +341,50 @@ func HandleComponent(ctx *PerComponentContext) error {
 		return logging.Logger.Fail(60, "Component failed creation: %v", err)
 	}
 
+	// Validate component build service account created
+	_, err = logging.Measure(
+		ctx,
+		validateComponent,
+		ctx.Framework,
+		ctx.ParentContext.ParentContext.Namespace,
+		ctx.ComponentName,
+	)
+	if err != nil {
+		return logging.Logger.Fail(65, "Component failed onboarding: %v", err)
+	}
+
+	// Configure imagePullSecrets needed for component build task images
+	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
+		_, err = logging.Measure(
+			ctx,
+			configurePipelineImagePullSecrets,
+			ctx.Framework,
+			ctx.ParentContext.ParentContext.Namespace,
+			ctx.ComponentName,
+			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
+		)
+		if err != nil {
+			return logging.Logger.Fail(61, "Failed to configure pipeline imagePullSecrets: %v", err)
+		}
+	}
+
 	var pullIface interface{}
 	pullIface, err = logging.Measure(
+		ctx,
 		getPaCPullNumber,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(61, "Component failed validation: %v", err)
+		return logging.Logger.Fail(62, "Component failed validation: %v", err)
 	}
 
 	// Get merge request number
 	var ok bool
 	ctx.MergeRequestNumber, ok = pullIface.(int)
 	if !ok {
-		return logging.Logger.Fail(62, "Type assertion failed on pull: %+v", pullIface)
+		return logging.Logger.Fail(63, "Type assertion failed on pull: %+v", pullIface)
 	}
 
 	// If this is supposed to be a multi-arch build, we do not care about
@@ -336,6 +403,7 @@ func HandleComponent(ctx *PerComponentContext) error {
 
 		// Skip what we do not care about, merge PR, graft pipeline yamls
 		_, err = logging.Measure(
+			ctx,
 			utilityRepoTemplatingComponentCleanup,
 			ctx.Framework,
 			ctx.ParentContext.ParentContext.Namespace,
@@ -343,27 +411,15 @@ func HandleComponent(ctx *PerComponentContext) error {
 			ctx.ComponentName,
 			ctx.ParentContext.ParentContext.ComponentRepoUrl,
 			ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
+			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSource,
+			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSourceDir,
 			ctx.MergeRequestNumber,
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(63, "Repo-templating workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(64, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
-	}
-
-	// Configure imagePullSecrets needed for component build task images
-	if len(ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets) > 0 {
-		_, err = logging.Measure(
-			configurePipelineImagePullSecrets,
-			ctx.Framework,
-			ctx.ParentContext.ParentContext.Namespace,
-			ctx.ComponentName,
-			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
-		)
-		if err != nil {
-			return logging.Logger.Fail(64, "Failed to configure pipeline imagePullSecrets: %v", err)
-		}
 	}
 
 	return nil
