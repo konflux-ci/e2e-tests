@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -483,37 +482,119 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				}
 			})
 
-			It("get all group snapshots and check if pr-group annotation contains all components", func() {
-				// get all group snapshots
+			It("wait for all component snapshots to be created with proper PR group annotations", func() {
 				Eventually(func() error {
-					groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
-
+					componentSnapshots, err := f.AsKubeAdmin.HasController.GetAllComponentSnapshotsForApplication(applicationName, testNamespace)
 					if err != nil {
-						// Use fmt.Sprintf to correctly format the string
-						GinkgoWriter.Println(fmt.Sprintf("Failed to get all group snapshots: %v", err))
+						GinkgoWriter.Printf("Failed to get component snapshots: %v\n", err)
+						return err
+					}
+
+					// We expect at least 3 component snapshots (for components A, B, and C)
+					if len(componentSnapshots.Items) < 3 {
+						GinkgoWriter.Printf("Expected at least 3 component snapshots, got %d\n", len(componentSnapshots.Items))
+						return fmt.Errorf("insufficient component snapshots: expected at least 3, got %d", len(componentSnapshots.Items))
+					}
+
+					// Check that component snapshots have PR group annotations
+					snapshotsWithPRGroup := 0
+					for _, snapshot := range componentSnapshots.Items {
+						annotations := snapshot.GetAnnotations()
+						if prGroup, exists := annotations[groupSnapshotAnnotation]; exists && prGroup != "" {
+							snapshotsWithPRGroup++
+							GinkgoWriter.Printf("Component snapshot %s has PR group annotation: %s\n", snapshot.Name, prGroup)
+						} else {
+							GinkgoWriter.Printf("Component snapshot %s is missing PR group annotation\n", snapshot.Name)
+						}
+					}
+
+					if snapshotsWithPRGroup < 3 {
+						return fmt.Errorf("expected at least 3 component snapshots with PR group annotations, got %d", snapshotsWithPRGroup)
+					}
+
+					GinkgoWriter.Printf("All component snapshots are ready with PR group annotations\n")
+					return nil
+				}, time.Minute*10, 15*time.Second).Should(Succeed(), "Timeout while waiting for component snapshots with PR group annotations")
+			})
+
+			It("get all group snapshots and check if pr-group annotation contains all components", func() {
+				// Wait for group snapshots with enhanced debugging and retry logic
+				Eventually(func() error {
+					GinkgoWriter.Printf("Attempting to find group snapshots for application %s in namespace %s\n", applicationName, testNamespace)
+
+					// First, let's check the current state of component snapshots
+					compSnapshots, err := f.AsKubeAdmin.HasController.GetAllComponentSnapshotsForApplication(applicationName, testNamespace)
+					if err != nil {
+						GinkgoWriter.Printf("Failed to get component snapshots: %v\n", err)
+						return err
+					}
+
+					GinkgoWriter.Printf("Found %d component snapshots:\n", len(compSnapshots.Items))
+					prGroupsFound := make(map[string]int)
+					for _, snapshot := range compSnapshots.Items {
+						annotations := snapshot.GetAnnotations()
+						prGroup := annotations[groupSnapshotAnnotation]
+
+						if prGroup != "" {
+							prGroupsFound[prGroup]++
+						}
+					}
+
+					// Log PR groups summary
+					GinkgoWriter.Printf("PR Groups found: %v\n", prGroupsFound)
+
+					// Now attempt to get group snapshots
+					groupSnapshots, err = f.AsKubeAdmin.HasController.GetAllGroupSnapshotsForApplication(applicationName, testNamespace)
+					if err != nil {
+						// Check if it's a "not found" error vs other errors
+						if err.Error() == fmt.Sprintf("no snapshot found for application %s", applicationName) {
+							GinkgoWriter.Printf("No group snapshots found yet. Component snapshots may not have been processed by integration service controller yet.\n")
+							return fmt.Errorf("group snapshots not yet created from component snapshots")
+						}
+						GinkgoWriter.Printf("Error getting group snapshots: %v\n", err)
 						return err
 					}
 
 					if len(groupSnapshots.Items) == 0 {
-						// Use fmt.Sprintf here as well
-						GinkgoWriter.Println(fmt.Sprintf("No group snapshots exist at the moment: %v", errors.New("no snapshot found")))
-						return errors.New("no snapshots found")
+						GinkgoWriter.Printf("No group snapshots exist yet. Integration service controller may still be processing component snapshots.\n")
+						return fmt.Errorf("no group snapshots found - controller may still be processing")
+					}
+
+					GinkgoWriter.Printf("Found %d group snapshots!\n", len(groupSnapshots.Items))
+					for i, snapshot := range groupSnapshots.Items {
+						annotations := snapshot.GetAnnotations()
+						labels := snapshot.GetLabels()
+						GinkgoWriter.Printf("  Group Snapshot %d: %s (type: %s)\n", i, snapshot.Name, labels["test.appstudio.openshift.io/type"])
+						GinkgoWriter.Printf("    Group Test Info: %s\n", annotations[testGroupSnapshotAnnotation])
 					}
 
 					return nil
-				}, time.Minute*30, 30*time.Second).Should(Succeed(), "Timeout while waiting for group snapshot")
+				}, time.Minute*30, 30*time.Second).Should(Succeed(), "Timeout while waiting for group snapshot creation")
 
-				// check annotation test.appstudio.openshift.io/group-test-info for each group snapshot
+				// Validate the group snapshot annotations
+				Expect(groupSnapshots.Items).ToNot(BeEmpty(), "Expected at least one group snapshot")
+
 				annotation := groupSnapshots.Items[0].GetAnnotations()
-				if annotation, ok := annotation[testGroupSnapshotAnnotation]; ok {
-					// konflux-test
-					Expect(annotation).To(ContainSubstring(componentRepoNameForGroupIntegration))
-					// go-component
-					Expect(annotation).To(ContainSubstring(multiComponentContextDirs[0]))
-					// python-compomnent
-					Expect(annotation).To(ContainSubstring(multiComponentContextDirs[1]))
-				}
+				groupTestInfo, exists := annotation[testGroupSnapshotAnnotation]
+				Expect(exists).To(BeTrue(), "Group snapshot should have test.appstudio.openshift.io/group-test-info annotation")
+				Expect(groupTestInfo).ToNot(BeEmpty(), "Group test info annotation should not be empty")
 
+				// Check that the annotation contains all expected components
+				GinkgoWriter.Printf("Validating group test info annotation: %s\n", groupTestInfo)
+
+				// konflux-test (multirepo component)
+				Expect(groupTestInfo).To(ContainSubstring(componentRepoNameForGroupIntegration),
+					"Group test info should contain multirepo component name")
+
+				// go-component (monorepo component A)
+				Expect(groupTestInfo).To(ContainSubstring(multiComponentContextDirs[0]),
+					"Group test info should contain first monorepo component context dir")
+
+				// python-component (monorepo component B)
+				Expect(groupTestInfo).To(ContainSubstring(multiComponentContextDirs[1]),
+					"Group test info should contain second monorepo component context dir")
+
+				GinkgoWriter.Printf("Group snapshot validation completed successfully\n")
 			})
 			It("make sure that group snapshot contains last build pipelinerun for each component", func() {
 				for _, component := range componentsList {
