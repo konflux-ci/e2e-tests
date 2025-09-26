@@ -304,9 +304,7 @@ def find_first_failed_build_plr(data_dir, plr_type):
     a "build" PLR and it is failed one.
     """
 
-    for data in find_all_failed_plrs(data_dir):
-        data = load(datafile)
-
+    for plr in find_all_failed_plrs(data_dir):
         if plr_type == "build":
             plr_type_label = "build"
         elif plr_type == "release":
@@ -316,12 +314,12 @@ def find_first_failed_build_plr(data_dir, plr_type):
 
         # Skip PLRs that do not have expected type
         try:
-            if data["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
+            if plr["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
                 continue
         except KeyError:
             continue
 
-        return data
+        return plr
 
 
 def find_trs(plr):
