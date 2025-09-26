@@ -86,7 +86,7 @@ func getRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileName 
 			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
 		}
 	} else {
-		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFileWithOrg(repoOrgName, repoName, fileName, repoRevision)
 		if err != nil {
 			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
 		}

@@ -66,11 +66,15 @@ func (g *Github) CreateFile(repository, pathToFile, fileContent, branchName stri
 }
 
 func (g *Github) GetFile(repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
+	return g.GetFileWithOrg(g.organization, repository, pathToFile, branchName)
+}
+
+func (g *Github) GetFileWithOrg(org, repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
 	opts := &github.RepositoryContentGetOptions{}
 	if branchName != "" {
 		opts.Ref = fmt.Sprintf(HEADS, branchName)
 	}
-	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, opts)
+	file, _, _, err := g.client.Repositories.GetContents(context.Background(), org, repository, pathToFile, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error when listing file contents: %v", err)
 	}
