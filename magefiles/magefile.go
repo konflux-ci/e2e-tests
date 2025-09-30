@@ -833,29 +833,28 @@ func CleanGitLabWebHooks() error {
 	if gcToken == "" {
 		return fmt.Errorf("empty GITLAB_BOT_TOKEN env variable")
 	}
-	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
-	if projectID == "" {
-		return fmt.Errorf("empty GITLAB_PROJECT_ID env variable. Please provide a valid GitLab Project ID")
-	}
 	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
 	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
 	if err != nil {
 		return err
 	}
-	webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, &gl.ListProjectHooksOptions{PerPage: 100})
-	if err != nil {
-		return fmt.Errorf("failed to list project hooks: %v", err)
-	}
-	// Delete webhooks that are older than 1 day
-	for _, webhook := range webhooks {
-		dayDuration, _ := time.ParseDuration("24h")
-		if time.Since(*webhook.CreatedAt) > dayDuration {
-			klog.Infof("removing webhookURL: %s", webhook.URL)
-			if _, err := gc.GetClient().Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
-				return fmt.Errorf("failed to delete webhook (URL: %s): %v", webhook.URL, err)
+	for projectName, projectID := range constants.GitLabProjectIdsMap {
+		webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, &gl.ListProjectHooksOptions{PerPage: 100})
+		if err != nil {
+			return fmt.Errorf("failed to list project hooks: %v", err)
+		}
+		// Delete webhooks that are older than 1 day
+		for _, webhook := range webhooks {
+			dayDuration, _ := time.ParseDuration("24h")
+			if time.Since(*webhook.CreatedAt) > dayDuration {
+				klog.Infof("[INFO] from project: %s, removing webhookURL: %s", projectName, webhook.URL)
+				if _, err := gc.GetClient().Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
+					return fmt.Errorf("failed to delete webhook (URL: %s): %v", webhook.URL, err)
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1185,7 +1184,7 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
-	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", "--no-color",
+	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color",
 		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 
