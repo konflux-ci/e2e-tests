@@ -523,6 +523,21 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
 				})
 
+				It("should have a valid SBOM pushed to the registry", Label(buildTemplatesTestLabel), func() {
+					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					binaryImage := build.GetBinaryImage(pr)
+
+					_, err = reference.Parse(binaryImage)
+					Expect(err).NotTo(HaveOccurred())
+
+					auth, err := build.GetDockerAuth()
+					Expect(err).NotTo(HaveOccurred())
+
+					GinkgoWriter.Printf("%s*****", string(auth)[0:3])
+
+				})
+
 				When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
 					var imageWithDigest string
 					var pr *tektonpipeline.PipelineRun
