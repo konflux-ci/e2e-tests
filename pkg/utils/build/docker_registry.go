@@ -1,7 +1,6 @@
 package build
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -23,14 +22,8 @@ func GetDockerAuth() (string, error) {
 		return "", fmt.Errorf("docker config is empty")
 	}
 
-	decodedDockerConfig, err := base64.StdEncoding.DecodeString(rawDockerConfig)
-	if err != nil {
-		log.Printf("error decoding docker config: %v", err)
-		log.Print("will attempt to parse it as JSON")
-	}
-
 	var config DockerConfig
-	if err := json.Unmarshal(decodedDockerConfig, &config); err != nil {
+	if err := json.Unmarshal([]byte(rawDockerConfig), &config); err != nil {
 		return "", fmt.Errorf("error parsing docker config JSON: %v", err)
 	}
 
