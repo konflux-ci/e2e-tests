@@ -84,7 +84,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func createComponent(f *framework.Framework, namespace, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, componentIndex int, mintmakerDisabled bool) error {
+func createComponent(f *framework.Framework, namespace, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, componentIndex int, mintmakerDisabled bool) (string, error) {
 	name := fmt.Sprintf("%s-comp-%d", appName, componentIndex)
 
 	logging.Logger.Debug("Creating component %s in namespace %s", name, namespace)
@@ -123,9 +123,9 @@ func createComponent(f *framework.Framework, namespace, repoUrl, repoRevision, c
 
 	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, annotationsMap)
 	if err != nil {
-		return fmt.Errorf("Unable to create the Component %s: %v", name, err)
+		return "", fmt.Errorf("Unable to create the Component %s: %v", name, err)
 	}
-	return nil
+	return name, nil
 }
 
 func validateComponent(f *framework.Framework, namespace, name string) error {
