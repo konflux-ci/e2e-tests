@@ -22,6 +22,8 @@ type Opts struct {
 	JourneyDuration                  string
 	JourneyRepeats                   int
 	JourneyUntil                     time.Time
+	JourneyReuseApplications         bool
+	JourneyReuseComponents           bool
 	LogDebug                         bool
 	LogInfo                          bool
 	LogTrace                         bool
@@ -93,6 +95,16 @@ func (o *Opts) ProcessOptions() error {
 		if o.StartupJitter > o.StartupDelay * 2 {
 			fmt.Print("Warning: Lowering startup jitter as it was bigger than delay\n")
 			o.StartupJitter = o.StartupDelay * 2
+		}
+	}
+
+	// If we are supposed to reuse components on additional journeys, we have to reuse applications
+	if o.JourneyRepeats > 1 {
+		if o.JourneyReuseComponents {
+			if ! o.JourneyReuseApplications {
+				fmt.Print("Warning: We are supposed to reuse components so will reuse applications as well\n")
+				o.JourneyReuseApplications = true
+			}
 		}
 	}
 

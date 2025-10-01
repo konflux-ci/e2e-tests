@@ -231,8 +231,8 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 	return shaMap, nil
 }
 
-// DoHarmlessCommit creates or updates file "just-trigger-build" with current timestamp and commits it
-func DoHarmlessCommit(f *framework.Framework, repoUrl, repoRevision string) (string, error) {
+// doHarmlessCommit creates or updates file "just-trigger-build" with current timestamp and commits it
+func doHarmlessCommit(f *framework.Framework, repoUrl, repoRevision string) (string, error) {
 	fileName := "just-trigger-build"
 	var fileContent string
 	var sha *string

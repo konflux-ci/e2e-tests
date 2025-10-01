@@ -38,13 +38,12 @@ type PerApplicationContext struct {
 
 // Struct to hold data for thread to process each component
 type PerComponentContext struct {
-	PerComponentWG     *sync.WaitGroup
-	ComponentIndex     int
-	StartupPause       time.Duration
-	Framework          *framework.Framework
-	ParentContext      *PerApplicationContext
-	ComponentName      string
-	SnapshotName       string
-	MergeRequestNumber int
-	ReleaseName        string
+	PerComponentWG *sync.WaitGroup
+	ComponentIndex int
+	StartupPause   time.Duration
+	Framework      *framework.Framework
+	ParentContext  *PerApplicationContext
+	ComponentName  string
+	SnapshotName   string
+	ReleaseName    string
 }

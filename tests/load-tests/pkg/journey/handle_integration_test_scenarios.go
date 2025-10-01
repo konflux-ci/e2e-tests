@@ -36,8 +36,13 @@ func createIntegrationTestScenario(f *framework.Framework, namespace, appName, s
 }
 
 func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
+	if ctx.IntegrationTestScenarioName != "" {
+		logging.Logger.Debug("Skipping integration test scenario creation because reusing integration test scenario %s in namespace %s", ctx.IntegrationTestScenarioName, ctx.ParentContext.Namespace)
+		return nil
+	}
+
 	if ctx.ParentContext.Opts.TestScenarioGitURL == "" {
-		logging.Logger.Debug("Integration Test Scenario GIT not provided, not creating it")
+		logging.Logger.Debug("Skipping integration test scenario creation because GIT was not provided")
 		return nil
 	}
 

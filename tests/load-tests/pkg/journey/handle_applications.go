@@ -39,6 +39,11 @@ func validateApplication(f *framework.Framework, name, namespace string) error {
 }
 
 func HandleApplication(ctx *types.PerApplicationContext) error {
+	if ctx.ApplicationName != "" {
+		logging.Logger.Debug("Skipping application creation because reusing application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
+		return nil
+	}
+
 	var iface interface{}
 	var err error
 	var ok bool

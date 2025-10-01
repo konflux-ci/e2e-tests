@@ -63,6 +63,8 @@ func init() {
 	rootCmd.Flags().IntVarP(&opts.Concurrency, "concurrency", "c", 1, "number of concurrent threads to execute")
 	rootCmd.Flags().IntVar(&opts.JourneyRepeats, "journey-repeats", 1, "number of times to repeat user journey (either this or --journey-duration)")
 	rootCmd.Flags().StringVar(&opts.JourneyDuration, "journey-duration", "1h", "repeat user journey until this timeout (either this or --journey-repeats)")
+	rootCmd.Flags().BoolVar(&opts.JourneyReuseApplications, "journey-reuse-applications", false, "when repeating journey, do not create new application (and integration test scenario and release plan and repease plan admission) on every journey repeat")
+	rootCmd.Flags().BoolVar(&opts.JourneyReuseComponents, "journey-reuse-componets", false, "when repeating journey, do not create new component on every journey repeat; this implies --journey-reuse-applications")
 	rootCmd.Flags().BoolVar(&opts.PipelineMintmakerDisabled, "pipeline-mintmaker-disabled", true, "if you want to stop Mintmaker to be creating update PRs for your component (default in loadtest different from Konflux default)")
 	rootCmd.Flags().BoolVar(&opts.PipelineRepoTemplating, "pipeline-repo-templating", false, "if we should use in repo template pipelines (merge PaC PR, template repo pipelines and ignore custom pipeline run, e.g. required for multi arch test)")
 	rootCmd.Flags().StringVar(&opts.PipelineRepoTemplatingSource, "pipeline-repo-templating-source", "", "when templating, take template source files from this repository (\"\" means we will get source files from current repo)")

@@ -130,6 +130,14 @@ func validateReleasePlanAdmission(f *framework.Framework, namespace, name string
 
 
 func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
+	if ctx.ReleasePlanName != "" {
+		if ctx.ReleasePlanAdmissionName == "" {
+			return logging.Logger.Fail(90, "We are supposed to reuse RPA, but it was not configured")
+		}
+		logging.Logger.Debug("Skipping setting up releases because reusing release plan %s and release plan admission %s in namespace %s", ctx.ReleasePlanName, ctx.ReleasePlanAdmissionName, ctx.ParentContext.Namespace)
+		return nil
+	}
+
 	if ctx.ParentContext.Opts.ReleasePolicy == "" {
 		logging.Logger.Info("Skipping setting up releases because policy was not provided")
 		return nil

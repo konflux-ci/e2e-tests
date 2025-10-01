@@ -318,12 +318,22 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 }
 
 func HandleComponent(ctx *types.PerComponentContext) error {
-	var err error
+	if ctx.ComponentName != "" {
+		logging.Logger.Debug("Skipping setting up component because reusing component %s in namespace %s, triggering build with push to the repo", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+		_, err := doHarmlessCommit(ctx.Framework, ctx.ParentContext.ParentContext.Opts.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision)
+		if err != nil {
+			return logging.Logger.Fail(60, "Commiting to repo for reused component %s in namespace %s failed: %v", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace, err)
+		}
+		return nil
+	}
 
 	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
 		logging.Logger.Debug("Waiting to create component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 		ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboardingLock.Lock()
 	}
+
+	var err error
+	var mergeRequestNumber int
 
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
@@ -343,7 +353,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ParentContext.ParentContext.Opts.PipelineMintmakerDisabled,
 	)
 	if err != nil {
-		return logging.Logger.Fail(60, "Component failed creation: %v", err)
+		return logging.Logger.Fail(61, "Component failed creation: %v", err)
 	}
 
 	// Validate component build service account created
@@ -355,7 +365,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(65, "Component failed onboarding: %v", err)
+		return logging.Logger.Fail(62, "Component failed onboarding: %v", err)
 	}
 
 	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
@@ -374,7 +384,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
 		)
 		if err != nil {
-			return logging.Logger.Fail(61, "Failed to configure pipeline imagePullSecrets: %v", err)
+			return logging.Logger.Fail(63, "Failed to configure pipeline imagePullSecrets: %v", err)
 		}
 	}
 
@@ -387,14 +397,14 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(62, "Component failed validation: %v", err)
+		return logging.Logger.Fail(64, "Component failed validation: %v", err)
 	}
 
 	// Get merge request number
 	var ok bool
-	ctx.MergeRequestNumber, ok = pullIface.(int)
+	mergeRequestNumber, ok = pullIface.(int)
 	if !ok {
-		return logging.Logger.Fail(63, "Type assertion failed on pull: %+v", pullIface)
+		return logging.Logger.Fail(65, "Type assertion failed on pull: %+v", pullIface)
 	}
 
 	// If this is supposed to be a multi-arch build, we do not care about
@@ -423,11 +433,11 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 			ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
 			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSource,
 			ctx.ParentContext.ParentContext.Opts.PipelineRepoTemplatingSourceDir,
-			ctx.MergeRequestNumber,
+			mergeRequestNumber,
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(64, "Repo-templating workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(66, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
 	}
