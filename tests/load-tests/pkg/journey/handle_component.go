@@ -332,7 +332,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 	}
 
 	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
-		logging.Logger.Debug("Waiting to create component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+		logging.Logger.Debug("Waiting to create component in namespace %s", ctx.ParentContext.ParentContext.Namespace)
 		ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboardingLock.Lock()
 	}
 
