@@ -196,42 +196,46 @@ func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component
 
 func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appName, compName, snapName, releasePlanName, releasePlanAdmissionName, relName string) error {
 	// Collect ReleasePlan JSON
-	releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
-	if err != nil {
-		if !k8s_api_errors.IsNotFound(err) {
-			return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
-		}
-	}
-
-	if err == nil {
-		releasePlanJSON, err := json.Marshal(releasePlan)
+	if releasePlanName != "" {
+		releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+			}
 		}
 
-		err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
-		if err != nil {
-			return fmt.Errorf("Failed to write Release Plan: %v", err)
+		if err == nil {
+			releasePlanJSON, err := json.Marshal(releasePlan)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Release Plan: %v", err)
+			}
 		}
 	}
 
 	// Collect ReleasePlanAdmission JSON
-	releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
-	if err != nil {
-		if !k8s_api_errors.IsNotFound(err) {
-			return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
-		}
-	}
-
-	if err == nil {
-		releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
+	if releasePlanAdmissionName != "" {
+		releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+			if !k8s_api_errors.IsNotFound(err) {
+				return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+			}
 		}
 
-		err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
-		if err != nil {
-			return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+		if err == nil {
+			releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
+			if err != nil {
+				return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+			}
+
+			err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
+			if err != nil {
+				return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+			}
 		}
 	}
 
