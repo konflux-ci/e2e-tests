@@ -31,6 +31,8 @@ type PerApplicationContext struct {
 	ParentContext               *PerUserContext
 	ApplicationName             string
 	IntegrationTestScenarioName string
+	ReleasePlanName             string
+	ReleasePlanAdmissionName    string
 	PerComponentContexts        []*PerComponentContext
 }
 

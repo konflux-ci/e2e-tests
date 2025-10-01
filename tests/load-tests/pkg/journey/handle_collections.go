@@ -194,9 +194,8 @@ func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component
 	return nil
 }
 
-func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appName, compName, snapName, relName string) error {
+func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appName, compName, snapName, releasePlanName, releasePlanAdmissionName, relName string) error {
 	// Collect ReleasePlan JSON
-	releasePlanName := appName + "-rp"
 	releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
 	if err != nil {
 		if !k8s_api_errors.IsNotFound(err) {
@@ -217,7 +216,6 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 	}
 
 	// Collect ReleasePlanAdmission JSON
-	releasePlanAdmissionName := appName + "-rpa"
 	releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
 	if err != nil {
 		if !k8s_api_errors.IsNotFound(err) {
@@ -342,7 +340,7 @@ func HandlePerComponentCollection(ctx *types.PerComponentContext) error {
 		return logging.Logger.Fail(103, "Failed to collect component JSONs: %v", err)
 	}
 
-	err = collectReleaseRelatedJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.SnapshotName, ctx.ReleaseName)
+	err = collectReleaseRelatedJSONs(ctx.Framework, dirPath, ctx.ParentContext.ParentContext.Namespace, ctx.ParentContext.ApplicationName, ctx.ComponentName, ctx.SnapshotName, ctx.ParentContext.ReleasePlanName, ctx.ParentContext.ReleasePlanAdmissionName, ctx.ReleaseName)
 	if err != nil {
 		return logging.Logger.Fail(104, "Failed to collect release related JSONs: %v", err)
 	}

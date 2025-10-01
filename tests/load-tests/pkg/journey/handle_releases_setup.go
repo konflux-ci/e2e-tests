@@ -135,8 +135,6 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		return nil
 	}
 
-	var releasePlanName string
-	var releasePlanAdmissionName string
 	var iface interface{}
 	var ok bool
 	var err error
@@ -152,7 +150,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		return logging.Logger.Fail(91, "Release Plan failed creation: %v", err)
 	}
 
-	releasePlanName, ok = iface.(string)
+	ctx.ReleasePlanName, ok = iface.(string)
 	if !ok {
 		return logging.Logger.Fail(92, "Type assertion failed on release plan name: %+v", iface)
 	}
@@ -173,7 +171,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		return logging.Logger.Fail(93, "Release Plan Admission failed creation: %v", err)
 	}
 
-	releasePlanAdmissionName, ok = iface.(string)
+	ctx.ReleasePlanAdmissionName, ok = iface.(string)
 	if !ok {
 		return logging.Logger.Fail(94, "Type assertion failed on release plan admission name: %+v", iface)
 	}
@@ -183,7 +181,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		validateReleasePlan,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
-		releasePlanName,
+		ctx.ReleasePlanName,
 	)
 	if err != nil {
 		return logging.Logger.Fail(95, "Release Plan failed validation: %v", err)
@@ -194,14 +192,14 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		validateReleasePlanAdmission,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
-		releasePlanAdmissionName,
+		ctx.ReleasePlanAdmissionName,
 	)
 	if err != nil {
 		return logging.Logger.Fail(96, "Release Plan Admission failed validation: %v", err)
 	}
 
 
-	logging.Logger.Info("Configured release %s & %s for application %s in namespace %s", releasePlanName, releasePlanAdmissionName, ctx.ApplicationName, ctx.ParentContext.Namespace)
+	logging.Logger.Info("Configured release %s & %s for application %s in namespace %s", ctx.ReleasePlanName, ctx.ReleasePlanAdmissionName, ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	return nil
 }
