@@ -48,7 +48,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 		timeout := time.Minute * 20
 
 		err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-			if firstApplicationCtx.ApplicationName != "" {
+			if firstApplicationCtx.ApplicationName != "" && firstApplicationCtx.IntegrationTestScenarioName != "" && (ctx.ParentContext.Opts.ReleasePolicy == "" || (firstApplicationCtx.ReleasePlanName != "" && firstApplicationCtx.ReleasePlanAdmissionName != "")) {
 				logging.Logger.Debug("Reused application name is now available: %s", firstApplicationCtx.ApplicationName)
 				return true, nil
 			}
