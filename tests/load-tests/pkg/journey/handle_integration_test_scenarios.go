@@ -12,9 +12,12 @@ import (
 	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
-func createIntegrationTestScenario(f *framework.Framework, namespace, name, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) error {
+func createIntegrationTestScenario(f *framework.Framework, namespace, appName, scenarioGitURL, scenarioRevision, scenarioPathInRepo string) (string, error) {
 	interval := time.Second * 10
 	timeout := time.Minute * 1
+
+	name := fmt.Sprintf("%s-its", appName)
+	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, appName, namespace)
 
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		_, err = f.AsKubeDeveloper.IntegrationController.CreateIntegrationTestScenario(name, appName, namespace, scenarioGitURL, scenarioRevision, scenarioPathInRepo, "", []string{})
@@ -26,10 +29,10 @@ func createIntegrationTestScenario(f *framework.Framework, namespace, name, appN
 		return true, nil
 	}, interval, timeout)
 	if err != nil {
-		return fmt.Errorf("Unable to create the Integration Test Scenario %s in namespace %s: %v", name, namespace, err)
+		return "", fmt.Errorf("Unable to create the Integration Test Scenario %s in namespace %s: %v", name, namespace, err)
 	}
 
-	return nil
+	return name, nil
 }
 
 func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
@@ -38,17 +41,15 @@ func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
 		return nil
 	}
 
+	var iface interface{}
 	var err error
+	var ok bool
 
-	name := fmt.Sprintf("%s-its", ctx.ApplicationName)
-	logging.Logger.Debug("Creating integration test scenario %s for application %s in namespace %s", name, ctx.ApplicationName, ctx.ParentContext.Namespace)
-
-	_, err = logging.Measure(
+	iface, err = logging.Measure(
 		ctx,
 		createIntegrationTestScenario,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
-		name,
 		ctx.ApplicationName,
 		ctx.ParentContext.Opts.TestScenarioGitURL,
 		ctx.ParentContext.Opts.TestScenarioRevision,
@@ -58,7 +59,10 @@ func HandleIntegrationTestScenario(ctx *types.PerApplicationContext) error {
 		return logging.Logger.Fail(40, "Integration test scenario failed creation: %v", err)
 	}
 
-	ctx.IntegrationTestScenarioName = name
+	ctx.IntegrationTestScenarioName, ok = iface.(string)
+	if !ok {
+		return logging.Logger.Fail(41, "Type assertion failed on integration test scenario name: %+v", iface)
+	}
 
 	return nil
 }
