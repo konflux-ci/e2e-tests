@@ -231,6 +231,75 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 	return shaMap, nil
 }
 
+// DoHarmlessCommit creates or updates file "just-trigger-build" with current timestamp and commits it
+func DoHarmlessCommit(f *framework.Framework, repoUrl, repoRevision string) (string, error) {
+	fileName := "just-trigger-build"
+	var fileContent string
+	var sha *string
+	var commitSha string
+
+	repoName, err := getRepoNameFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+	repoOrgName, err := getRepoOrgFromRepoUrl(repoUrl)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.Contains(repoUrl, "gitlab.") {
+		// For gitlab, we can get file content. If it fails, we assume it doesn't exist.
+		// The UpdateFile API for gitlab creates the file if it doesn't exist.
+		existingContent, err := f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoOrgName+"/"+repoName, fileName, repoRevision)
+		if err != nil {
+			logging.Logger.Debug("Failed to get file %s from repo %s, assuming it does not exist: %v", fileName, repoUrl, err)
+			fileContent = ""
+		} else {
+			fileContent = existingContent
+		}
+		fileContent += fmt.Sprintf("\n# %s", time.Now().String())
+
+		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoOrgName+"/"+repoName, fileName, fileContent, repoRevision)
+		if err != nil {
+			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName+"/"+repoName, repoRevision, err)
+		}
+	} else {
+		// For github, we need to get SHA if file exists.
+		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
+		if err != nil {
+			// Assuming error means not found.
+			logging.Logger.Debug("File %s not found in repo %s, will create it.", fileName, repoUrl)
+			fileContent = ""
+			sha = nil
+		} else {
+			existingContent, err := fileResponse.GetContent()
+			if err != nil {
+				return "", err
+			}
+			fileContent = existingContent
+			sha = fileResponse.SHA
+		}
+
+		fileContent += fmt.Sprintf("\n# %s", time.Now().String())
+
+		if sha == nil {
+			// We have to assume a CreateFile function exists in the framework's github controller
+			repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.CreateFile(repoName, fileName, fileContent, repoRevision)
+			if err != nil {
+				return "", fmt.Errorf("Failed to create file %s in repo %s: %v", fileName, repoUrl, err)
+			}
+			commitSha = *repoContentResponse.Commit.SHA
+		} else {
+			repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *sha)
+			if err != nil {
+				return "", fmt.Errorf("Failed to update file %s in repo %s: %v", fileName, repoUrl, err)
+			}
+			commitSha = *repoContentResponse.Commit.SHA
+		}
+	}
+	return commitSha, nil
+}
+
 func HandleRepoForking(ctx *types.PerUserContext) error {
 	var suffix string
 	if ctx.Opts.Stage {
