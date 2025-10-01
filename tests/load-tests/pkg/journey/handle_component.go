@@ -320,6 +320,11 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 func HandleComponent(ctx *types.PerComponentContext) error {
 	var err error
 
+	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
+		logging.Logger.Debug("Waiting to create component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
+		ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboardingLock.Lock()
+	}
+
 	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 
 	// Create component
@@ -351,6 +356,11 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 	)
 	if err != nil {
 		return logging.Logger.Fail(65, "Component failed onboarding: %v", err)
+	}
+
+	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
+		ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboardingLock.Unlock()
+		logging.Logger.Debug("Freed lock to create another component after %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 	}
 
 	// Configure imagePullSecrets needed for component build task images

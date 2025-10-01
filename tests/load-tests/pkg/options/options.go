@@ -5,49 +5,52 @@ import "fmt"
 import "os"
 import "time"
 import "strings"
+import "sync"
 
 // Struct to hold command line options
 type Opts struct {
-	ApplicationsCount               int
-	BuildPipelineSelectorBundle     string
-	ComponentContainerContext       string
-	ComponentContainerFile          string
-	ComponentRepoRevision           string
-	ComponentRepoUrl                string
-	ComponentsCount                 int
-	Concurrency                     int
-	FailFast                        bool
-	ForkTarget                      string
-	JourneyDuration                 string
-	JourneyRepeats                  int
-	JourneyUntil                    time.Time
-	LogDebug                        bool
-	LogInfo                         bool
-	LogTrace                        bool
-	OutputDir                       string
-	PipelineImagePullSecrets        []string
-	PipelineMintmakerDisabled       bool
-	PipelineRepoTemplating          bool
-	PipelineRepoTemplatingSourceDir string
-	PipelineRepoTemplatingSource    string
-	Purge                           bool
-	PurgeOnly                       bool
-	QuayRepo                        string
-	ReleasePipelinePath             string
-	ReleasePipelineRevision         string
-	ReleasePipelineServiceAccount   string
-	ReleasePipelineUrl              string
-	ReleasePolicy                   string
-	RunPrefix                       string
-	Stage                           bool
-	StartupDelay                    time.Duration
-	StartupJitter                   time.Duration
-	TestScenarioGitURL              string
-	TestScenarioPathInRepo          string
-	TestScenarioRevision            string
-	WaitIntegrationTestsPipelines   bool
-	WaitPipelines                   bool
-	WaitRelease                     bool
+	ApplicationsCount                int
+	BuildPipelineSelectorBundle      string
+	ComponentContainerContext        string
+	ComponentContainerFile           string
+	ComponentRepoRevision            string
+	ComponentRepoUrl                 string
+	ComponentsCount                  int
+	Concurrency                      int
+	FailFast                         bool
+	ForkTarget                       string
+	JourneyDuration                  string
+	JourneyRepeats                   int
+	JourneyUntil                     time.Time
+	LogDebug                         bool
+	LogInfo                          bool
+	LogTrace                         bool
+	OutputDir                        string
+	PipelineImagePullSecrets         []string
+	PipelineMintmakerDisabled        bool
+	PipelineRepoTemplating           bool
+	PipelineRepoTemplatingSourceDir  string
+	PipelineRepoTemplatingSource     string
+	Purge                            bool
+	PurgeOnly                        bool
+	QuayRepo                         string
+	ReleasePipelinePath              string
+	ReleasePipelineRevision          string
+	ReleasePipelineServiceAccount    string
+	ReleasePipelineUrl               string
+	ReleasePolicy                    string
+	RunPrefix                        string
+	SerializeComponentOnboarding     bool
+	SerializeComponentOnboardingLock sync.Mutex
+	Stage                            bool
+	StartupDelay                     time.Duration
+	StartupJitter                    time.Duration
+	TestScenarioGitURL               string
+	TestScenarioPathInRepo           string
+	TestScenarioRevision             string
+	WaitIntegrationTestsPipelines    bool
+	WaitPipelines                    bool
+	WaitRelease                      bool
 }
 
 // Pre-process load-test options before running the test
