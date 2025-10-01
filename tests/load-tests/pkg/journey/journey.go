@@ -10,8 +10,6 @@ import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
 import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
-import util "github.com/devfile/library/v2/pkg/util"
-
 // Pointers to all user journey thread contexts
 var PerUserContexts []*types.PerUserContext
 
@@ -132,7 +130,6 @@ func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *t
 			ApplicationIndex: applicationIndex,
 			StartupPause:     startupPause,
 			ParentContext:    parentContext,
-			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Opts.RunPrefix, util.GenerateRandomString(5)),
 		}
 
 		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)

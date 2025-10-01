@@ -9,12 +9,15 @@ import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 
-func createApplication(f *framework.Framework, namespace string, timeout time.Duration, name string) error {
-	_, err := f.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(name, namespace, timeout)
+import util "github.com/devfile/library/v2/pkg/util"
+
+func createApplication(f *framework.Framework, namespace string, runPrefix string) (string, error) {
+	name := fmt.Sprintf("%s-app-%s", runPrefix, util.GenerateRandomString(5))
+	_, err := f.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(name, namespace, time.Minute*60)
 	if err != nil {
-		return fmt.Errorf("Unable to create the Application %s: %v", name, err)
+		return "", fmt.Errorf("Unable to create the Application %s: %v", name, err)
 	}
-	return nil
+	return name, nil
 }
 
 func validateApplication(f *framework.Framework, name, namespace string) error {
@@ -36,20 +39,26 @@ func validateApplication(f *framework.Framework, name, namespace string) error {
 }
 
 func HandleApplication(ctx *types.PerApplicationContext) error {
+	var iface interface{}
 	var err error
+	var ok bool
 
 	logging.Logger.Debug("Creating application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 
-	_, err = logging.Measure(
+	iface, err = logging.Measure(
 		ctx,
 		createApplication,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
-		time.Minute*60,
-		ctx.ApplicationName,
+		ctx.ParentContext.Opts.RunPrefix,
 	)
 	if err != nil {
 		return logging.Logger.Fail(30, "Application failed creation: %v", err)
+	}
+
+	ctx.ApplicationName, ok = iface.(string)
+	if !ok {
+		return logging.Logger.Fail(31, "Type assertion failed on application name: %+v", iface)
 	}
 
 	_, err = logging.Measure(
@@ -60,7 +69,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 		ctx.ParentContext.Namespace,
 	)
 	if err != nil {
-		return logging.Logger.Fail(31, "Application failed validation: %v", err)
+		return logging.Logger.Fail(32, "Application failed validation: %v", err)
 	}
 
 	return nil
