@@ -9,8 +9,8 @@ import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 
 // Struct to hold user journey thread data
 type PerUserContext struct {
-	ThreadsWG              *sync.WaitGroup
-	ThreadIndex            int
+	PerUserWG              *sync.WaitGroup
+	UserIndex              int
 	StartupPause           time.Duration
 	JourneyRepeatsCounter  int
 	Opts                   *options.Opts

@@ -13,19 +13,19 @@ import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
-var MainContexts []*types.PerUserContext
+var PerUserContexts []*types.PerUserContext
 
 // Just to create user
-func initUserThread(threadCtx *types.PerUserContext) {
-	defer threadCtx.ThreadsWG.Done()
+func initUserThread(perUserCtx *types.PerUserContext) {
+	defer perUserCtx.PerUserWG.Done()
 
 	var err error
 
 	// Create user if needed
 	_, err = logging.Measure(
-		threadCtx,
+		perUserCtx,
 		HandleUser,
-		threadCtx,
+		perUserCtx,
 	)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
@@ -49,8 +49,8 @@ func computeStartupPause(index int, delay, jitter time.Duration) time.Duration {
 // Start all the user journey threads
 // TODO split this to two functions and get PurgeOnly code out
 func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, error) {
-	threadsWG := &sync.WaitGroup{}
-	threadsWG.Add(opts.Concurrency)
+	perUserWG := &sync.WaitGroup{}
+	perUserWG.Add(opts.Concurrency)
 
 	var stageUsers []loadtestutils.User
 	var err error
@@ -62,14 +62,14 @@ func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, e
 	}
 
 	// Initialize all user thread contexts
-	for threadIndex := 0; threadIndex < opts.Concurrency; threadIndex++ {
-		startupPause := computeStartupPause(threadIndex, opts.StartupDelay, opts.StartupJitter)
+	for userIndex := 0; userIndex < opts.Concurrency; userIndex++ {
+		startupPause := computeStartupPause(userIndex, opts.StartupDelay, opts.StartupJitter)
 
-		logging.Logger.Info("Initiating per user thread %d with pause %v", threadIndex, startupPause)
+		logging.Logger.Info("Initiating per user thread %d with pause %v", userIndex, startupPause)
 
-		threadCtx := &types.PerUserContext{
-			ThreadsWG:        threadsWG,
-			ThreadIndex:      threadIndex,
+		perUserCtx := &types.PerUserContext{
+			PerUserWG:        perUserWG,
+			UserIndex:        userIndex,
 			StartupPause:     startupPause,
 			Opts:             opts,
 			StageUsers:       &stageUsers,
@@ -77,15 +77,15 @@ func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, e
 			Namespace:        "",
 		}
 
-		MainContexts = append(MainContexts, threadCtx)
+		PerUserContexts = append(PerUserContexts, perUserCtx)
 	}
 
 	// Create all users (if necessary) and initialize their frameworks
-	for _, threadCtx := range MainContexts {
-		go initUserThread(threadCtx)
+	for _, perUserCtx := range PerUserContexts {
+		go initUserThread(perUserCtx)
 	}
 
-	threadsWG.Wait()
+	perUserWG.Wait()
 
 	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
 	if opts.PurgeOnly {
@@ -94,25 +94,25 @@ func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, e
 	}
 
 	// Fork repositories sequentially as GitHub do not allow more than 3 running forks in parallel anyway
-	for _, threadCtx := range MainContexts {
+	for _, perUserCtx := range PerUserContexts {
 		_, err = logging.Measure(
-			threadCtx,
+			perUserCtx,
 			HandleRepoForking,
-			threadCtx,
+			perUserCtx,
 		)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	threadsWG.Add(opts.Concurrency)
+	perUserWG.Add(opts.Concurrency)
 
 	// Run actual user thread function
-	for _, threadCtx := range MainContexts {
-		go fn(threadCtx)
+	for _, perUserCtx := range PerUserContexts {
+		go fn(perUserCtx)
 	}
 
-	threadsWG.Wait()
+	perUserWG.Wait()
 
 	return "", nil
 }
@@ -125,7 +125,7 @@ func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *t
 	for applicationIndex := 0; applicationIndex < parentContext.Opts.ApplicationsCount; applicationIndex++ {
 		startupPause := computeStartupPause(applicationIndex, parentContext.Opts.StartupDelay, parentContext.Opts.StartupJitter)
 
-		logging.Logger.Info("Initiating per application thread %d-%d with pause %v", parentContext.ThreadIndex, applicationIndex, startupPause)
+		logging.Logger.Info("Initiating per application thread %d-%d with pause %v", parentContext.UserIndex, applicationIndex, startupPause)
 
 		perApplicationCtx := &types.PerApplicationContext{
 			PerApplicationWG: perApplicationWG,
@@ -153,7 +153,7 @@ func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types
 	for componentIndex := 0; componentIndex < parentContext.ParentContext.Opts.ComponentsCount; componentIndex++ {
 		startupPause := computeStartupPause(componentIndex, parentContext.ParentContext.Opts.StartupDelay, parentContext.ParentContext.Opts.StartupJitter)
 
-		logging.Logger.Info("Initiating per component thread %d-%d-%d with pause %s", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex, startupPause)
+		logging.Logger.Info("Initiating per component thread %d-%d-%d with pause %s", parentContext.ParentContext.UserIndex, parentContext.ApplicationIndex, componentIndex, startupPause)
 
 		perComponentCtx := &types.PerComponentContext{
 			PerComponentWG: perComponentWG,

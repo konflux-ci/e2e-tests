@@ -40,14 +40,14 @@ func HandleUser(ctx *types.PerUserContext) error {
 	var err error
 
 	if ctx.Opts.Stage {
-		ctx.Username = strings.TrimSuffix((*ctx.StageUsers)[ctx.ThreadIndex].Namespace, "-tenant")
+		ctx.Username = strings.TrimSuffix((*ctx.StageUsers)[ctx.UserIndex].Namespace, "-tenant")
 	} else {
-		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.RunPrefix, ctx.ThreadIndex)
+		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.RunPrefix, ctx.UserIndex)
 	}
 
 	ctx.Framework, ctx.Namespace, err = provisionFramework(
 		*ctx.StageUsers,
-		ctx.ThreadIndex,
+		ctx.UserIndex,
 		ctx.Username,
 		ctx.Opts.Stage,
 	)
@@ -63,7 +63,7 @@ func HandleNewFrameworkForApp(ctx *types.PerApplicationContext) error {
 
 	ctx.Framework, _, err = provisionFramework(
 		*ctx.ParentContext.StageUsers,
-		ctx.ParentContext.ThreadIndex,
+		ctx.ParentContext.UserIndex,
 		ctx.ParentContext.Username,
 		ctx.ParentContext.Opts.Stage,
 	)
@@ -79,7 +79,7 @@ func HandleNewFrameworkForComp(ctx *types.PerComponentContext) error {
 
 	ctx.Framework, _, err = provisionFramework(
 		*ctx.ParentContext.ParentContext.StageUsers,
-		ctx.ParentContext.ParentContext.ThreadIndex,
+		ctx.ParentContext.ParentContext.UserIndex,
 		ctx.ParentContext.ParentContext.Username,
 		ctx.ParentContext.ParentContext.Opts.Stage,
 	)

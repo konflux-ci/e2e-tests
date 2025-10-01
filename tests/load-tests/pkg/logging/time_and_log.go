@@ -179,16 +179,16 @@ func Measure(ctx interface{}, fn interface{}, params ...interface{}) (interface{
 
 	// Extract additional metadata about this function call from provided context.
 	if casted, ok := ctx.(*types.PerUserContext); ok {
-		perUserId = casted.ThreadIndex
+		perUserId = casted.UserIndex
 		repeatsCounter = casted.JourneyRepeatsCounter
 	}
 	if casted, ok := ctx.(*types.PerApplicationContext); ok {
-		perUserId = casted.ParentContext.ThreadIndex
+		perUserId = casted.ParentContext.UserIndex
 		perAppId = casted.ApplicationIndex
 		repeatsCounter = casted.ParentContext.JourneyRepeatsCounter
 	}
 	if casted, ok := ctx.(*types.PerComponentContext); ok {
-		perUserId = casted.ParentContext.ParentContext.ThreadIndex
+		perUserId = casted.ParentContext.ParentContext.UserIndex
 		perAppId = casted.ParentContext.ApplicationIndex
 		perCompId = casted.ComponentIndex
 		repeatsCounter = casted.ParentContext.ParentContext.JourneyRepeatsCounter

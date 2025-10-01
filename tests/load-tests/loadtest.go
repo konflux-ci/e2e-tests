@@ -144,10 +144,10 @@ func main() {
 }
 
 // Single user journey
-func perUserThread(threadCtx *types.PerUserContext) {
-	defer threadCtx.ThreadsWG.Done()
+func perUserThread(perUserCtx *types.PerUserContext) {
+	defer perUserCtx.PerUserWG.Done()
 
-	time.Sleep(threadCtx.StartupPause)
+	time.Sleep(perUserCtx.StartupPause)
 
 	var err error
 
@@ -165,9 +165,9 @@ func perUserThread(threadCtx *types.PerUserContext) {
 	//}
 	//// Create watcher
 	//fmt.Print("Creating watcher...\n")
-	//watcher, err2 := threadCtx.Framework.AsKubeDeveloper.CommonController.DynamicClient().
+	//watcher, err2 := perUserCtx.Framework.AsKubeDeveloper.CommonController.DynamicClient().
 	//	Resource(gvr).
-	//	Namespace(threadCtx.Namespace).
+	//	Namespace(perUserCtx.Namespace).
 	//	Watch(watchCtx, listOptions)
 	//if err2 != nil {
 	//	fmt.Printf("Can not get watcher: %v", err2)
@@ -228,21 +228,21 @@ func perUserThread(threadCtx *types.PerUserContext) {
 	//watcher.Stop()
 	//os.Exit(10)
 
-	for threadCtx.JourneyRepeatsCounter = 1; threadCtx.JourneyRepeatsCounter <= threadCtx.Opts.JourneyRepeats; threadCtx.JourneyRepeatsCounter++ {
+	for perUserCtx.JourneyRepeatsCounter = 1; perUserCtx.JourneyRepeatsCounter <= perUserCtx.Opts.JourneyRepeats; perUserCtx.JourneyRepeatsCounter++ {
 
 		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
 		_, err = logging.Measure(
-			threadCtx,
+			perUserCtx,
 			journey.PerApplicationSetup,
 			perApplicationThread,
-			threadCtx,
+			perUserCtx,
 		)
 		if err != nil {
 			logging.Logger.Fatal("Per application threads setup failed: %v", err)
 		}
 
 		// Check if we are supposed to quit based on --journey-duration
-		if time.Now().UTC().After(threadCtx.Opts.JourneyUntil) {
+		if time.Now().UTC().After(perUserCtx.Opts.JourneyUntil) {
 			logging.Logger.Debug("Done with user journey because of timeout")
 			break
 		}
@@ -251,9 +251,9 @@ func perUserThread(threadCtx *types.PerUserContext) {
 
 	// Collect info about PVCs
 	_, err = logging.Measure(
-		threadCtx,
+		perUserCtx,
 		journey.HandlePersistentVolumeClaim,
-		threadCtx,
+		perUserCtx,
 	)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
