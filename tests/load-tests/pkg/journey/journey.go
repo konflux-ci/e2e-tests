@@ -1,6 +1,5 @@
 package journey
 
-import "fmt"
 import "sync"
 import "time"
 import "math/rand"
@@ -169,7 +168,7 @@ func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types
 			ComponentIndex: componentIndex,
 			StartupPause:   startupPause,
 			ParentContext:  parentContext,
-			ComponentName:  fmt.Sprintf("%s-comp-%d", parentContext.ApplicationName, componentIndex),
+			ComponentName:  "",
 		}
 
 		if parentContext.ParentContext.Opts.JourneyReuseComponents && componentIndex != 0 {

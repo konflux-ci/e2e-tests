@@ -84,7 +84,11 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	}
 }
 
-func createComponent(f *framework.Framework, namespace, name, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, mintmakerDisabled bool) error {
+func createComponent(f *framework.Framework, namespace, repoUrl, repoRevision, containerContext, containerFile, buildPipelineSelector, appName string, componentIndex int, mintmakerDisabled bool) error {
+	name := fmt.Sprintf("%s-comp-%d", appName, componentIndex)
+
+	logging.Logger.Debug("Creating component %s in namespace %s", name, namespace)
+
 	// Prepare annotations to add to component
 	annotationsMap := constants.DefaultDockerBuildPipelineBundleAnnotation
 	if buildPipelineSelector != "" {
@@ -332,28 +336,33 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboardingLock.Lock()
 	}
 
+	var iface interface{}
+	var ok bool
 	var err error
 	var mergeRequestNumber int
 
-	logging.Logger.Debug("Creating component %s in namespace %s", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
-
 	// Create component
-	_, err = logging.Measure(
+	iface, err = logging.Measure(
 		ctx,
 		createComponent,
 		ctx.Framework,
 		ctx.ParentContext.ParentContext.Namespace,
-		ctx.ComponentName,
 		ctx.ParentContext.ParentContext.ComponentRepoUrl,
 		ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision,
 		ctx.ParentContext.ParentContext.Opts.ComponentContainerContext,
 		ctx.ParentContext.ParentContext.Opts.ComponentContainerFile,
 		ctx.ParentContext.ParentContext.Opts.BuildPipelineSelectorBundle,
 		ctx.ParentContext.ApplicationName,
+		ctx.ComponentIndex,
 		ctx.ParentContext.ParentContext.Opts.PipelineMintmakerDisabled,
 	)
 	if err != nil {
 		return logging.Logger.Fail(61, "Component failed creation: %v", err)
+	}
+
+	ctx.ComponentName, ok = iface.(string)
+	if !ok {
+		return logging.Logger.Fail(62, "Type assertion failed on component name: %+v", iface)
 	}
 
 	// Validate component build service account created
@@ -365,7 +374,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(62, "Component failed onboarding: %v", err)
+		return logging.Logger.Fail(63, "Component failed onboarding: %v", err)
 	}
 
 	if ctx.ParentContext.ParentContext.Opts.SerializeComponentOnboarding {
@@ -384,12 +393,11 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 			ctx.ParentContext.ParentContext.Opts.PipelineImagePullSecrets,
 		)
 		if err != nil {
-			return logging.Logger.Fail(63, "Failed to configure pipeline imagePullSecrets: %v", err)
+			return logging.Logger.Fail(64, "Failed to configure pipeline imagePullSecrets: %v", err)
 		}
 	}
 
-	var pullIface interface{}
-	pullIface, err = logging.Measure(
+	iface, err = logging.Measure(
 		ctx,
 		getPaCPullNumber,
 		ctx.Framework,
@@ -397,14 +405,13 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(64, "Component failed validation: %v", err)
+		return logging.Logger.Fail(65, "Component failed validation: %v", err)
 	}
 
 	// Get merge request number
-	var ok bool
-	mergeRequestNumber, ok = pullIface.(int)
+	mergeRequestNumber, ok = iface.(int)
 	if !ok {
-		return logging.Logger.Fail(65, "Type assertion failed on pull: %+v", pullIface)
+		return logging.Logger.Fail(66, "Type assertion failed on pull: %+v", iface)
 	}
 
 	// If this is supposed to be a multi-arch build, we do not care about
@@ -437,7 +444,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(66, "Repo-templating workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(67, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
 	}
