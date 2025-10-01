@@ -135,14 +135,6 @@ func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *t
 			ReleasePlanAdmissionName:    "",
 		}
 
-		if parentContext.Opts.JourneyReuseApplications && applicationIndex != 0 {
-			perApplicationCtx.ApplicationName = parentContext.PerApplicationContexts[0].ApplicationName
-			perApplicationCtx.IntegrationTestScenarioName = parentContext.PerApplicationContexts[0].IntegrationTestScenarioName
-			perApplicationCtx.ReleasePlanName = parentContext.PerApplicationContexts[0].ReleasePlanName
-			perApplicationCtx.ReleasePlanAdmissionName = parentContext.PerApplicationContexts[0].ReleasePlanAdmissionName
-			logging.Logger.Debug("Reusing application %s and others in thread %d-%d", perApplicationCtx.ApplicationName, parentContext.UserIndex, applicationIndex)
-		}
-
 		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)
 
 		go fn(perApplicationCtx)
@@ -169,11 +161,6 @@ func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types
 			StartupPause:   startupPause,
 			ParentContext:  parentContext,
 			ComponentName:  "",
-		}
-
-		if parentContext.ParentContext.Opts.JourneyReuseComponents && componentIndex != 0 {
-			perComponentCtx.ComponentName = parentContext.PerComponentContexts[0].ComponentName
-			logging.Logger.Debug("Reusing component %s in thread %d-%d-%d", perComponentCtx.ComponentName, parentContext.ParentContext.UserIndex, parentContext.ApplicationIndex, componentIndex)
 		}
 
 		parentContext.PerComponentContexts = append(parentContext.PerComponentContexts, perComponentCtx)

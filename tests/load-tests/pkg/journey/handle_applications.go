@@ -39,6 +39,34 @@ func validateApplication(f *framework.Framework, name, namespace string) error {
 }
 
 func HandleApplication(ctx *types.PerApplicationContext) error {
+	if ctx.ParentContext.Opts.JourneyReuseApplications && ctx.ApplicationIndex != 0 {
+		// This is a reused application. We need to get the name from the first application.
+		// We must wait until the first application's context has the name.
+		firstApplicationCtx := ctx.ParentContext.PerApplicationContexts[0]
+
+		interval := time.Second * 2
+		timeout := time.Minute * 20
+
+		err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+			if firstApplicationCtx.ApplicationName != "" {
+				logging.Logger.Debug("Reused application name is now available: %s", firstApplicationCtx.ApplicationName)
+				return true, nil
+			}
+			logging.Logger.Debug("Waiting for application name from first application thread...")
+			return false, nil
+		}, interval, timeout)
+
+		if err != nil {
+			return logging.Logger.Fail(30, "timed out waiting for application name from first application thread: %v", err)
+		}
+
+		ctx.ApplicationName = firstApplicationCtx.ApplicationName
+		ctx.IntegrationTestScenarioName = firstApplicationCtx.IntegrationTestScenarioName
+		ctx.ReleasePlanName = firstApplicationCtx.ReleasePlanName
+		ctx.ReleasePlanAdmissionName = firstApplicationCtx.ReleasePlanAdmissionName
+		logging.Logger.Debug("Reusing application %s and others in thread %d-%d", ctx.ApplicationName, ctx.ParentContext.UserIndex, ctx.ApplicationIndex)
+	}
+
 	if ctx.ApplicationName != "" {
 		logging.Logger.Debug("Skipping application creation because reusing application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 		return nil

@@ -322,6 +322,31 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 }
 
 func HandleComponent(ctx *types.PerComponentContext) error {
+	if ctx.ParentContext.ParentContext.Opts.JourneyReuseComponents && ctx.ComponentIndex != 0 {
+		// This is a reused component. We need to get the name from the first component.
+		// We must wait until the first component's context has the name.
+		firstComponentCtx := ctx.ParentContext.PerComponentContexts[0]
+
+		interval := time.Second * 2
+		timeout := time.Minute * 20
+
+		err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+			if firstComponentCtx.ComponentName != "" {
+				logging.Logger.Debug("Reused component name is now available: %s", firstComponentCtx.ComponentName)
+				return true, nil
+			}
+			logging.Logger.Debug("Waiting for component name from first component thread...")
+			return false, nil
+		}, interval, timeout)
+
+		if err != nil {
+			return logging.Logger.Fail(60, "timed out waiting for component name from first component thread: %v", err)
+		}
+
+		ctx.ComponentName = firstComponentCtx.ComponentName
+		logging.Logger.Debug("Reusing component %s in thread %d-%d-%d", ctx.ComponentName, ctx.ParentContext.ParentContext.UserIndex, ctx.ParentContext.ApplicationIndex, ctx.ComponentIndex)
+	}
+
 	if ctx.ComponentName != "" {
 		logging.Logger.Debug("Skipping setting up component because reusing component %s in namespace %s, triggering build with push to the repo", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
 		_, err := doHarmlessCommit(ctx.Framework, ctx.ParentContext.ParentContext.Opts.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision)
