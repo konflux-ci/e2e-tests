@@ -36,7 +36,7 @@ func provisionFramework(stageUsers []loadtestutils.User, threadIndex int, userna
 	return f, f.UserNamespace, nil
 }
 
-func HandleUser(ctx *types.MainContext) error {
+func HandleUser(ctx *types.PerUserContext) error {
 	var err error
 
 	if ctx.Opts.Stage {

@@ -119,10 +119,10 @@ func main() {
 	// Tier up measurements logger
 	logging.MeasurementsStart(opts.OutputDir)
 
-	// Start given number of `perUserThread()` threads using `journey.Setup()` and wait for them to finish
+	// Start given number of `perUserThread()` threads using `journey.PerUserSetup()` and wait for them to finish
 	_, err = logging.Measure(
 		nil,
-		journey.Setup,
+		journey.PerUserSetup,
 		perUserThread,
 		&opts,
 	)
@@ -144,7 +144,7 @@ func main() {
 }
 
 // Single user journey
-func perUserThread(threadCtx *types.MainContext) {
+func perUserThread(threadCtx *types.PerUserContext) {
 	defer threadCtx.ThreadsWG.Done()
 
 	time.Sleep(threadCtx.StartupPause)

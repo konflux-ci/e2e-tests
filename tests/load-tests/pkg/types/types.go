@@ -8,7 +8,7 @@ import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadt
 import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 
 // Struct to hold user journey thread data
-type MainContext struct {
+type PerUserContext struct {
 	ThreadsWG              *sync.WaitGroup
 	ThreadIndex            int
 	StartupPause           time.Duration
@@ -28,7 +28,7 @@ type PerApplicationContext struct {
 	ApplicationIndex            int
 	StartupPause                time.Duration
 	Framework                   *framework.Framework
-	ParentContext               *MainContext
+	ParentContext               *PerUserContext
 	ApplicationName             string
 	IntegrationTestScenarioName string
 	PerComponentContexts        []*PerComponentContext

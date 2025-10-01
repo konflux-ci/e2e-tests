@@ -231,7 +231,7 @@ func templateFiles(f *framework.Framework, repoUrl, repoRevision, sourceRepo, so
 	return shaMap, nil
 }
 
-func HandleRepoForking(ctx *types.MainContext) error {
+func HandleRepoForking(ctx *types.PerUserContext) error {
 	var suffix string
 	if ctx.Opts.Stage {
 		suffix = ctx.Opts.RunPrefix + "-" + ctx.Namespace

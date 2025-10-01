@@ -26,7 +26,7 @@ func collectPersistentVolumeClaims(f *framework.Framework, namespace string) err
 	return nil
 }
 
-func HandlePersistentVolumeClaim(ctx *types.MainContext) error {
+func HandlePersistentVolumeClaim(ctx *types.PerUserContext) error {
 	if !ctx.Opts.WaitPipelines {
 		return nil // if build pipeline runs are not done yet, it does not make sense to collect PV timings
 	}

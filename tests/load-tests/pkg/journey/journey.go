@@ -13,10 +13,10 @@ import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
-var MainContexts []*types.MainContext
+var MainContexts []*types.PerUserContext
 
 // Just to create user
-func initUserThread(threadCtx *types.MainContext) {
+func initUserThread(threadCtx *types.PerUserContext) {
 	defer threadCtx.ThreadsWG.Done()
 
 	var err error
@@ -48,7 +48,7 @@ func computeStartupPause(index int, delay, jitter time.Duration) time.Duration {
 
 // Start all the user journey threads
 // TODO split this to two functions and get PurgeOnly code out
-func Setup(fn func(*types.MainContext), opts *options.Opts) (string, error) {
+func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, error) {
 	threadsWG := &sync.WaitGroup{}
 	threadsWG.Add(opts.Concurrency)
 
@@ -67,7 +67,7 @@ func Setup(fn func(*types.MainContext), opts *options.Opts) (string, error) {
 
 		logging.Logger.Info("Initiating per user thread %d with pause %v", threadIndex, startupPause)
 
-		threadCtx := &types.MainContext{
+		threadCtx := &types.PerUserContext{
 			ThreadsWG:        threadsWG,
 			ThreadIndex:      threadIndex,
 			StartupPause:     startupPause,
@@ -118,7 +118,7 @@ func Setup(fn func(*types.MainContext), opts *options.Opts) (string, error) {
 }
 
 // Start all the threads to process all applications per user
-func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *types.MainContext) (string, error) {
+func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *types.PerUserContext) (string, error) {
 	perApplicationWG := &sync.WaitGroup{}
 	perApplicationWG.Add(parentContext.Opts.ApplicationsCount)
 

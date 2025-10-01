@@ -178,7 +178,7 @@ func Measure(ctx interface{}, fn interface{}, params ...interface{}) (interface{
 	repeatsCounter := -1
 
 	// Extract additional metadata about this function call from provided context.
-	if casted, ok := ctx.(*types.MainContext); ok {
+	if casted, ok := ctx.(*types.PerUserContext); ok {
 		perUserId = casted.ThreadIndex
 		repeatsCounter = casted.JourneyRepeatsCounter
 	}
