@@ -350,7 +350,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 
 	if ctx.ComponentName != "" {
 		logging.Logger.Debug("Skipping setting up component because reusing component %s in namespace %s, triggering build with push to the repo", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace)
-		_, err := doHarmlessCommit(ctx.Framework, ctx.ParentContext.ParentContext.Opts.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision)
+		_, err := doHarmlessCommit(ctx.Framework, ctx.ParentContext.ParentContext.ComponentRepoUrl, ctx.ParentContext.ParentContext.Opts.ComponentRepoRevision)
 		if err != nil {
 			return logging.Logger.Fail(60, "Commiting to repo for reused component %s in namespace %s failed: %v", ctx.ComponentName, ctx.ParentContext.ParentContext.Namespace, err)
 		}
