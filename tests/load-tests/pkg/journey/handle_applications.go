@@ -42,7 +42,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 	if ctx.ParentContext.Opts.JourneyReuseApplications && ctx.JourneyRepeatIndex > 0 {
 		// This is a reused application. We need to get the name from the first application.
 		// We must wait until the first application's context has the name.
-		firstApplicationCtx := ctx.ParentContext.PerApplicationContexts[0]
+		firstApplicationCtx := ctx.ParentContext.PerApplicationContexts[ctx.ApplicationIndex]
 
 		interval := time.Second * 2
 		timeout := time.Minute * 20
