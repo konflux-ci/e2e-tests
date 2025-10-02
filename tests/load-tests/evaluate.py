@@ -69,12 +69,36 @@ METRICS_RELEASE = [
     "validateReleaseCondition",
 ]
 
+# These metrics will be reused when we are reusing applications
+METRICS_REUSE_APPLICATIONS = [
+    "createApplication",
+    "validateApplication",
+    "createIntegrationTestScenario",
+    "createReleasePlan",
+    "createReleasePlanAdmission",
+    "validateReleasePlan",
+    "validateReleasePlanAdmission",
+]
+
+# These metrics will be reused when we are reusing components
+METRICS_REUSE_COMPONENTS = [
+    "createComponent",
+    "getPaCPullNumber",
+    "validateComponent",
+]
+
 
 class SinglePass:
     """Structure to record data about one specific pass through loadtest workload, identified by an identier (touple with loadtest's per user, per application and per component thread index and repeats counter."""
 
     def __init__(self):
         self._metrics = {}
+
+    def __contains__(self, item):
+        return item in self._metrics
+
+    def __getitem__(self, key):
+        return self._metrics[key]
 
     def add(self, metric, duration):
         """Adds given metric to data about this pass."""
@@ -166,8 +190,9 @@ def main():
     with open(options_file, "r") as fp:
         options = json.load(fp)
 
-    # Determine what metrics we need to skip based on options
+    # Determine what metrics we need to skip or reuse based on options
     to_skip = []
+    to_reuse = []
     if options["Stage"]:
         print("NOTE: Ignoring CI cluster related metrics because running against non-CI cluster")
         to_skip += METRICS_CI
@@ -177,9 +202,16 @@ def main():
     if options["ReleasePolicy"] == "":
         print("NOTE: Ignoring Release related metrics because they were disabled at test run")
         to_skip += METRICS_RELEASE
+    if options["JourneyReuseApplications"]:
+        print("NOTE: Will reuse application metrics as we were reusing applications")
+        to_reuse += METRICS_REUSE_APPLICATIONS
+    if options["JourneyReuseComponents"]:
+        print("NOTE: Will reuse component metrics as we were reusing components")
+        to_reuse += METRICS_REUSE_COMPONENTS
 
     # When processing, only consider these metrics
     expected_metrics = set(METRICS) - set(to_skip)
+    reuse_metrics = set(to_reuse) - set(to_skip)
 
     stats_raw = {}
     stats_passes = {}
@@ -233,6 +265,15 @@ def main():
         found = [v for k, v in stats_passes.items() if SinglePass.i_matches(identifier, k)]
         for i in found:
             i.add(metric, duration)
+            #print(f"Metric {metric} added from {identifier}")
+
+    # Now add reused metrics if needed
+    for pass_id, pass_data in stats_passes.items():
+        for reuse_metric in reuse_metrics:
+            if reuse_metric not in pass_data:
+                reuse_from_id = pass_id[:3] + (0,)
+                pass_data.add(reuse_metric, stats_passes[reuse_from_id][reuse_metric])
+                #print(f"Metric {reuse_metric} reused from {reuse_from_id} to {pass_id}")
 
     #print("Raw stats:")
     #print(json.dumps(stats_raw, indent=4, default=lambda o: '<' + str(o) + '>'))
