@@ -323,9 +323,10 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 
 func HandleComponent(ctx *types.PerComponentContext) error {
 	if ctx.ParentContext.ParentContext.Opts.JourneyReuseComponents && ctx.ParentContext.JourneyRepeatIndex > 0 {
-		// This is a reused component. We need to get the name from the first component.
-		// We must wait until the first component's context has the name.
-		firstComponentCtx := ctx.ParentContext.PerComponentContexts[0]
+		// This is a reused component. We need to get the name from the component from the first journey.
+		// We must wait until the component's context from the first journey has the name.
+		firstApplicationCtx := ctx.ParentContext.ParentContext.PerApplicationContexts[ctx.ParentContext.ApplicationIndex]
+		firstComponentCtx := firstApplicationCtx.PerComponentContexts[ctx.ComponentIndex]
 
 		interval := time.Second * 2
 		timeout := time.Minute * 20
