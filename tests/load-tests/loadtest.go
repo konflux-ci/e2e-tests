@@ -230,7 +230,7 @@ func perUserThread(perUserCtx *types.PerUserContext) {
 	//watcher.Stop()
 	//os.Exit(10)
 
-	for perUserCtx.JourneyRepeatsCounter = 1; perUserCtx.JourneyRepeatsCounter <= perUserCtx.Opts.JourneyRepeats; perUserCtx.JourneyRepeatsCounter++ {
+	for perUserCtx.JourneyRepeatsCounter = 0; perUserCtx.JourneyRepeatsCounter < perUserCtx.Opts.JourneyRepeats; perUserCtx.JourneyRepeatsCounter++ {
 
 		// Start given number of `perApplicationThread()` threads using `journey.PerApplicationSetup()` and wait for them to finish
 		_, err = logging.Measure(

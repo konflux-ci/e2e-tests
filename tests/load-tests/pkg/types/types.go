@@ -26,6 +26,7 @@ type PerUserContext struct {
 type PerApplicationContext struct {
 	PerApplicationWG            *sync.WaitGroup
 	ApplicationIndex            int
+	JourneyRepeatIndex          int
 	StartupPause                time.Duration
 	Framework                   *framework.Framework
 	ParentContext               *PerUserContext

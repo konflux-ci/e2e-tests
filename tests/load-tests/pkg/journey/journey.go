@@ -122,11 +122,12 @@ func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *t
 	for applicationIndex := 0; applicationIndex < parentContext.Opts.ApplicationsCount; applicationIndex++ {
 		startupPause := computeStartupPause(applicationIndex, parentContext.Opts.StartupDelay, parentContext.Opts.StartupJitter)
 
-		logging.Logger.Info("Initiating per application thread %d-%d with pause %v", parentContext.UserIndex, applicationIndex, startupPause)
+		logging.Logger.Info("Initiating per application thread %d-%d(%d) with pause %v", parentContext.UserIndex, applicationIndex, parentContext.JourneyRepeatsCounter, startupPause)
 
 		perApplicationCtx := &types.PerApplicationContext{
 			PerApplicationWG:            perApplicationWG,
 			ApplicationIndex:            applicationIndex,
+			JourneyRepeatIndex:          parentContext.JourneyRepeatsCounter,
 			StartupPause:                startupPause,
 			ParentContext:               parentContext,
 			ApplicationName:             "",
@@ -153,7 +154,7 @@ func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types
 	for componentIndex := 0; componentIndex < parentContext.ParentContext.Opts.ComponentsCount; componentIndex++ {
 		startupPause := computeStartupPause(componentIndex, parentContext.ParentContext.Opts.StartupDelay, parentContext.ParentContext.Opts.StartupJitter)
 
-		logging.Logger.Info("Initiating per component thread %d-%d-%d with pause %s", parentContext.ParentContext.UserIndex, parentContext.ApplicationIndex, componentIndex, startupPause)
+		logging.Logger.Info("Initiating per component thread %d-%d(%d)-%d with pause %s", parentContext.ParentContext.UserIndex, parentContext.ApplicationIndex, parentContext.JourneyRepeatIndex, componentIndex, startupPause)
 
 		perComponentCtx := &types.PerComponentContext{
 			PerComponentWG: perComponentWG,

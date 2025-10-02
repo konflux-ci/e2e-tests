@@ -322,7 +322,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 }
 
 func HandleComponent(ctx *types.PerComponentContext) error {
-	if ctx.ParentContext.ParentContext.Opts.JourneyReuseComponents && ctx.ComponentIndex != 0 {
+	if ctx.ParentContext.ParentContext.Opts.JourneyReuseComponents && ctx.ParentContext.JourneyRepeatIndex > 0 {
 		// This is a reused component. We need to get the name from the first component.
 		// We must wait until the first component's context has the name.
 		firstComponentCtx := ctx.ParentContext.PerComponentContexts[0]
@@ -335,7 +335,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 				logging.Logger.Debug("Reused component name is now available: %s", firstComponentCtx.ComponentName)
 				return true, nil
 			}
-			logging.Logger.Debug("Waiting for component name from first component thread...")
+			logging.Logger.Trace("Waiting for component name from first component thread")
 			return false, nil
 		}, interval, timeout)
 

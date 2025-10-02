@@ -39,7 +39,7 @@ func validateApplication(f *framework.Framework, name, namespace string) error {
 }
 
 func HandleApplication(ctx *types.PerApplicationContext) error {
-	if ctx.ParentContext.Opts.JourneyReuseApplications && ctx.ApplicationIndex != 0 {
+	if ctx.ParentContext.Opts.JourneyReuseApplications && ctx.JourneyRepeatIndex > 0 {
 		// This is a reused application. We need to get the name from the first application.
 		// We must wait until the first application's context has the name.
 		firstApplicationCtx := ctx.ParentContext.PerApplicationContexts[0]
@@ -52,7 +52,7 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 				logging.Logger.Debug("Reused application name is now available: %s", firstApplicationCtx.ApplicationName)
 				return true, nil
 			}
-			logging.Logger.Debug("Waiting for application name from first application thread...")
+			logging.Logger.Trace("Waiting for application name from first application thread")
 			return false, nil
 		}, interval, timeout)
 

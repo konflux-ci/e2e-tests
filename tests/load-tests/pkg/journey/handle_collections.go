@@ -294,7 +294,7 @@ func HandlePerApplicationCollection(ctx *types.PerApplicationContext) error {
 
 	var err error
 
-	journeyCounterStr := fmt.Sprintf("%d", ctx.ParentContext.JourneyRepeatsCounter)
+	journeyCounterStr := fmt.Sprintf("%d", ctx.JourneyRepeatIndex)
 	dirPath := getDirName(ctx.ParentContext.Opts.OutputDir, ctx.ParentContext.Namespace, journeyCounterStr)
 	err = createDir(dirPath)
 	if err != nil {
@@ -322,7 +322,7 @@ func HandlePerComponentCollection(ctx *types.PerComponentContext) error {
 
 	var err error
 
-	journeyCounterStr := fmt.Sprintf("%d", ctx.ParentContext.ParentContext.JourneyRepeatsCounter)
+	journeyCounterStr := fmt.Sprintf("%d", ctx.ParentContext.JourneyRepeatIndex)
 	dirPath := getDirName(ctx.ParentContext.ParentContext.Opts.OutputDir, ctx.ParentContext.ParentContext.Namespace, journeyCounterStr)
 	err = createDir(dirPath)
 	if err != nil {

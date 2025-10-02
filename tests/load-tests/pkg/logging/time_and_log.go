@@ -185,13 +185,13 @@ func Measure(ctx interface{}, fn interface{}, params ...interface{}) (interface{
 	if casted, ok := ctx.(*types.PerApplicationContext); ok {
 		perUserId = casted.ParentContext.UserIndex
 		perAppId = casted.ApplicationIndex
-		repeatsCounter = casted.ParentContext.JourneyRepeatsCounter
+		repeatsCounter = casted.JourneyRepeatIndex
 	}
 	if casted, ok := ctx.(*types.PerComponentContext); ok {
 		perUserId = casted.ParentContext.ParentContext.UserIndex
 		perAppId = casted.ParentContext.ApplicationIndex
 		perCompId = casted.ComponentIndex
-		repeatsCounter = casted.ParentContext.ParentContext.JourneyRepeatsCounter
+		repeatsCounter = casted.ParentContext.JourneyRepeatIndex
 	}
 
 	// Construct arguments for the function call
