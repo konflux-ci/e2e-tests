@@ -133,6 +133,18 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s namespace: %v", name, err)
 			}
+
+			// Wait for namespace to be active
+			err = utils.WaitUntil(func() (bool, error) {
+				fetchedNs, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{})
+				if err != nil {
+					return false, err
+				}
+				return fetchedNs.Status.Phase == corev1.NamespaceActive, nil
+			}, 30*time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("timeout waiting for namespace %s to be ready: %v", name, err)
+			}
 		} else {
 			return nil, fmt.Errorf("error when getting the '%s' namespace: %v", name, err)
 		}
