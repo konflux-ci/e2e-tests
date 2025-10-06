@@ -168,11 +168,6 @@ func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace stri
 		return err
 	}
 
-	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, DefaultPipelineServiceAccount, true)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -211,11 +206,6 @@ func (s *SuiteController) CreateQuayRegistrySecret(namespace string) error {
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{corev1.DockerConfigJsonKey: dockerConfigJsonData}}
 	_, err = s.CreateSecret(namespace, repositorySecret)
-	if err != nil {
-		return err
-	}
-
-	err = s.LinkSecretToServiceAccount(namespace, constants.QuayRepositorySecretName, constants.DefaultPipelineServiceAccount, true)
 	if err != nil {
 		return err
 	}
