@@ -15,7 +15,15 @@ type SbomPackage interface {
 	GetName() string
 	GetVersion() string
 	GetPurl() string
+	GetCreatedBy() SbomPackageCreatedBy
 }
+
+type SbomPackageCreatedBy int
+
+const (
+	SbomPackageCreatedByUnknown SbomPackageCreatedBy = iota
+	SbomPackageCreatedByHermeto
+)
 
 type SbomCyclonedx struct {
 	BomFormat   string
@@ -25,10 +33,16 @@ type SbomCyclonedx struct {
 }
 
 type CyclonedxComponent struct {
-	Name    string `json:"name"`
-	Purl    string `json:"purl"`
-	Type    string `json:"type"`
-	Version string `json:"version"`
+	Name       string              `json:"name"`
+	Purl       string              `json:"purl"`
+	Type       string              `json:"type"`
+	Version    string              `json:"version"`
+	Properties []CyclonedxProperty `json:"properties"`
+}
+
+type CyclonedxProperty struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 func (s *SbomCyclonedx) GetPackages() []SbomPackage {
@@ -51,6 +65,15 @@ func (c *CyclonedxComponent) GetPurl() string {
 	return c.Purl
 }
 
+func (c *CyclonedxComponent) GetCreatedBy() SbomPackageCreatedBy {
+	for _, property := range c.Properties {
+		if property.Name == "hermeto:found_by" && property.Value == "hermeto" {
+			return SbomPackageCreatedByHermeto
+		}
+	}
+	return SbomPackageCreatedByUnknown
+}
+
 type SbomSpdx struct {
 	SPDXID      string        `json:"SPDXID"`
 	SpdxVersion string        `json:"spdxVersion"`
@@ -61,12 +84,18 @@ type SpdxPackage struct {
 	Name         string            `json:"name"`
 	VersionInfo  string            `json:"versionInfo"`
 	ExternalRefs []SpdxExternalRef `json:"externalRefs"`
+	Annotations  []SpdxAnnotation  `json:"annotations"`
 }
 
 type SpdxExternalRef struct {
 	ReferenceCategory string `json:"referenceCategory"`
 	ReferenceLocator  string `json:"referenceLocator"`
 	ReferenceType     string `json:"referenceType"`
+}
+
+type SpdxAnnotation struct {
+	Annotator string `json:"annotator"`
+	Comment   string `json:"comment"`
 }
 
 func (s *SbomSpdx) GetPackages() []SbomPackage {
@@ -92,6 +121,15 @@ func (p *SpdxPackage) GetPurl() string {
 		}
 	}
 	return ""
+}
+
+func (p *SpdxPackage) GetCreatedBy() SbomPackageCreatedBy {
+	for _, ref := range p.Annotations {
+		if ref.Annotator == "Tool: hermeto:jsonencoded" {
+			return SbomPackageCreatedByHermeto
+		}
+	}
+	return SbomPackageCreatedByUnknown
 }
 
 func UnmarshalSbom(data []byte) (Sbom, error) {
