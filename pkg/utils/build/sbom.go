@@ -3,6 +3,8 @@ package build
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/konflux-ci/e2e-tests/pkg/clients/ociregistry"
 )
 
 type Sbom interface {
@@ -110,4 +112,18 @@ func UnmarshalSbom(data []byte) (Sbom, error) {
 	}
 
 	return nil, fmt.Errorf("unmarshalling SBOM: doesn't look like either CycloneDX or SPDX")
+}
+
+func FetchSbomFromRegistry(c *ociregistry.OciRegistryV2Client, organization, repository, sbomBlobDigest string) (Sbom, error) {
+	blobData, err := c.FetchBlob(organization, repository, sbomBlobDigest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch blob: %w", err)
+	}
+
+	sbom, err := UnmarshalSbom(blobData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal sbom: %w", err)
+	}
+
+	return sbom, nil
 }
