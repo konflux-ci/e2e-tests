@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/conforma/crds/api/v1alpha1"
+	"github.com/devfile/library/v2/pkg/util"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/ociregistry"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -623,6 +624,43 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(tr.Status.TaskRunStatusFields.Results).Should(
 							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						)
+					})
+
+					It("should have Hermeto content in the SBOM in case the build was hermetic", Label(buildTemplatesTestLabel), func() {
+						if !scenario.EnableHermetic {
+							Skip("Hermetic build is not enabled, skipping the test")
+						}
+
+						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						Expect(err).ShouldNot(HaveOccurred())
+						taskRun, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container")
+						Expect(err).NotTo(HaveOccurred())
+
+						var sbomBlobUrl string
+
+						for _, r := range taskRun.Status.TaskRunStatusFields.Results {
+							if r.Name == "SBOM_BLOB_URL" {
+								sbomBlobUrl = r.Value.StringVal
+							}
+						}
+						Expect(sbomBlobUrl).NotTo(BeEmpty())
+
+						imageRef, err := reference.Parse(sbomBlobUrl)
+						Expect(err).NotTo(HaveOccurred())
+
+						c := ociregistry.NewOciRegistryV2Client(imageRef.Registry)
+
+						sbom, err := build.FetchSbomFromRegistry(c, imageRef.Namespace, imageRef.Name, imageRef.ID)
+						Expect(err).NotTo(HaveOccurred())
+
+						hasHermetoPackages := false
+						for _, pkg := range sbom.GetPackages() {
+							if pkg.GetCreatedBy() == build.SbomPackageCreatedByHermeto {
+								hasHermetoPackages = true
+								break
+							}
+						}
+						Expect(hasHermetoPackages).To(BeTrue(), "no hermeto packages found")
 					})
 				})
 
