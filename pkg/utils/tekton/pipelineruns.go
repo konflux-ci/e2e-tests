@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -82,6 +83,9 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 						ClaimName: "app-studio-default-workspace",
 					},
 				},
+			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
 			},
 		},
 	}, nil
@@ -169,6 +173,9 @@ func (p VerifyEnterpriseContract) Generate() (*pipeline.PipelineRun, error) {
 						},
 					},
 				},
+			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
 			},
 		},
 	}, nil
