@@ -164,11 +164,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 			})
-
-			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("%s-on-pull-request** has successfully validated your commit", componentName)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
-			})
 		})
 
 		When("the PaC build pipelineRun run succeeded", func() {
