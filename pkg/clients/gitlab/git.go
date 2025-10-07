@@ -211,23 +211,44 @@ func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.
 	return mr, err
 }
 
-// ValidateNoteInMergeRequestComment verify expected note is commented in MR comment
-func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNote string, mergeRequestID int) {
-
-	var timeout, interval time.Duration
-
-	timeout = time.Minute * 10
-	interval = time.Second * 2
+func (gc *GitlabClient) GetCommitStatusConclusion(statusName, projectID, commitSHA string, mergeRequestID int) string {
+	var matchingStatus *gitlab.CommitStatus
+	timeout := time.Minute * 10
 
 	Eventually(func() bool {
-		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
-		allNotes, _, err := gc.client.Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, note := range allNotes {
-			if strings.Contains(note.Body, expectedNote) {
+		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
+		if err != nil {
+			fmt.Printf("got error when listing commit statuses: %+v\n", err)
+			return false
+		}
+		for _, status := range statuses {
+			if strings.Contains(status.Name, statusName) {
+				matchingStatus = status
 				return true
 			}
 		}
 		return false
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
+	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to appear for %s", commitSHA))
+
+	Eventually(func() bool {
+		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
+		if err != nil {
+			fmt.Printf("got error when checking commit status: %+v\n", err)
+			return false
+		}
+		for _, status := range statuses {
+			if strings.Contains(status.Name, statusName) {
+				currentState := status.Status
+				if currentState != "pending" && currentState != "running" {
+					matchingStatus = status
+					return true
+				}
+				fmt.Printf("expecting commit status to be completed, got: %s\n", currentState)
+				return false
+			}
+		}
+		return false
+	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to be completed for %s", commitSHA))
+
+	return matchingStatus.Status
 }
