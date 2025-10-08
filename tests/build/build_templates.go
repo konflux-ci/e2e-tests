@@ -54,7 +54,7 @@ type TestBranches struct {
 
 var pacAndBaseBranches []TestBranches
 
-func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) {
+func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) error {
 	var err error
 	var buildPipelineAnnotation map[string]string
 	var baseBranchName, pacBranchName string
@@ -67,16 +67,14 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the docker-build pipeline bundle with param hermetic=true
 		customBuildBundle, err = enableHermeticBuildInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.PrefetchInput)
 		if err != nil {
-			GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
 		}
 	}
 	if scenario.OverrideMediaType != "" {
 		// Update the pipeline bundle with updating BUILDAH_FORMAT value
 		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.OverrideMediaType)
 		if err != nil {
-			GinkgoWriter.Printf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
 		}
 	}
 
@@ -84,8 +82,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply additional tags
 		customBuildBundle, err = applyAdditionalTagsInPipelineBundle(customBuildBundle, pipelineBundleName, additionalTags)
 		if err != nil {
-			GinkgoWriter.Printf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
 		}
 	}
 
@@ -93,8 +90,8 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply WORKINGDIR_MOUNT
 		customBuildBundle, err = addWorkingDirMountInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.WorkingDirMount)
 		if err != nil {
-			GinkgoWriter.Printf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
+
 		}
 	}
 
@@ -158,6 +155,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 
 	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
 		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
+	return nil
 }
 
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
@@ -257,10 +255,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Expect(err).NotTo(HaveOccurred())
 
 			for componentName, scenario := range components {
-				CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
+				err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for scenario: %s", scenario.Name))
 			}
 			// Create the symlink component
-			CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for symlink scenario"))
 
 		})
 
