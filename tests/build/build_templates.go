@@ -155,6 +155,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 
 	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
 		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
+	return nil
 }
 
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
