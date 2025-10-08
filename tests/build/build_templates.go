@@ -260,7 +260,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 			// Create the symlink component
 			err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for symlink scenario"))
+			Expect(err).ShouldNot(HaveOccurred(), "failed to create component for symlink scenario")
 
 		})
 
