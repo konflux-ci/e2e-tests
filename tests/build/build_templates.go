@@ -163,13 +163,13 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
 	switch pipelineBundleName {
 	case "docker-build":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build:devel")
 	case "docker-build-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta:devel")
 	case "docker-build-multi-platform-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-multi-platform-oci-ta:devel")
 	case "fbc-builder":
-		return os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-fbc-builder:devel")
 	default:
 		return ""
 	}
