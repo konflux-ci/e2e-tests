@@ -133,6 +133,18 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			if err != nil {
 				return nil, fmt.Errorf("error when creating %s namespace: %v", name, err)
 			}
+
+			// Wait for namespace to be active
+			err = utils.WaitUntil(func() (bool, error) {
+				fetchedNs, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{})
+				if err != nil {
+					return false, err
+				}
+				return fetchedNs.Status.Phase == corev1.NamespaceActive, nil
+			}, 30*time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("timeout waiting for namespace %s to be ready: %v", name, err)
+			}
 		} else {
 			return nil, fmt.Errorf("error when getting the '%s' namespace: %v", name, err)
 		}
@@ -182,16 +194,22 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 					Name: constants.DefaultPipelineServiceAccountClusterRole,
 				},
 			}
-			_, err = s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
-			if err != nil {
-				// Handle race condition - another parallel test may have created it between our Get() and Create()
-				if k8sErrors.IsAlreadyExists(err) {
-					// This is fine - the rolebinding already exists, which is what we wanted
-					fmt.Printf("RoleBinding %s already exists in namespace %s (created by parallel test)\n",
-						constants.DefaultPipelineServiceAccountRoleBinding, name)
-				} else {
-					return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
+
+			err = utils.WaitUntil(func() (bool, error) {
+				_, createErr := s.KubeInterface().RbacV1().RoleBindings(name).Create(context.Background(), &roleBindingTemplate, metav1.CreateOptions{})
+				if createErr == nil {
+					return true, nil
 				}
+				if k8sErrors.IsNotFound(createErr) || k8sErrors.IsUnauthorized(createErr) || k8sErrors.IsForbidden(createErr) {
+					return false, nil
+				}
+				if k8sErrors.IsAlreadyExists(createErr) {
+					return true, nil
+				}
+				return false, createErr
+			}, 30*time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
 			}
 		} else {
 			return nil, fmt.Errorf("error when creating %s roleBinding: %v", constants.DefaultPipelineServiceAccountRoleBinding, err)
