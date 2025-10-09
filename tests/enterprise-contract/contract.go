@@ -76,7 +76,6 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", Label("e
 			buildPipelineRunName = fmt.Sprintf("buildah-demo-%s", util.GenerateRandomString(10))
 			image = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), buildPipelineRunName)
 
-			time.Sleep(5 * time.Minute)
 			Expect(fwk.AsKubeAdmin.CommonController.CreateQuayRegistrySecret(namespace)).To(Succeed())
 
 			pipelineRunTimeout = int(time.Duration(20) * time.Minute)
