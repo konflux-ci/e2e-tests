@@ -209,6 +209,9 @@ func (p ECIntegrationTestScenario) Generate() (*pipeline.PipelineRun, error) {
 				{Name: "SNAPSHOT", Value: *pipeline.NewStructuredValues(snapshot)},
 				{Name: "POLICY_CONFIGURATION", Value: *pipeline.NewStructuredValues(p.PipelinePolicyConfiguration)},
 			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
+			},
 		},
 	}, nil
 }

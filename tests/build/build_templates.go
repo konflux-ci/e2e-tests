@@ -229,6 +229,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		// Use the other value defined in componentScenarios in build_templates_scenario.go except revision and pipelineBundle
 		symlinkScenario.Revision = gitRepoContainsSymlinkBranchName
 		symlinkScenario.PipelineBundleNames = []constants.BuildPipelineType{constants.DockerBuild}
+		symlinkScenario.OverrideMediaType = ""
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
