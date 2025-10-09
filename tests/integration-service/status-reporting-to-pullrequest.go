@@ -274,6 +274,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 								},
 							},
 						},
+						TaskRunTemplate: tektonv1.PipelineTaskRunTemplate{
+							ServiceAccountName: constants.DefaultPipelineServiceAccount,
+						},
 					},
 				}
 				failedPipelineRun.Labels = labels
