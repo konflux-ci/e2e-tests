@@ -31,6 +31,9 @@ spec:
     value: 5d
   - name: dockerfile
     value: Dockerfile
+  - name: build-definitions-update-script
+    value: |
+      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' .tekton/tasks/e2e-test.yaml
   pipelineSpec:
     finally:
     - name: show-sbom
@@ -378,6 +381,30 @@ spec:
           value: apply-tags
         - name: bundle
           value: quay.io/konflux-ci/tekton-catalog/task-apply-tags:0.1@sha256:1c6f673fe100a49f58aaef62580c8adf0c397790964f4e7bac7fcd3f4d07c92e
+        - name: kind
+          value: task
+        resolver: bundles
+    - name: update-build-definitions-repo
+      runAfter:
+      - build-container
+      params:
+        - name: ORIGIN_REPO
+          value: https://github.com/fmudry/e2e-tests
+        - name: REVISION
+          value: $(params.revision)
+        - name: SCRIPT
+          value: $(params.build-definitions-update-script)
+        - name: TARGET_GH_REPO
+          value: konflux-ci/build-definitions
+        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
+        - name: GITHUB_APP_INSTALLATION_ID
+          value: "51073377"
+      taskRef:
+        params:
+        - name: name
+          value: update-infra-deployments
+        - name: bundle
+          value: quay.io/rh-ee-fmudry/tekton-catalog/update-infra-deployments:final-version-without-wait-final
         - name: kind
           value: task
         resolver: bundles
