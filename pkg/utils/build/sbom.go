@@ -7,6 +7,7 @@ import (
 
 type Sbom interface {
 	GetPackages() []SbomPackage
+	GetCreationInfo() CreationInfo
 }
 
 type SbomPackage interface {
@@ -49,10 +50,21 @@ func (c *CyclonedxComponent) GetPurl() string {
 	return c.Purl
 }
 
+func (s *SbomCyclonedx) GetCreationInfo() CreationInfo {
+	return CreationInfo{
+		Creators: []string{},
+	}
+}
+
+type CreationInfo struct {
+	Creators []string `json:"creators"`
+}
+
 type SbomSpdx struct {
-	SPDXID      string        `json:"SPDXID"`
-	SpdxVersion string        `json:"spdxVersion"`
-	Packages    []SpdxPackage `json:"packages"`
+	SPDXID       string        `json:"SPDXID"`
+	SpdxVersion  string        `json:"spdxVersion"`
+	Packages     []SpdxPackage `json:"packages"`
+	CreationInfo CreationInfo  `json:"creationInfo"`
 }
 
 type SpdxPackage struct {
@@ -90,6 +102,10 @@ func (p *SpdxPackage) GetPurl() string {
 		}
 	}
 	return ""
+}
+
+func (s *SbomSpdx) GetCreationInfo() CreationInfo {
+	return s.CreationInfo
 }
 
 func UnmarshalSbom(data []byte) (Sbom, error) {
