@@ -156,6 +156,20 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 			return ns, nil
 		}
 	}
+	// Wait for konflux-integration-runner sa to be created
+	err = utils.WaitUntil(func() (bool, error) {
+		_, err := s.KubeInterface().CoreV1().ServiceAccounts(name).Get(context.Background(), constants.DefaultPipelineServiceAccount, metav1.GetOptions{})
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	}, 5*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("timeout waiting for service account %s to be created in namespace %s with error: %v", constants.DefaultPipelineServiceAccount, name, err)
+	}
 
 	// Create a rolebinding to allow default konflux-ci user
 	// to access test namespaces in konflux-ci cluster
