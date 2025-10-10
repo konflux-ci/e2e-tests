@@ -4,6 +4,7 @@ import "fmt"
 import "time"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
 import utils "github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -34,12 +35,13 @@ func validateApplication(f *framework.Framework, name, namespace string) error {
 	return err
 }
 
-func HandleApplication(ctx *PerApplicationContext) error {
+func HandleApplication(ctx *types.PerApplicationContext) error {
 	var err error
 
 	logging.Logger.Debug("Creating application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	_, err = logging.Measure(
+		ctx,
 		createApplication,
 		ctx.Framework,
 		ctx.ParentContext.Namespace,
@@ -51,6 +53,7 @@ func HandleApplication(ctx *PerApplicationContext) error {
 	}
 
 	_, err = logging.Measure(
+		ctx,
 		validateApplication,
 		ctx.Framework,
 		ctx.ApplicationName,

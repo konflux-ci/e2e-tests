@@ -46,7 +46,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tektoncd/cli v0.33.0
 	github.com/tektoncd/pipeline v0.68.0
-	github.com/xanzy/go-gitlab v0.104.1
+	github.com/xanzy/go-gitlab v0.110.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/tools v0.28.0
