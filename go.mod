@@ -25,7 +25,7 @@ require (
 	github.com/h2non/gock v1.2.0
 	github.com/konflux-ci/application-api v0.0.0-20240812090716-e7eb2ecfb409
 	github.com/konflux-ci/build-service v0.0.0-20240611083846-2dee6cfe6fe4
-	github.com/konflux-ci/image-controller v0.0.0-20240530145826-3296e4996f6f
+	github.com/konflux-ci/image-controller v0.0.0-20251007155315-a7573b4fd18e
 	github.com/konflux-ci/integration-service v0.0.0-20250605083515-7ca8993ef047
 	github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d
 	github.com/konflux-ci/release-service v0.0.0-20241016090118-bd730698b9c5
@@ -42,7 +42,7 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tektoncd/cli v0.33.0
 	github.com/tektoncd/pipeline v0.68.0
@@ -51,9 +51,9 @@ require (
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/tools v0.28.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.30.3
-	k8s.io/apiextensions-apiserver v0.29.15
-	k8s.io/apimachinery v0.30.3
+	k8s.io/api v0.31.0
+	k8s.io/apiextensions-apiserver v0.31.0
+	k8s.io/apimachinery v0.31.0
 	k8s.io/cli-runtime v0.29.4
 	k8s.io/client-go v1.5.2
 	k8s.io/klog v1.0.0
@@ -62,7 +62,7 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	knative.dev/pkg v0.0.0-20240416145024-0f34a8815650
 	oras.land/oras-go/v2 v2.3.0
-	sigs.k8s.io/controller-runtime v0.17.6
+	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -179,7 +179,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-openapi/errors v0.21.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -302,8 +302,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.29.15 // indirect
-	k8s.io/component-base v0.29.15 // indirect
+	k8s.io/apiserver v0.31.0 // indirect
+	k8s.io/component-base v0.31.0 // indirect
 	k8s.io/component-helpers v0.29.4 // indirect
 	k8s.io/kube-aggregator v0.29.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20240403164606-bc84c2ddaf99 // indirect
