@@ -45,9 +45,12 @@ const (
 	scenarioAnnotation                       = "test.appstudio.openshift.io/scenario"
 	groupSnapshotAnnotation                  = "test.appstudio.openshift.io/pr-group"
 	testGroupSnapshotAnnotation              = "test.appstudio.openshift.io/group-test-info"
+	snapshotStatusAnnotation                 = "test.appstudio.openshift.io/status"
+	gitReportingFailureAnnotation            = "test.appstudio.openshift.io/git-reporting-failure"
 	pipelinerunFinalizerByIntegrationService = "test.appstudio.openshift.io/pipelinerun"
 	snapshotRerunLabel                       = "test.appstudio.openshift.io/run"
 	snapshotCreationReport                   = "test.appstudio.openshift.io/snapshot-creation-report"
+	pipelinesAsCodeGitProviderAnnotation     = "pac.test.appstudio.openshift.io/git-provider"
 
 	chainsSignedAnnotation = "chains.tekton.dev/signed"
 
