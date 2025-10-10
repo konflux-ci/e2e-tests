@@ -14,6 +14,7 @@ import (
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -240,6 +241,38 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
+			})
+		})
+
+		When("The git-provider annotation is missing", func() {
+			It("should set the git-reporting-failure annotation correctly", func() {
+				// remove snapshot git-provider and git-reporting-failure annotations
+				// Also updated the snapshot status annotation so that the integration status
+				// report controller will re-reconcile the snapshot
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				updatedSnapshot := snapshot.DeepCopy()
+				err = metadata.DeleteAnnotation(updatedSnapshot, pipelinesAsCodeGitProviderAnnotation)
+				Expect(err).NotTo(HaveOccurred())
+				err = metadata.DeleteAnnotation(updatedSnapshot, gitReportingFailureAnnotation)
+				Expect(err).NotTo(HaveOccurred())
+				err = metadata.SetAnnotation(updatedSnapshot, snapshotStatusAnnotation, "failed")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f.AsKubeAdmin.IntegrationController.PatchSnapshot(snapshot, updatedSnapshot)).Should(Succeed())
+
+				Eventually(func() error {
+					reconciledSnapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", snapshot.Namespace)
+					if err != nil {
+						GinkgoWriter.Printf("failed to get snapshot: %v", err)
+						return fmt.Errorf("error occurred when fetching snapshot to check gitReportingFailureAnnotation: %v", err)
+					}
+					val, ok := reconciledSnapshot.Annotations[gitReportingFailureAnnotation]
+					if !ok || val == "" {
+						GinkgoWriter.Printf("gitReportingFailureAnnotation does not exist or is empty")
+						return fmt.Errorf("gitReportingFailureAnnotation does not exist or is empty")
+					}
+					return nil
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 			})
 		})
 
