@@ -4,6 +4,7 @@
 import collections
 import csv
 import json
+import logging
 import os
 import re
 import sys
@@ -405,6 +406,7 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
             if reason != "SKIP":
                 reasons.append(reason)
     except Exception as e:
+        logging.exception("Investigating PLR failed")
         return ["SORRY " + str(e)]
 
     reasons = list(set(reasons))   # get unique reasons only
