@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
@@ -281,12 +280,25 @@ func (t *TektonController) AddFinalizerToPipelineRun(pipelineRun *pipeline.Pipel
 }
 
 func (t *TektonController) RemoveFinalizerFromPipelineRun(pipelineRun *pipeline.PipelineRun, finalizerName string) error {
+	// Check if PipelineRun is complete - Tekton webhook blocks ALL updates to completed PipelineRuns
+	if pipelineRun.Status.CompletionTime != nil {
+		g.GinkgoWriter.Printf("Warning: Skipping finalizer %q removal from completed PipelineRun %s/%s (CompletionTime: %v)\n",
+			finalizerName, pipelineRun.GetNamespace(), pipelineRun.GetName(), pipelineRun.Status.CompletionTime)
+		return nil
+	}
+
 	ctx := context.Background()
 	kubeClient := t.KubeRest()
-	patch := client.MergeFrom(pipelineRun.DeepCopy())
+	patch := crclient.MergeFrom(pipelineRun.DeepCopy())
 	if ok := controllerutil.RemoveFinalizer(pipelineRun, finalizerName); ok {
 		err := kubeClient.Patch(ctx, pipelineRun, patch)
 		if err != nil {
+			// If we somehow hit a race condition where PipelineRun completed between our check and the patch
+			if strings.Contains(err.Error(), "Once the PipelineRun is complete, no updates are allowed") {
+				g.GinkgoWriter.Printf("Warning: PipelineRun %s/%s completed during finalizer removal (race condition), ignoring error\n",
+					pipelineRun.GetNamespace(), pipelineRun.GetName())
+				return nil
+			}
 			return fmt.Errorf("error occurred while patching the updated PipelineRun after finalizer removal: %v", err)
 		}
 	}
