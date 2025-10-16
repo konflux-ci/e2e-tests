@@ -267,7 +267,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		})
 
 		AfterAll(func() {
-			//Remove finalizers from pipelineruns
+			// Clean up pipelineruns with finalizers by deleting them directly (ignoring finalizers)
 			Eventually(func() error {
 				pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 				if err != nil {
@@ -276,15 +276,16 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
-						err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
+						err = f.AsKubeAdmin.TektonController.DeletePipelineRunIgnoreFinalizers(pipelineRuns.Items[i].GetNamespace(), pipelineRuns.Items[i].GetName())
 						if err != nil {
-							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
+							GinkgoWriter.Printf("error deleting pipelinerun %s: %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
 						}
+						GinkgoWriter.Printf("Successfully deleted pipelinerun %s\n", pipelineRuns.Items[i].GetName())
 					}
 				}
 				return nil
-			}, time.Minute*1, time.Second*10).Should(Succeed(), "timed out when trying to remove the e2e-test finalizer from pipelineruns")
+			}, time.Minute*1, time.Second*10).Should(Succeed(), "timed out when trying to delete pipelineruns")
 			// Do cleanup only in case the test succeeded
 			if !CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
@@ -721,9 +722,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							defer func(pr *tektonpipeline.PipelineRun) {
 								err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
 								if err != nil {
-									GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+									if strings.Contains(err.Error(), "Once the PipelineRun is complete, no updates are allowed") {
+										GinkgoWriter.Printf("Warning: Cannot remove finalizer from completed PipelineRun %s: %v\n", pr.GetName(), err)
+									} else {
+										GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+									}
 								}
-								// Avoid blowing up PipelineRun usage
 								err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 								if err != nil {
 									Expect(err.Error()).To(ContainSubstring("not found"))
