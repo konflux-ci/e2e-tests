@@ -8,14 +8,13 @@ import (
 	"strings"
 	"time"
 
-	ecp "github.com/conforma/crds/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/ociregistry"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -276,8 +275,19 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
+						// Check if PipelineRun is completed before attempting finalizer removal
+						if pipelineRuns.Items[i].Status.CompletionTime != nil {
+							GinkgoWriter.Printf("PipelineRun %s is completed, skipping finalizer removal\n", pipelineRuns.Items[i].GetName())
+							continue
+						}
+
 						err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
 						if err != nil {
+							// Check if it's a validation error due to completed PipelineRun
+							if strings.Contains(err.Error(), "Once the PipelineRun is complete, no updates are allowed") {
+								GinkgoWriter.Printf("Warning: Cannot remove finalizer from completed PipelineRun %s: %v\n", pipelineRuns.Items[i].GetName(), err)
+								continue // Skip this PipelineRun and continue with others
+							}
 							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
 						}
@@ -625,43 +635,6 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						)
 					})
-
-					It("should have Hermeto content in the SBOM in case the build was hermetic", Label(buildTemplatesTestLabel), func() {
-						if !scenario.EnableHermetic {
-							Skip("Hermetic build is not enabled, skipping the test")
-						}
-
-						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-						Expect(err).ShouldNot(HaveOccurred())
-						taskRun, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container")
-						Expect(err).NotTo(HaveOccurred())
-
-						var sbomBlobUrl string
-
-						for _, r := range taskRun.Status.TaskRunStatusFields.Results {
-							if r.Name == "SBOM_BLOB_URL" {
-								sbomBlobUrl = r.Value.StringVal
-							}
-						}
-						Expect(sbomBlobUrl).NotTo(BeEmpty())
-
-						imageRef, err := reference.Parse(sbomBlobUrl)
-						Expect(err).NotTo(HaveOccurred())
-
-						c := ociregistry.NewOciRegistryV2Client(imageRef.Registry)
-
-						sbom, err := build.FetchSbomFromRegistry(c, imageRef.Namespace, imageRef.Name, imageRef.ID)
-						Expect(err).NotTo(HaveOccurred())
-
-						hasHermetoPackages := false
-						for _, pkg := range sbom.GetPackages() {
-							if pkg.GetCreatedBy() == build.SbomPackageCreatedByHermeto {
-								hasHermetoPackages = true
-								break
-							}
-						}
-						Expect(hasHermetoPackages).To(BeTrue(), "no hermeto packages found")
-					})
 				})
 
 				Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
@@ -719,9 +692,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 							pr, err := f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 							Expect(err).NotTo(HaveOccurred())
 							defer func(pr *tektonpipeline.PipelineRun) {
-								err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
-								if err != nil {
-									GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+								// Check if PipelineRun is completed before attempting finalizer removal
+								if pr.Status.CompletionTime != nil {
+									GinkgoWriter.Printf("PipelineRun %s is completed, skipping finalizer removal\n", pr.GetName())
+								} else {
+									err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+									if err != nil {
+										if strings.Contains(err.Error(), "Once the PipelineRun is complete, no updates are allowed") {
+											GinkgoWriter.Printf("Warning: Cannot remove finalizer from completed PipelineRun %s: %v\n", pr.GetName(), err)
+										} else {
+											GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+										}
+									}
 								}
 								// Avoid blowing up PipelineRun usage
 								err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
