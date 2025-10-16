@@ -192,6 +192,9 @@ func (p ECIntegrationTestScenario) Generate() (*pipeline.PipelineRun, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "ec-integration-test-scenario-run-",
 			Namespace:    p.Namespace,
+			Labels: map[string]string{
+				"build.appstudio.redhat.com/pipeline": "enterprise-contract",
+			},
 		},
 		Spec: pipeline.PipelineRunSpec{
 			PipelineRef: &pipeline.PipelineRef{
