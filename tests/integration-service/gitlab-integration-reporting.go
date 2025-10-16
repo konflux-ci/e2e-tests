@@ -164,11 +164,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 			})
-
-			It("eventually leads to the build PipelineRun's status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("%s-on-pull-request** has successfully validated your commit", componentName)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
-			})
 		})
 
 		When("the PaC build pipelineRun run succeeded", func() {
@@ -222,9 +217,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Pass status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has passed", snapshot.Name, integrationTestScenarioPass.Name)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
+			It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
+				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusSuccess))
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
@@ -244,9 +238,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				}, longTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Fail status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has failed", snapshot.Name, integrationTestScenarioFail.Name)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
+			It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
+				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusFail))
 			})
 
 			It("merging the PR should be successful", func() {
@@ -296,9 +289,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Pass status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has passed", snapshot.Name, integrationTestScenarioPass.Name)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
+			It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
+				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 
 			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
@@ -318,9 +310,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Fail status reported at MR notes", func() {
-				expectedNote := fmt.Sprintf("Integration test for snapshot %s and scenario %s has failed", snapshot.Name, integrationTestScenarioFail.Name)
-				f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(projectID, expectedNote, mrID)
+			It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
+				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusFail))
 			})
 		})
 	})

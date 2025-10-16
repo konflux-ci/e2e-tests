@@ -206,9 +206,7 @@ const (
 
 	TektonTaskTestOutputName = "TEST_OUTPUT"
 
-	DefaultPipelineServiceAccount            = "appstudio-pipeline"
-	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
-	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
+	DefaultPipelineServiceAccount = "konflux-integration-runner"
 
 	PaCPullRequestBranchPrefix = "konflux-"
 

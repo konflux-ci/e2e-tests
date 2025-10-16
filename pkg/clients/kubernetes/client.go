@@ -8,7 +8,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/sandbox"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"

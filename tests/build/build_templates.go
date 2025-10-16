@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/ociregistry"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -54,7 +55,7 @@ type TestBranches struct {
 
 var pacAndBaseBranches []TestBranches
 
-func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) {
+func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) error {
 	var err error
 	var buildPipelineAnnotation map[string]string
 	var baseBranchName, pacBranchName string
@@ -67,16 +68,14 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the docker-build pipeline bundle with param hermetic=true
 		customBuildBundle, err = enableHermeticBuildInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.PrefetchInput)
 		if err != nil {
-			GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
 		}
 	}
 	if scenario.OverrideMediaType != "" {
 		// Update the pipeline bundle with updating BUILDAH_FORMAT value
 		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.OverrideMediaType)
 		if err != nil {
-			GinkgoWriter.Printf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
 		}
 	}
 
@@ -84,8 +83,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply additional tags
 		customBuildBundle, err = applyAdditionalTagsInPipelineBundle(customBuildBundle, pipelineBundleName, additionalTags)
 		if err != nil {
-			GinkgoWriter.Printf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
 		}
 	}
 
@@ -93,8 +91,8 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply WORKINGDIR_MOUNT
 		customBuildBundle, err = addWorkingDirMountInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.WorkingDirMount)
 		if err != nil {
-			GinkgoWriter.Printf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
+
 		}
 	}
 
@@ -158,18 +156,19 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 
 	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
 		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
+	return nil
 }
 
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
 	switch pipelineBundleName {
 	case "docker-build":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build:devel")
 	case "docker-build-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta:devel")
 	case "docker-build-multi-platform-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-multi-platform-oci-ta:devel")
 	case "fbc-builder":
-		return os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-fbc-builder:devel")
 	default:
 		return ""
 	}
@@ -231,6 +230,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		// Use the other value defined in componentScenarios in build_templates_scenario.go except revision and pipelineBundle
 		symlinkScenario.Revision = gitRepoContainsSymlinkBranchName
 		symlinkScenario.PipelineBundleNames = []constants.BuildPipelineType{constants.DockerBuild}
+		symlinkScenario.OverrideMediaType = ""
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -257,10 +257,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			Expect(err).NotTo(HaveOccurred())
 
 			for componentName, scenario := range components {
-				CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
+				err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for scenario: %s", scenario.Name))
 			}
 			// Create the symlink component
-			CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			Expect(err).ShouldNot(HaveOccurred(), "failed to create component for symlink scenario")
 
 		})
 
@@ -622,6 +624,43 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						Expect(tr.Status.TaskRunStatusFields.Results).Should(
 							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						)
+					})
+
+					It("should have Hermeto content in the SBOM in case the build was hermetic", Label(buildTemplatesTestLabel), func() {
+						if !scenario.EnableHermetic {
+							Skip("Hermetic build is not enabled, skipping the test")
+						}
+
+						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						Expect(err).ShouldNot(HaveOccurred())
+						taskRun, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container")
+						Expect(err).NotTo(HaveOccurred())
+
+						var sbomBlobUrl string
+
+						for _, r := range taskRun.Status.TaskRunStatusFields.Results {
+							if r.Name == "SBOM_BLOB_URL" {
+								sbomBlobUrl = r.Value.StringVal
+							}
+						}
+						Expect(sbomBlobUrl).NotTo(BeEmpty())
+
+						imageRef, err := reference.Parse(sbomBlobUrl)
+						Expect(err).NotTo(HaveOccurred())
+
+						c := ociregistry.NewOciRegistryV2Client(imageRef.Registry)
+
+						sbom, err := build.FetchSbomFromRegistry(c, imageRef.Namespace, imageRef.Name, imageRef.ID)
+						Expect(err).NotTo(HaveOccurred())
+
+						hasHermetoPackages := false
+						for _, pkg := range sbom.GetPackages() {
+							if pkg.GetCreatedBy() == build.SbomPackageCreatedByHermeto {
+								hasHermetoPackages = true
+								break
+							}
+						}
+						Expect(hasHermetoPackages).To(BeTrue(), "no hermeto packages found")
 					})
 				})
 
