@@ -449,8 +449,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
-					expectedNote := fmt.Sprintf("%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -514,8 +514,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
-					expectedNote := fmt.Sprintf("%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
