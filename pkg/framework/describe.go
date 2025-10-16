@@ -38,7 +38,7 @@ func UpgradeSuiteDescribe(text string, args ...interface{}) bool {
 }
 
 func ReleasePipelinesSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[release-pipelines-suite "+text+"]", args, Ordered)
+	return Describe("[release-pipelines-suite "+text+"]", args)
 }
 
 func ReleaseServiceSuiteDescribe(text string, args ...interface{}) bool {
