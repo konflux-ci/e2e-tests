@@ -36,6 +36,8 @@ python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 python3 -m pip install tabulate
 python3 -m pip install matplotlib
+echo "Content of the venv:"
+python3 -m pip freeze
 } &>"${ARTIFACT_DIR}/monitoring-setup.log"
 
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
