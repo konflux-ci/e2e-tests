@@ -13,9 +13,6 @@ func BuildSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[build-service-suite "+text+"]", args)
 }
 
-func JVMBuildSuiteDescribe(text string, args ...interface{}) bool {
-	return Describe("[jvm-build-service-suite "+text+"]", args, Ordered)
-}
 
 func MultiPlatformBuildSuiteDescribe(text string, args ...interface{}) bool {
 	return Describe("[multi-platform-build-service-suite "+text+"]", args, Ordered)

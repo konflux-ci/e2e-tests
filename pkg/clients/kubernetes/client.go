@@ -19,8 +19,6 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
-	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
-	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
 
 	release "github.com/konflux-ci/release-service/api/v1alpha1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -42,12 +40,11 @@ const (
 )
 
 type CustomClient struct {
-	kubeClient            *kubernetes.Clientset
-	crClient              crclient.Client
-	pipelineClient        pipelineclientset.Interface
-	dynamicClient         dynamic.Interface
-	jvmbuildserviceClient jvmbuildserviceclientset.Interface
-	routeClient           routeclientset.Interface
+	kubeClient     *kubernetes.Clientset
+	crClient       crclient.Client
+	pipelineClient pipelineclientset.Interface
+	dynamicClient  dynamic.Interface
+	routeClient    routeclientset.Interface
 }
 
 type K8SClient struct {
@@ -73,7 +70,6 @@ func init() {
 	utilruntime.Must(toolchainv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(release.AddToScheme(scheme))
 	utilruntime.Must(integrationservicev1beta2.AddToScheme(scheme))
-	utilruntime.Must(jvmbuildservice.AddToScheme(scheme))
 	utilruntime.Must(ecp.AddToScheme(scheme))
 	utilruntime.Must(userv1.AddToScheme(scheme))
 	utilruntime.Must(imagecontroller.AddToScheme(scheme))
@@ -94,9 +90,6 @@ func (c *CustomClient) PipelineClient() pipelineclientset.Interface {
 	return c.pipelineClient
 }
 
-func (c *CustomClient) JvmbuildserviceClient() jvmbuildserviceclientset.Interface {
-	return c.jvmbuildserviceClient
-}
 
 func (c *CustomClient) RouteClient() routeclientset.Interface {
 	return c.routeClient
@@ -163,12 +156,11 @@ func NewAdminKubernetesClient() (*CustomClient, error) {
 	}
 
 	return &CustomClient{
-		kubeClient:            clientSets.kubeClient,
-		pipelineClient:        clientSets.pipelineClient,
-		dynamicClient:         clientSets.dynamicClient,
-		jvmbuildserviceClient: clientSets.jvmbuildserviceClient,
-		routeClient:           clientSets.routeClient,
-		crClient:              crClient,
+		kubeClient:     clientSets.kubeClient,
+		pipelineClient: clientSets.pipelineClient,
+		dynamicClient:  clientSets.dynamicClient,
+		routeClient:    clientSets.routeClient,
+		crClient:       crClient,
 	}, nil
 }
 
@@ -199,12 +191,11 @@ func CreateAPIProxyClient(usertoken, proxyURL string) (*CustomClient, error) {
 	}
 
 	return &CustomClient{
-		kubeClient:            clientSets.kubeClient,
-		pipelineClient:        clientSets.pipelineClient,
-		dynamicClient:         clientSets.dynamicClient,
-		jvmbuildserviceClient: clientSets.jvmbuildserviceClient,
-		routeClient:           clientSets.routeClient,
-		crClient:              proxyCl,
+		kubeClient:     clientSets.kubeClient,
+		pipelineClient: clientSets.pipelineClient,
+		dynamicClient:  clientSets.dynamicClient,
+		routeClient:    clientSets.routeClient,
+		crClient:       proxyCl,
 	}, nil
 }
 
@@ -243,10 +234,6 @@ func createClientSetsFromConfig(cfg *rest.Config) (*CustomClient, error) {
 		return nil, err
 	}
 
-	jvmbuildserviceClient, err := jvmbuildserviceclientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
 
 	routeClient, err := routeclientset.NewForConfig(cfg)
 	if err != nil {
@@ -254,10 +241,9 @@ func createClientSetsFromConfig(cfg *rest.Config) (*CustomClient, error) {
 	}
 
 	return &CustomClient{
-		kubeClient:            client,
-		pipelineClient:        pipelineClient,
-		dynamicClient:         dynamicClient,
-		jvmbuildserviceClient: jvmbuildserviceClient,
-		routeClient:           routeClient,
+		kubeClient:     client,
+		pipelineClient: pipelineClient,
+		dynamicClient:  dynamicClient,
+		routeClient:    routeClient,
 	}, nil
 }

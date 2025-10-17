@@ -18,7 +18,6 @@ var InfraDeploymentsDefaultRule = rulesengine.Rule{Name: "Infra Deployments Defa
 		&InfraDeploymentsBuildServiceComponentChangeRule,
 		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
-		&InfraDeploymentsJVMComponentChangeRule,
 		&InfraDeploymentsPipelineServiceComponentChangeRule,
 		rulesengine.ConditionFunc(CheckNoFilesChanged)},
 
@@ -41,8 +40,7 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 		&InfraDeploymentsBuildServiceComponentChangeRule,
 		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
-		&InfraDeploymentsPipelineServiceComponentChangeRule,
-		&InfraDeploymentsJVMComponentChangeRule},
+		&InfraDeploymentsPipelineServiceComponentChangeRule},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
 		// Adding "konflux" to the label filter when component is updated
 		AddLabelToLabelFilter(rctx, "konflux")
@@ -74,16 +72,6 @@ var InfraDeploymentsEnterpriseControllerComponentChangeRule = rulesengine.Rule{N
 		return nil
 	})}}
 
-var InfraDeploymentsJVMComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Jvm-build-service component File Change Rule",
-	Description: "Map jvm-build-service tests files when Jvm-build-service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-
-		return len(rctx.DiffFiles.FilterByDirGlob("components/jvm-build-service/**/*")) != 0, nil
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "jvm-build-service")
-		return nil
-	})}}
 
 var InfraDeploymentsImageControllerComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Image Controller component File Change Rule",
 	Description: "Map image-controller tests files when Image Controller component files are changed in the infra-deployments PR",
