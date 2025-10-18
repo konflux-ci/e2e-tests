@@ -947,8 +947,8 @@ github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb/go.mod h1:MRW2K1Es7tjgbqLt024he5iaDcpnMx03Xf2TaFG67ww=
 github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3 h1:Dj9Gp8/qM322+4CVxqQBSoKBGrvL/pw3JhxFqQsfEz4=
 github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3/go.mod h1:klt61SndSV3ZWfVEmjt9/uxDmqgLQsMi33s6KaDE9gY=
-github.com/conforma/crds/api v0.1.0 h1:Y2AAFKI5tywBxqr0tTBkhaiX8dsp8rkMN2CmrIofg9s=
-github.com/conforma/crds/api v0.1.0/go.mod h1:vaUCN54r99HME4555KRKOUPGJxBNAlX1agZ4jlGI2YA=
+github.com/conforma/crds/api v0.1.4 h1:4QN6cVwWExKoguEizpcclSk0jV88K7kS8W5UG6M7bFg=
+github.com/conforma/crds/api v0.1.4/go.mod h1:vaUCN54r99HME4555KRKOUPGJxBNAlX1agZ4jlGI2YA=
 github.com/containerd/containerd v1.7.25 h1:khEQOAXOEJalRO228yzVsuASLH42vT7DIo9Ss+9SMFQ=
 github.com/containerd/containerd v1.7.25/go.mod h1:tWfHzVI0azhw4CT2vaIjsb2CoV4LJ9PrMPaULAr21Ok=
 github.com/containerd/continuity v0.4.4 h1:/fNVfTJ7wIl/YPMHjf+5H32uFhl63JucB34PlCpMKII=
