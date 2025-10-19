@@ -43,7 +43,7 @@ require (
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.8.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/cli v0.33.0
 	github.com/tektoncd/pipeline v0.68.0
 	github.com/xanzy/go-gitlab v0.104.1
