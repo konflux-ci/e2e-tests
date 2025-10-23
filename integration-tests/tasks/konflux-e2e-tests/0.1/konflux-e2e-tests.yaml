@@ -46,24 +46,9 @@ spec:
     - name: ginkgo-procs
       description: "Number of processes to run in parallel in ginkgo"
       default: 20
-    - name: sealights-bsid
-      description: "A unique identifier (Build Session ID) assigned to the current Sealights build session. This ID is used to associate test results with a specific build in Sealights for detailed analysis and reporting."
-      default: ""
-    - name: test-stage
-      description: "The name or identifier of the test suite being executed (e.g., 'integration', 'e2e'). This value will be recorded in Sealights to help categorize and trace test results within the platform."
-      default: "konflux-e2e"
-    - name: enable-sealights
-      description: "A flag to enable or disable the Sealights integration feature. When set to 'true', test results are sent to Sealights for analysis; otherwise, this feature is skipped."
-      default: "false"
     - name: e2e-timeout
       description: "Timeout value for running E2E script (cluster bootstrap + E2E tests)"
       default: "150m"
-    - name: enable-sl-plugin
-      description: "Enable Sealights ginkgo plugin to scan the e2e tests that will report to Sealights."
-      default: "false"
-    - name: sealights-test-selection
-      description: "Sealights test selection feature is disabled by default. This feature allow sealights ginkgo plugin to run only tests based on code changes."
-      default: "false"
   volumes:
     - name: konflux-secret-volume
       secret:
@@ -72,25 +57,6 @@ spec:
       secret:
         secretName: konflux-test-infra
   steps:
-    - name: initialize-sealights-session
-      when:
-        - input: $(params.enable-sealights)
-          operator: in
-          values: ["true"]
-      ref:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: stepactions/sealights/create-test-session/0.1/create-test-session.yaml
-      params:
-        - name: sealights-bsid
-          value: $(params.sealights-bsid)
-        - name: test-stage
-          value: $(params.test-stage)
     - name: e2e-test
       computeResources:
         requests:
@@ -129,14 +95,6 @@ spec:
           value: /workspace/artifact-dir
         - name: E2E_TIMEOUT
           value: $(params.e2e-timeout)
-        - name: ENABLE_SL_PLUGIN
-          value: $(params.enable-sl-plugin)
-        - name: SEALIGHTS_BUILD_SESSION_ID
-          value: $(params.sealights-bsid)
-        - name: SEALIGHTS_TEST_STAGE
-          value: $(params.test-stage)
-        - name: SEALIGHTS_TEST_SELECTION
-          value: $(params.sealights-test-selection)
       onError: continue
       script: |
         #!/bin/bash
@@ -195,30 +153,6 @@ spec:
         make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
         /bin/bash -c "integration-tests/scripts/konflux-e2e/0.1/konflux-e2e.sh"
-    - name: sealights-reporter
-      onError: continue
-      when:
-        - input: $(params.enable-sealights)
-          operator: in
-          values: ["true"]
-      ref:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: stepactions/sealights/upload-ginkgo-results/0.1/upload-ginkgo-results.yaml
-      params:
-        - name: ginkgo-json-report-path
-          value: /workspace/artifact-dir/e2e-report.json
-        - name: test-stage
-          value: $(params.test-stage)
-        - name: sealights-bsid
-          value: $(params.sealights-bsid)
-        - name: test-session-id
-          value: $(steps.initialize-sealights-session.results.test-session-id)
     - name: secure-push-oci
       ref:
         resolver: git
