@@ -13,7 +13,6 @@ import (
 func ReportFailure(f **Framework) func() {
 	namespaces := map[string]string{
 		"Build Service":       "build-service",
-		"JVM Build Service":   "jvm-build-service",
 		"Application Service": "application-service",
 		"Image Controller":    "image-controller"}
 
