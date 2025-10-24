@@ -143,7 +143,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -319,7 +319,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -666,7 +666,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -776,7 +776,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 							},
 						},
 					}
-					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -900,7 +900,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = fw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 
 			})
@@ -1046,7 +1046,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("creates second component", func() {
@@ -1063,7 +1063,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -1179,7 +1179,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
 				Expect(component).ToNot(BeNil())
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -1241,7 +1241,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6)),
 				ContainerImage: containerImageSource,
 			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
+			_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
@@ -1446,7 +1446,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					if comp.repoName == componentDependenciesParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
 					}
-					comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})
