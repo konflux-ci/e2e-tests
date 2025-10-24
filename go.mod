@@ -1,6 +1,8 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.24
+go 1.24.0
+
+toolchain go1.24.6
 
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
@@ -67,7 +69,7 @@ require (
 )
 
 require (
-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 )
 
