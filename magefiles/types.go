@@ -66,10 +66,16 @@ type KonfluxGitRefs struct {
 	PullRequestAuthor string `json:"pull_request_author,omitempty"`
 
 	// GitOrg represents the organization in which the Git repository resides.
-	GitOrg string `json:"git_org"`
+	GitOrg string `json:"git_org,omitempty"`
+
+	// Org represents the organization in which the Git repository resides.
+	Org string `json:"org,omitempty"`
 
 	// GitRepo represents the name of the Git repository.
-	GitRepo string `json:"git_repo"`
+	GitRepo string `json:"git_repo,omitempty"`
+
+	// Repo represents the name of the Git repository.
+	Repo string `json:"repo,omitempty"`
 
 	// CommitSha represents the SHA of the commit associated with the event.
 	CommitSha string `json:"commit_sha"`
