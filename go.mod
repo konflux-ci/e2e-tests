@@ -152,7 +152,7 @@ require (
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.10 // indirect
 	github.com/containers/storage v1.51.0 // indirect
-	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
+	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -237,8 +237,9 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
-	github.com/moby/sys/mountinfo v0.7.1 // indirect
+	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -249,8 +250,8 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/runc v1.1.14 // indirect
-	github.com/opencontainers/runtime-spec v1.1.0 // indirect
+	github.com/opencontainers/runc v1.3.2 // indirect
+	github.com/opencontainers/runtime-spec v1.2.1 // indirect
 	github.com/operator-framework/operator-lib v0.13.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -298,7 +299,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/grpc v1.70.0 // indirect
-	google.golang.org/protobuf v1.36.4 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
