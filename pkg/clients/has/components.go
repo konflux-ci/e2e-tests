@@ -245,8 +245,16 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if attempts == r.Retries+1 || (!r.Always && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
 				return err
 			}
-			if err = t.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName); err != nil {
-				return fmt.Errorf("failed to remove the finalizer from pipelinerun %s:%s in order to retrigger it: %+v", pr.GetNamespace(), pr.GetName(), err)
+			if pr.Status.CompletionTime != nil {
+				GinkgoWriter.Printf("PipelineRun %s/%s is completed, skipping finalizer removal for retry\n", pr.GetNamespace(), pr.GetName())
+			} else {
+				if err = t.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName); err != nil {
+					if strings.Contains(err.Error(), "Once the PipelineRun is complete, no updates are allowed") {
+						GinkgoWriter.Printf("Warning: Cannot remove finalizer from completed PipelineRun %s/%s: %v\n", pr.GetNamespace(), pr.GetName(), err)
+					} else {
+						return fmt.Errorf("failed to remove the finalizer from pipelinerun %s:%s in order to retrigger it: %+v", pr.GetNamespace(), pr.GetName(), err)
+					}
+				}
 			}
 			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
