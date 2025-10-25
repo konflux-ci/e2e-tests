@@ -34,7 +34,7 @@ require (
 	github.com/moby/buildkit v0.12.5
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/openshift-pipelines/pipelines-as-code v0.27.2
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
@@ -61,7 +61,7 @@ require (
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	knative.dev/pkg v0.0.0-20240416145024-0f34a8815650
-	oras.land/oras-go/v2 v2.3.0
+	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.17.6
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -288,7 +288,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
