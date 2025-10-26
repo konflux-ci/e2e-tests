@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/google/go-github/v44/github"
+	"github.com/google/go-github/v76/github"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/build-service/controllers"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
