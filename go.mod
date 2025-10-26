@@ -51,9 +51,9 @@ require (
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/tools v0.28.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.30.3
+	k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver v0.29.15
-	k8s.io/apimachinery v0.30.3
+	k8s.io/apimachinery v0.32.2
 	k8s.io/cli-runtime v0.29.4
 	k8s.io/client-go v1.5.2
 	k8s.io/klog v1.0.0
@@ -272,7 +272,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
@@ -287,7 +287,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
@@ -306,11 +306,11 @@ require (
 	k8s.io/component-base v0.29.15 // indirect
 	k8s.io/component-helpers v0.29.4 // indirect
 	k8s.io/kube-aggregator v0.29.2 // indirect
-	k8s.io/kube-openapi v0.0.0-20240403164606-bc84c2ddaf99 // indirect
+	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/kubectl v0.29.2 // indirect
 	k8s.io/kubernetes v1.29.2 // indirect
-	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )
