@@ -7,7 +7,7 @@ import "regexp"
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
 import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
-import github "github.com/google/go-github/v44/github"
+import github "github.com/google/go-github/v76/github"
 
 var fileList = []string{"COMPONENT-pull-request.yaml", "COMPONENT-push.yaml"}
 
@@ -42,7 +42,7 @@ func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, file
 	var repoContentResponse *github.RepositoryContentResponse
 	var err error
 
-	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".template/" + fileName, repoRevision)
+	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".template/"+fileName, repoRevision)
 	if err != nil {
 		return "", err
 	}
@@ -57,12 +57,12 @@ func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, file
 		fileName = strings.ReplaceAll(fileName, key, value)
 	}
 
-	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".tekton/" + fileName, repoRevision)
+	fileResponse, err = f.AsKubeAdmin.CommonController.Github.GetFile(repoName, ".tekton/"+fileName, repoRevision)
 	if err != nil {
 		return "", err
 	}
 
-	repoContentResponse, err = f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision, *fileResponse.SHA)
+	repoContentResponse, err = f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, ".tekton/"+fileName, fileContent, repoRevision, *fileResponse.SHA)
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +73,7 @@ func templateRepoFileGithub(f *framework.Framework, repoName, repoRevision, file
 // Template file from '.template/...' to '.tekton/...', expanding placeholders (even in file name) using Gitlab API
 // Returns SHA of the commit
 func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, fileName string, placeholders *map[string]string) (string, error) {
-	fileContent, err := f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, ".template/" + fileName, repoRevision)
+	fileContent, err := f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoName, ".template/"+fileName, repoRevision)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get file: %v", err)
 	}
@@ -83,7 +83,7 @@ func templateRepoFileGitlab(f *framework.Framework, repoName, repoRevision, file
 		fileName = strings.ReplaceAll(fileName, key, value)
 	}
 
-	commitID, err := f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, ".tekton/" + fileName, fileContent, repoRevision)
+	commitID, err := f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoName, ".tekton/"+fileName, fileContent, repoRevision)
 	if err != nil {
 		return "", fmt.Errorf("Failed to update file: %v", err)
 	}
@@ -110,7 +110,7 @@ func ForkRepo(f *framework.Framework, repoUrl, repoRevision, username string) (s
 	if strings.Contains(repoUrl, "gitlab.") {
 		logging.Logger.Debug("Forking Gitlab repository %s", repoUrl)
 
-		logging.Logger.Warning("Forking Gitlab repository not implemented yet, this will only work with 1 concurrent user")   // TODO
+		logging.Logger.Warning("Forking Gitlab repository not implemented yet, this will only work with 1 concurrent user") // TODO
 
 		return repoUrl, nil
 	} else {

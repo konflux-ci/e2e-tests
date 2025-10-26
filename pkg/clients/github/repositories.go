@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/v76/github"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/google/go-github/v44/github"
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -203,7 +203,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, fmt.Errorf("Error forking %s/%s: %v", g.organization, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 30)
+	}, time.Second*10, time.Minute*30)
 	if err1 != nil {
 		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", g.organization, sourceName, err1)
 	}
@@ -216,7 +216,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, nil
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 10)
+	}, time.Second*10, time.Minute*10)
 	if err2 != nil {
 		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", g.organization, sourceName, err2)
 	}
@@ -236,7 +236,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 			return false, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 10)
+	}, time.Second*10, time.Minute*10)
 	if err3 != nil {
 		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", g.organization, targetName, err3)
 	}

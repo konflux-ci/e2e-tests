@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	ghub "github.com/google/go-github/v44/github"
+	ghub "github.com/google/go-github/v76/github"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
