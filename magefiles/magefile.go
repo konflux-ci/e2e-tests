@@ -103,7 +103,15 @@ func (ci CI) init() error {
 
 	if konfluxCI == "true" {
 		pr.Organization = konfluxCiSpec.KonfluxGitRefs.GitOrg
+		// Workaround to fix the incompatibility between test-metadata task v0.1 and v0.3
+		if pr.Organization == "" {
+			pr.Organization = konfluxCiSpec.KonfluxGitRefs.Org
+		}
 		pr.RepoName = konfluxCiSpec.KonfluxGitRefs.GitRepo
+		// Workaround to fix the incompatibility between test-metadata task v0.1 and v0.3
+		if pr.RepoName == "" {
+			pr.RepoName = konfluxCiSpec.KonfluxGitRefs.Repo
+		}
 		pr.CommitSHA = konfluxCiSpec.KonfluxGitRefs.CommitSha
 		pr.Number = konfluxCiSpec.KonfluxGitRefs.PullRequestNumber
 	} else {
@@ -117,7 +125,7 @@ func (ci CI) init() error {
 		prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
 		pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot get remote name and branch name for PR URL %q: %+v", prUrl, err)
 		}
 	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service-catalog" {
 		pr.RemoteName = "konflux-ci"

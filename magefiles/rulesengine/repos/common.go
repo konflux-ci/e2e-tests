@@ -559,8 +559,8 @@ func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
 
 	// From Konflux the e2e tests will receive 2 kind of images:
 	// 1. quay.io/test/test@sha:1234: This images ussually comes from the Konflux snapshots
-	// 2. quay.io/test/test:on-pr-1234.sealights@sha:1234 This images ussually comes from a build
-	// that includes the Sealights instrumented code:
+	// 2. quay.io/test/test:on-pr-1234@sha:1234 This images ussually comes from a build
+	// that includes the instrumented code:
 	if tag == "" {
 		if repoParts := strings.SplitN(repository, ":", 2); len(repoParts) == 2 {
 			repository, tag = repoParts[0], repoParts[1]
