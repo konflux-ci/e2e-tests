@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -240,6 +242,53 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
+			})
+		})
+
+		When("The git-provider annotation is missing", func() {
+			It("should set the git-reporting-failure annotation correctly", func() {
+				// Get snapshot from the cluster
+				snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				updatedSnapshot := snapshot.DeepCopy()
+
+				// update the provider annotation to a non-existent provider and reset the git-reporting-failure annotation
+				err = metadata.SetAnnotation(updatedSnapshot, pipelinesAsCodeGitProviderAnnotation, "not-supported-provider")
+				Expect(err).NotTo(HaveOccurred())
+				err = metadata.DeleteAnnotation(updatedSnapshot, gitReportingFailureAnnotation)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Change lastUpdateTime for one scenario in order to trigger re-reconciliation from statusreport controller
+				currentStatus := updatedSnapshot.Annotations[snapshotStatusAnnotation]
+				var arr []map[string]any
+				err = json.Unmarshal([]byte(currentStatus), &arr)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(arr).ToNot(BeEmpty())
+				arr[0]["lastUpdateTime"] = time.Now().UTC().Format(time.RFC3339)
+				newStatusBytes, err := json.Marshal(arr)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = metadata.SetAnnotation(updatedSnapshot, snapshotStatusAnnotation, string(newStatusBytes))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(f.AsKubeAdmin.IntegrationController.PatchSnapshot(snapshot, updatedSnapshot)).Should(Succeed())
+				Eventually(func() error {
+					reconciledSnapshot, err := f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", snapshot.Namespace)
+					if err != nil {
+						GinkgoWriter.Printf("failed to get snapshot: %v", err)
+						return fmt.Errorf("error occurred when fetching snapshot to check gitReportingFailureAnnotation: %v", err)
+					}
+					val, ok := reconciledSnapshot.Annotations[gitReportingFailureAnnotation]
+					if !ok {
+						GinkgoWriter.Printf("gitReportingFailureAnnotation does not exist. Annotations: %+v", reconciledSnapshot.Annotations)
+						return fmt.Errorf("gitReportingFailureAnnotation does not exist. Annotations: %+v", reconciledSnapshot.Annotations)
+					}
+					if val == "" {
+						GinkgoWriter.Printf("gitReportingFailureAnnotation is empty. Annotations: %+v", reconciledSnapshot.Annotations)
+						return fmt.Errorf("gitReportingFailureAnnotation is empty. Annotations: %+v", reconciledSnapshot.Annotations)
+					}
+					return nil
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), "git-reporting-failure-annotation was never set")
 			})
 		})
 
