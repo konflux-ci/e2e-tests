@@ -50,7 +50,7 @@ require (
 	golang.org/x/crypto v0.36.0
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/tools v0.28.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.3
 	k8s.io/apiextensions-apiserver v0.29.15
 	k8s.io/apimachinery v0.30.3
@@ -301,7 +301,7 @@ require (
 	google.golang.org/protobuf v1.36.4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apiserver v0.29.15 // indirect
 	k8s.io/component-base v0.29.15 // indirect
 	k8s.io/component-helpers v0.29.4 // indirect
