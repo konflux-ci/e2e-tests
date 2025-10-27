@@ -56,7 +56,7 @@ require (
 	k8s.io/apimachinery v0.30.3
 	k8s.io/cli-runtime v0.29.4
 	k8s.io/client-go v1.5.2
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.130.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
