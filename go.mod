@@ -38,7 +38,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/openshift-pipelines/pipelines-as-code v0.27.2
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
-	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+	github.com/openshift/client-go db0dee36e235
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
