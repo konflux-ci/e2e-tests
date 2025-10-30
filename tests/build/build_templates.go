@@ -820,6 +820,7 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle string, pipelin
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -837,13 +838,16 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle string, pipelin
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
@@ -856,6 +860,7 @@ func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipel
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -883,13 +888,16 @@ func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipel
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
@@ -904,6 +912,7 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelin
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -920,13 +929,16 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelin
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
@@ -940,6 +952,7 @@ func addWorkingDirMountInPipelineBundle(customDockerBuildBundle string, pipeline
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -958,13 +971,16 @@ func addWorkingDirMountInPipelineBundle(customDockerBuildBundle string, pipeline
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
