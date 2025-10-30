@@ -41,7 +41,6 @@ require (
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
-	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.10.0
