@@ -30,9 +30,8 @@ func NewFramework(workspace string) *framework.Framework {
 	var fw *framework.Framework
 	var err error
 	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
+		ApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
+		Token:  os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
 
 	fw, err = framework.NewFrameworkWithTimeout(
