@@ -452,7 +452,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent, componentName, pacBranchName, componentBaseBranchName
@@ -480,7 +480,7 @@ func createComponentWithCustomBranch(f framework.Framework, testNamespace, appli
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent

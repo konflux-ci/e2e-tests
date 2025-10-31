@@ -30,9 +30,8 @@ func NewFramework(workspace string) *framework.Framework {
 	var fw *framework.Framework
 	var err error
 	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
+		ApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
+		Token:  os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
 
 	fw, err = framework.NewFrameworkWithTimeout(
@@ -78,7 +77,7 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 			},
 		},
 	}
-	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
+	component, err := devFw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
 	Expect(err).NotTo(HaveOccurred())
 	return component
 }
@@ -116,7 +115,7 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 		},
 	}
 
-	testComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	testComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return testComponent, testPacBranchName, componentBaseBranchName
