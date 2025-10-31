@@ -269,10 +269,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				Eventually(func() bool {
+				Eventually(func() (bool, error) {
 					exists, err := gitClient.BranchExists(helloWorldRepository, customDefaultComponentBranch)
-					Expect(err).ShouldNot(HaveOccurred())
-					return exists
+					if err != nil {
+						Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+						return false, nil
+					}
+					return exists, nil
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", customDefaultComponentBranch, helloWorldComponentGitSourceRepoName))
 			})
 
@@ -1405,12 +1408,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				println("deleting branch " + c.componentBranch)
 				err = gitClient.DeleteBranch(repositories[i], c.componentBranch)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
 				}
 				err = gitClient.DeleteBranch(repositories[i], c.pacBranchName)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
 				}
+
 				// Cleanup parent repo webhooks
 				err = gitClient.CleanupWebhooks(componentDependenciesParentRepoName, f.ClusterAppDomain)
 				if err != nil {
