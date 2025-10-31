@@ -184,7 +184,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		return logging.Logger.Fail(94, "Type assertion failed on release plan admission name: %+v", iface)
 	}
 
-	iface, err = logging.Measure(
+	_, err = logging.Measure(
 		ctx,
 		validateReleasePlan,
 		ctx.Framework,
@@ -195,7 +195,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		return logging.Logger.Fail(95, "Release Plan failed validation: %v", err)
 	}
 
-	iface, err = logging.Measure(
+	_, err = logging.Measure(
 		ctx,
 		validateReleasePlanAdmission,
 		ctx.Framework,

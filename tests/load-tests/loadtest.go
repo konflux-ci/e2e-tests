@@ -10,7 +10,7 @@ import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
 
 import cobra "github.com/spf13/cobra"
 import klog "k8s.io/klog/v2"
-import klogr "k8s.io/klog/v2/klogr"
+import textlogger "k8s.io/klog/v2/textlogger"
 import ctrl "sigs.k8s.io/controller-runtime"
 
 //import "os"
@@ -87,7 +87,7 @@ func main() {
 	// This makes controller-runtime logs go through klog.
 	// Hopefuly will help us to avoid these errors:
 	//   [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
-	ctrl.SetLogger(klogr.New())
+	ctrl.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
 
 	// Setup argument parser
 	err = rootCmd.Execute()
@@ -116,7 +116,7 @@ func main() {
 	}
 
 	// Show test options
-	logging.Logger.Debug("Options: %+v", opts)
+	logging.Logger.Debug("Options: %+v", &opts)
 
 	// Tier up measurements logger
 	logging.MeasurementsStart(opts.OutputDir)

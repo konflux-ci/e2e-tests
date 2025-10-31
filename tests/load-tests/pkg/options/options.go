@@ -77,7 +77,7 @@ func (o *Opts) ProcessOptions() error {
 		if o.PipelineRepoTemplatingSourceDir == "" {
 			o.PipelineRepoTemplatingSourceDir = ".template/"
 		}
-		if strings.HasSuffix(o.PipelineRepoTemplatingSourceDir, "/") != true {
+		if !strings.HasSuffix(o.PipelineRepoTemplatingSourceDir, "/") {
 			o.PipelineRepoTemplatingSourceDir = o.PipelineRepoTemplatingSourceDir + "/"
 		}
 	}

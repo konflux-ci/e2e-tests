@@ -24,8 +24,7 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
 	//   repoUrl: https://gitlab.example.com/abc/def/nodejs-devfile-sample, match[1]: nodejs-devfile-sample
-	var regex *regexp.Regexp
-	regex = regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
+	regex := regexp.MustCompile(`/([^/]+?)(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
@@ -44,8 +43,7 @@ func getRepoOrgFromRepoUrl(repoUrl string) (string, error) {
 	//   repoUrl: https://github.com/abc/nodejs-devfile-sample, match[1]: abc
 	//   repoUrl: https://gitlab.example.com/abc/nodejs-devfile-sample, match[1]: abc
 	//   repoUrl: https://gitlab.example.com/abc/def/nodejs-devfile-sample, match[1]: abc/def
-	var regex *regexp.Regexp
-	regex = regexp.MustCompile(`^[^/]+://[^/]+/(.*)/.+(.git)?/?$`)
+	regex := regexp.MustCompile(`^[^/]+://[^/]+/(.*)/.+(.git)?/?$`)
 	match := regex.FindStringSubmatch(repoUrl)
 	if match != nil {
 		return match[1], nil
