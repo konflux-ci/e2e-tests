@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
 	github.com/IBM/vpc-go-sdk v0.48.0
-	github.com/argoproj/argo-cd/v2 v2.0.0-20240610143855-32519c70a568
+	github.com/argoproj/argo-cd/v2 v2.14.15
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2 v1.32.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
@@ -49,7 +49,7 @@ require (
 	github.com/tektoncd/pipeline v0.68.0
 	github.com/xanzy/go-gitlab v0.110.0
 	golang.org/x/crypto v0.36.0
-	golang.org/x/oauth2 v0.25.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/tools v0.28.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.30.3
