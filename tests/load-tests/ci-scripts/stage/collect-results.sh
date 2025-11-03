@@ -18,8 +18,6 @@ BASE_URL=$(echo $MEMBER_CLUSTER | grep -oP 'https://api\.\K[^:]+')
 PROMETHEUS_HOST="thanos-querier-openshift-monitoring.apps.$BASE_URL"
 TOKEN=${OCP_PROMETHEUS_TOKEN}
 
-{
-
 echo "[$(date --utc -Ins)] Collecting artifacts"
 find . -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
 find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
@@ -36,29 +34,27 @@ python3 -m pip install -U pip
 python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core"
 python3 -m pip install tabulate
 python3 -m pip install matplotlib
-echo "Content of the venv:"
-python3 -m pip freeze
 } &>"${ARTIFACT_DIR}/monitoring-setup.log"
 
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
-./evaluate.py "${ARTIFACT_DIR}/load-test-options.json" "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
+./evaluate.py "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
 
-echo "[$(date --utc -Ins)] Create summary JSON with errors"
-./errors.py "${ARTIFACT_DIR}/load-test-errors.csv" "${ARTIFACT_DIR}/load-test-timings.json" "${ARTIFACT_DIR}/load-test-errors.json" "${ARTIFACT_DIR}/collected-data/" || true
+echo "[$(date --utc -Ins)] Counting PRs and TRs"
+ci-scripts/utility_scripts/count-multiarch-taskruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/count-multiarch-taskruns.log"
 
 echo "[$(date --utc -Ins)] Graphing PRs and TRs"
-ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" &>"${ARTIFACT_DIR}/show-pipelineruns.log" || true
+ci-scripts/utility_scripts/show-pipelineruns.py --data-dir "${ARTIFACT_DIR}" >"${ARTIFACT_DIR}/show-pipelineruns.log" || true
 mv "${ARTIFACT_DIR}/output.svg" "${ARTIFACT_DIR}/show-pipelines.svg" || true
 
 echo "[$(date --utc -Ins)] Computing duration of PRs, TRs and steps"
-ci-scripts/utility_scripts/get-taskruns-durations.py --debug --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" &>"${ARTIFACT_DIR}/get-taskruns-durations.log"
+ci-scripts/utility_scripts/get-taskruns-durations.py --data-dir "${ARTIFACT_DIR}" --dump-json "${ARTIFACT_DIR}/get-taskruns-durations.json" >"${ARTIFACT_DIR}/get-taskruns-durations.log"
 
 echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
 status_data.py \
     --status-data-file "${STATUS_DATA_FILE}" \
     --set "name=Konflux loadtest" "started=$( cat started )" "ended=$( cat ended )" \
-    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json" "results.errors=${ARTIFACT_DIR}/load-test-errors.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
+    --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
 
 echo "[$(date --utc -Ins)] Adding monitoring data"
 mstarted="$( date -d "$( cat started )" --utc -Iseconds )"
@@ -78,7 +74,5 @@ status_data.py \
     &>"${ARTIFACT_DIR}/monitoring-collection.log"
 
 deactivate
-
-} 2>&1 | tee "${ARTIFACT_DIR}/collect-results.log"
 
 popd

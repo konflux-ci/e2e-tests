@@ -149,20 +149,30 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 
 	// Handle the result.
 	if e != nil {
-		GinkgoWriter.Printf("Sandbox proxy error: %v\n", e)
+		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
 	}
 	return res, e
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
-func (s *SandboxController) ReconcileUserCreationStage(userName, apiUrl, token string) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl, keycloakUrl, offlineToken string, isSA bool) (*SandboxUserAuthInfo, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	kubeconfigPath := utils.GetEnv(constants.USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
-	return s.GetKubeconfigPathForSpecificUser(true, apiUrl, userName, kubeconfigPath, token)
+	var userToken string
+	if isSA {
+		userToken = offlineToken
+	} else {
+		userToken, err = s.GetKeycloakTokenStage(userName, keycloakUrl, offlineToken)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.GetKubeconfigPathForSpecificUser(true, toolchainApiUrl, userName, kubeconfigPath, userToken)
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
@@ -288,7 +298,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 
 		modifyUserSignup(freshUserSignup)
 		if err := s.KubeRest.Update(context.Background(), freshUserSignup); err != nil {
-			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...\n", userSignupName, err.Error())
+			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
 			return false, nil
 		}
 		userSignup = freshUserSignup

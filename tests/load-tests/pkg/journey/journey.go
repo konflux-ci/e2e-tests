@@ -1,53 +1,51 @@
 package journey
 
+import "fmt"
 import "sync"
-import "time"
-import "math/rand"
 
 import options "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/options"
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
-import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
+
+import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+import util "github.com/devfile/library/v2/pkg/util"
 
 // Pointers to all user journey thread contexts
-var PerUserContexts []*types.PerUserContext
+var MainContexts []*MainContext
+
+// Struct to hold user journey thread data
+type MainContext struct {
+	ThreadsWG              *sync.WaitGroup
+	ThreadIndex            int
+	JourneyRepeatsCounter  int
+	Opts                   *options.Opts
+	StageUsers             *[]loadtestutils.User
+	Framework              *framework.Framework
+	Username               string
+	Namespace              string
+	ComponentRepoUrl       string // overrides same value from Opts, needed when templating repos
+	PerApplicationContexts []*PerApplicationContext
+}
 
 // Just to create user
-func initUserThread(perUserCtx *types.PerUserContext) {
-	defer perUserCtx.PerUserWG.Done()
+func initUserThread(threadCtx *MainContext) {
+	defer threadCtx.ThreadsWG.Done()
 
 	var err error
 
 	// Create user if needed
-	_, err = logging.Measure(
-		perUserCtx,
-		HandleUser,
-		perUserCtx,
-	)
+	_, err = logging.Measure(HandleUser, threadCtx)
 	if err != nil {
 		logging.Logger.Error("Thread failed: %v", err)
 		return
 	}
 }
 
-// Helper function to compute duration to delay startup of some threads based on StartupDelay and StartupJitter command-line options
-// If this is a first thread, delay will be skipped as it would not help
-func computeStartupPause(index int, delay, jitter time.Duration) time.Duration {
-	if index == 0 || delay == 0 {
-		return time.Duration(0)
-	} else {
-		// For delay = 10s and jitter = 3s, this computes random number from 8.5 to 11.5 seconds
-		jitterSec := rand.Float64() * jitter.Seconds() - jitter.Seconds() / 2
-		jitterDur := time.Duration(jitterSec) * time.Second
-		return delay + jitterDur
-	}
-}
-
 // Start all the user journey threads
 // TODO split this to two functions and get PurgeOnly code out
-func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, error) {
-	perUserWG := &sync.WaitGroup{}
-	perUserWG.Add(opts.Concurrency)
+func Setup(fn func(*MainContext), opts *options.Opts) (string, error) {
+	threadsWG := &sync.WaitGroup{}
+	threadsWG.Add(opts.Concurrency)
 
 	var stageUsers []loadtestutils.User
 	var err error
@@ -59,30 +57,27 @@ func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, e
 	}
 
 	// Initialize all user thread contexts
-	for userIndex := 0; userIndex < opts.Concurrency; userIndex++ {
-		startupPause := computeStartupPause(userIndex, opts.StartupDelay, opts.StartupJitter)
+	for threadIndex := 0; threadIndex < opts.Concurrency; threadIndex++ {
+		logging.Logger.Info("Initiating thread %d", threadIndex)
 
-		logging.Logger.Info("Initiating per user thread %d with pause %v", userIndex, startupPause)
-
-		perUserCtx := &types.PerUserContext{
-			PerUserWG:        perUserWG,
-			UserIndex:        userIndex,
-			StartupPause:     startupPause,
+		threadCtx := &MainContext{
+			ThreadsWG:        threadsWG,
+			ThreadIndex:      threadIndex,
 			Opts:             opts,
 			StageUsers:       &stageUsers,
 			Username:         "",
 			Namespace:        "",
 		}
 
-		PerUserContexts = append(PerUserContexts, perUserCtx)
+		MainContexts = append(MainContexts, threadCtx)
 	}
 
 	// Create all users (if necessary) and initialize their frameworks
-	for _, perUserCtx := range PerUserContexts {
-		go initUserThread(perUserCtx)
+	for _, threadCtx := range MainContexts {
+		go initUserThread(threadCtx)
 	}
 
-	perUserWG.Wait()
+	threadsWG.Wait()
 
 	// If we are supposed to only purge resources, now when frameworks are initialized, we are done
 	if opts.PurgeOnly {
@@ -91,49 +86,49 @@ func PerUserSetup(fn func(*types.PerUserContext), opts *options.Opts) (string, e
 	}
 
 	// Fork repositories sequentially as GitHub do not allow more than 3 running forks in parallel anyway
-	for _, perUserCtx := range PerUserContexts {
-		_, err = logging.Measure(
-			perUserCtx,
-			HandleRepoForking,
-			perUserCtx,
-		)
+	for _, threadCtx := range MainContexts {
+		_, err = logging.Measure(HandleRepoForking, threadCtx)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	perUserWG.Add(opts.Concurrency)
+	threadsWG.Add(opts.Concurrency)
 
 	// Run actual user thread function
-	for _, perUserCtx := range PerUserContexts {
-		go fn(perUserCtx)
+	for _, threadCtx := range MainContexts {
+		go fn(threadCtx)
 	}
 
-	perUserWG.Wait()
+	threadsWG.Wait()
 
 	return "", nil
 }
 
+// Struct to hold data for thread to process each application
+type PerApplicationContext struct {
+	PerApplicationWG            *sync.WaitGroup
+	ApplicationIndex            int
+	Framework                   *framework.Framework
+	ParentContext               *MainContext
+	ApplicationName             string
+	IntegrationTestScenarioName string
+	PerComponentContexts        []*PerComponentContext
+}
+
 // Start all the threads to process all applications per user
-func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *types.PerUserContext) (string, error) {
+func PerApplicationSetup(fn func(*PerApplicationContext), parentContext *MainContext) (string, error) {
 	perApplicationWG := &sync.WaitGroup{}
 	perApplicationWG.Add(parentContext.Opts.ApplicationsCount)
 
 	for applicationIndex := 0; applicationIndex < parentContext.Opts.ApplicationsCount; applicationIndex++ {
-		startupPause := computeStartupPause(applicationIndex, parentContext.Opts.StartupDelay, parentContext.Opts.StartupJitter)
+		logging.Logger.Info("Initiating per application thread %d-%d", parentContext.ThreadIndex, applicationIndex)
 
-		logging.Logger.Info("Initiating per application thread %d-%d(%d) with pause %v", parentContext.UserIndex, applicationIndex, parentContext.JourneyRepeatsCounter, startupPause)
-
-		perApplicationCtx := &types.PerApplicationContext{
-			PerApplicationWG:            perApplicationWG,
-			ApplicationIndex:            applicationIndex,
-			JourneyRepeatIndex:          parentContext.JourneyRepeatsCounter,
-			StartupPause:                startupPause,
-			ParentContext:               parentContext,
-			ApplicationName:             "",
-			IntegrationTestScenarioName: "",
-			ReleasePlanName:             "",
-			ReleasePlanAdmissionName:    "",
+		perApplicationCtx := &PerApplicationContext{
+			PerApplicationWG: perApplicationWG,
+			ApplicationIndex: applicationIndex,
+			ParentContext:    parentContext,
+			ApplicationName:  fmt.Sprintf("%s-app-%s", parentContext.Username, util.GenerateRandomString(5)),
 		}
 
 		parentContext.PerApplicationContexts = append(parentContext.PerApplicationContexts, perApplicationCtx)
@@ -146,22 +141,30 @@ func PerApplicationSetup(fn func(*types.PerApplicationContext), parentContext *t
 	return "", nil
 }
 
+// Struct to hold data for thread to process each component
+type PerComponentContext struct {
+	PerComponentWG     *sync.WaitGroup
+	ComponentIndex     int
+	Framework          *framework.Framework
+	ParentContext      *PerApplicationContext
+	ComponentName      string
+	SnapshotName       string
+	MergeRequestNumber int
+}
+
 // Start all the threads to process all components per application
-func PerComponentSetup(fn func(*types.PerComponentContext), parentContext *types.PerApplicationContext) (string, error) {
+func PerComponentSetup(fn func(*PerComponentContext), parentContext *PerApplicationContext) (string, error) {
 	perComponentWG := &sync.WaitGroup{}
 	perComponentWG.Add(parentContext.ParentContext.Opts.ComponentsCount)
 
 	for componentIndex := 0; componentIndex < parentContext.ParentContext.Opts.ComponentsCount; componentIndex++ {
-		startupPause := computeStartupPause(componentIndex, parentContext.ParentContext.Opts.StartupDelay, parentContext.ParentContext.Opts.StartupJitter)
+		logging.Logger.Info("Initiating per component thread %d-%d-%d", parentContext.ParentContext.ThreadIndex, parentContext.ApplicationIndex, componentIndex)
 
-		logging.Logger.Info("Initiating per component thread %d-%d(%d)-%d with pause %s", parentContext.ParentContext.UserIndex, parentContext.ApplicationIndex, parentContext.JourneyRepeatIndex, componentIndex, startupPause)
-
-		perComponentCtx := &types.PerComponentContext{
+		perComponentCtx := &PerComponentContext{
 			PerComponentWG: perComponentWG,
 			ComponentIndex: componentIndex,
-			StartupPause:   startupPause,
 			ParentContext:  parentContext,
-			ComponentName:  "",
+			ComponentName:  fmt.Sprintf("%s-comp-%d", parentContext.ApplicationName, componentIndex),
 		}
 
 		parentContext.PerComponentContexts = append(parentContext.PerComponentContexts, perComponentCtx)

@@ -303,22 +303,10 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	if err := h.KubeRest().Create(ctx, componentObject); err != nil {
 		return nil, err
 	}
-
-	return componentObject, nil
-}
-
-// Create a component and check image repository gets created.
-func (h *HasController) CreateComponentCheckImageRepository(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
-	componentObject, err := h.CreateComponent(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations)
-	if err != nil {
-		return nil, err
-	}
-
 	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
-	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*10, time.Minute*15); err != nil {
+	if err := utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*15); err != nil {
 		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
 	}
-
 	return componentObject, nil
 }
 
@@ -367,6 +355,10 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 
 // DeleteComponent delete an has component from a given name and namespace
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339))
+
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -382,11 +374,19 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 	// RHTAPBUGS-978: temporary timeout to 15min
 	err := utils.WaitUntil(h.ComponentDeleted(&component), 15*time.Minute)
 
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339), deletionTime)
+
 	return err
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
+	// temporary logs
+	start := time.Now()
+	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.String())
+
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
@@ -399,6 +399,10 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 		}
 		return len(componentList.Items) == 0, nil
 	}, timeout)
+
+	// temporary logs
+	deletionTime := time.Since(start).Minutes()
+	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
 }
@@ -551,24 +555,6 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 		}
 		return true, nil
 	}
-}
-
-// DeleteAllImageRepositoriesInASpecificNamespace removes all image repository CRs from a specific namespace. Useful when cleaning up a namespace and component cleanup did not cleaned it's image repository
-func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
-	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
-		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
-	}
-
-	imageRepositoryList := &imagecontroller.ImageRepositoryList{}
-
-	err := utils.WaitUntil(func() (done bool, err error) {
-		if err := h.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{Namespace: namespace}); err != nil {
-			return false, nil
-		}
-		return len(imageRepositoryList.Items) == 0, nil
-	}, timeout)
-
-	return err
 }
 
 // Gets value of a specified annotation in a component

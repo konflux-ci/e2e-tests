@@ -10,6 +10,7 @@ var DEBUG = 1
 var INFO = 2
 var WARNING = 3
 var ERROR = 4
+var FATAL = 5
 
 var Logger = logger{}
 
@@ -54,8 +55,9 @@ func (l *logger) Error(msg string, params ...interface{}) {
 }
 
 func (l *logger) Fatal(msg string, params ...interface{}) {
-	MeasurementsStop()
-	klog.Fatalf("FATAL "+msg, params...)
+	if l.Level <= FATAL {
+		klog.Fatalf("FATAL "+msg, params...)
+	}
 }
 
 // Log test failure with error code to CSV file so we can compile a statistic later

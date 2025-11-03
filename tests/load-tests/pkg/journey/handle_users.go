@@ -2,89 +2,86 @@ package journey
 
 import "fmt"
 import "time"
-import "strings"
 
 import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
-import types "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/types"
-import loadtestutils "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/loadtestutils"
 
 import "github.com/konflux-ci/e2e-tests/pkg/framework"
 import "github.com/konflux-ci/e2e-tests/pkg/utils"
 
-// Returns framework, namespace (and error)
-func provisionFramework(stageUsers []loadtestutils.User, threadIndex int, username string, isStage bool) (*framework.Framework, string, error) {
-	var f *framework.Framework
+func HandleUser(ctx *MainContext) error {
 	var err error
 
-	if isStage {
-		user := stageUsers[threadIndex]
-		f, err = framework.NewFrameworkWithTimeout(
-			username,
+	// TODO E.g. when token is incorrect, timeout does not work as expected
+	if ctx.Opts.Stage {
+		user := (*ctx.StageUsers)[ctx.ThreadIndex]
+		ctx.Username = user.Username
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(
+			ctx.Username,
 			time.Minute*60,
 			utils.Options{
-				ApiUrl: user.APIURL,
-				Token:  user.Token,
+				ToolchainApiUrl: user.APIURL,
+				KeycloakUrl:     user.SSOURL,
+				OfflineToken:    user.Token,
 			})
 	} else {
-		f, err = framework.NewFrameworkWithTimeout(username, time.Minute*60)
+		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.UsernamePrefix, ctx.ThreadIndex)
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.Username, time.Minute*60)
 	}
 
-	if err != nil {
-		return nil, "", err
-	}
-
-	return f, f.UserNamespace, nil
-}
-
-func HandleUser(ctx *types.PerUserContext) error {
-	var err error
-
-	if ctx.Opts.Stage {
-		ctx.Username = strings.TrimSuffix((*ctx.StageUsers)[ctx.UserIndex].Namespace, "-tenant")
-	} else {
-		ctx.Username = fmt.Sprintf("%s-%04d", ctx.Opts.RunPrefix, ctx.UserIndex)
-	}
-
-	ctx.Framework, ctx.Namespace, err = provisionFramework(
-		*ctx.StageUsers,
-		ctx.UserIndex,
-		ctx.Username,
-		ctx.Opts.Stage,
-	)
 	if err != nil {
 		return logging.Logger.Fail(10, "Unable to provision user %s: %v", ctx.Username, err)
 	}
 
+	ctx.Namespace = ctx.Framework.UserNamespace
+
 	return nil
 }
 
-func HandleNewFrameworkForApp(ctx *types.PerApplicationContext) error {
+func HandleNewFrameworkForComp(ctx *PerComponentContext) error {
 	var err error
 
-	ctx.Framework, _, err = provisionFramework(
-		*ctx.ParentContext.StageUsers,
-		ctx.ParentContext.UserIndex,
-		ctx.ParentContext.Username,
-		ctx.ParentContext.Opts.Stage,
-	)
+	// TODO This framework generation code is duplicate to above
+	if ctx.ParentContext.ParentContext.Opts.Stage {
+		user := (*ctx.ParentContext.ParentContext.StageUsers)[ctx.ParentContext.ParentContext.ThreadIndex]
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(
+			ctx.ParentContext.ParentContext.Username,
+			time.Minute*60,
+			utils.Options{
+				ToolchainApiUrl: user.APIURL,
+				KeycloakUrl:     user.SSOURL,
+				OfflineToken:    user.Token,
+			})
+	} else {
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.ParentContext.Username, time.Minute*60)
+	}
+
 	if err != nil {
-		return logging.Logger.Fail(11, "Unable to provision framework for user %s: %v", ctx.ParentContext.Username, err)
+		return logging.Logger.Fail(11, "Unable to provision framework for user %s: %v", ctx.ParentContext.ParentContext.Username, err)
 	}
 
 	return nil
 }
 
-func HandleNewFrameworkForComp(ctx *types.PerComponentContext) error {
+func HandleNewFrameworkForApp(ctx *PerApplicationContext) error {
 	var err error
 
-	ctx.Framework, _, err = provisionFramework(
-		*ctx.ParentContext.ParentContext.StageUsers,
-		ctx.ParentContext.ParentContext.UserIndex,
-		ctx.ParentContext.ParentContext.Username,
-		ctx.ParentContext.ParentContext.Opts.Stage,
-	)
+	// TODO This framework generation code is duplicate to above
+	if ctx.ParentContext.Opts.Stage {
+		user := (*ctx.ParentContext.StageUsers)[ctx.ParentContext.ThreadIndex]
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(
+			ctx.ParentContext.Username,
+			time.Minute*60,
+			utils.Options{
+				ToolchainApiUrl: user.APIURL,
+				KeycloakUrl:     user.SSOURL,
+				OfflineToken:    user.Token,
+			})
+	} else {
+		ctx.Framework, err = framework.NewFrameworkWithTimeout(ctx.ParentContext.Username, time.Minute*60)
+	}
+
 	if err != nil {
-		return logging.Logger.Fail(12, "Unable to provision framework for user %s: %v", ctx.ParentContext.ParentContext.Username, err)
+		return logging.Logger.Fail(12, "Unable to provision framework for user %s: %v", ctx.ParentContext.Username, err)
 	}
 
 	return nil

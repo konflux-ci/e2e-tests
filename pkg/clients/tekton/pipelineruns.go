@@ -198,12 +198,8 @@ func (t *TektonController) DeletePipelineRunIgnoreFinalizers(ns, name string) er
 		}
 
 		if err := t.KubeRest().Delete(context.Background(), &pipelineRunCR); err != nil {
-			if strings.HasSuffix(err.Error(), " not found") {
-				return true, nil
-			} else {
-				g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
-				return false, nil
-			}
+			g.GinkgoWriter.Printf("unable to delete PipelineRun '%s' in '%s': %v\n", pipelineRunCR.Name, pipelineRunCR.Namespace, err)
+			return false, nil
 		}
 		return true, nil
 	})

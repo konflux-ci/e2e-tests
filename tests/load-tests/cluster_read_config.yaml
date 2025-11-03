@@ -108,7 +108,6 @@
 
 # Interesting CI environment variables
 {% for var in [
-  'ARTIFACT_DIR',
   'BUILD_ID',
   'HOSTNAME',
   'JOB_NAME',

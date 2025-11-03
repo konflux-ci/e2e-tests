@@ -66,15 +66,11 @@ func (g *Github) CreateFile(repository, pathToFile, fileContent, branchName stri
 }
 
 func (g *Github) GetFile(repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
-	return g.GetFileWithOrg(g.organization, repository, pathToFile, branchName)
-}
-
-func (g *Github) GetFileWithOrg(org, repository, pathToFile, branchName string) (*github.RepositoryContent, error) {
 	opts := &github.RepositoryContentGetOptions{}
 	if branchName != "" {
 		opts.Ref = fmt.Sprintf(HEADS, branchName)
 	}
-	file, _, _, err := g.client.Repositories.GetContents(context.Background(), org, repository, pathToFile, opts)
+	file, _, _, err := g.client.Repositories.GetContents(context.Background(), g.organization, repository, pathToFile, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error when listing file contents: %v", err)
 	}
@@ -162,21 +158,20 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 
 	_, resp, err := g.client.Repositories.Get(ctx, g.organization, name)
 	if err != nil {
-		if resp != nil && resp.StatusCode == 404 {
-			return nil
+		if resp.StatusCode != 404 {
+			return fmt.Errorf("Error checking repository %s/%s: %v\n", g.organization, name, err)
 		}
-		return fmt.Errorf("Error checking repository %s/%s: %v", g.organization, name, err)
-	}
-
-	_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
-	if deleteErr != nil {
-		return fmt.Errorf("Error deleting repository %s/%s: %v", g.organization, name, deleteErr)
+	} else {
+		_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
+		if deleteErr != nil {
+			return fmt.Errorf("Error deleting repository %s/%s: %v\n", g.organization, name, deleteErr)
+		}
 	}
 
 	return nil
 }
 
-func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName, targetName string) (*github.Repository, error) {
+func (g *Github) ForkRepository(sourceName, targetName string) (*github.Repository, error) {
 	var fork *github.Repository
 	var resp *github.Response
 	var repo *github.Repository
@@ -184,11 +179,11 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 	ctx := context.Background()
 
 	forkOptions := &github.RepositoryCreateForkOptions{
-		Organization: targetOrgName,
+		Organization: g.organization,
 	}
 
 	err1 := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		fork, resp, err = g.client.Repositories.CreateFork(ctx, sourceOrgName, sourceName, forkOptions)
+		fork, resp, err = g.client.Repositories.CreateFork(ctx, g.organization, sourceName, forkOptions)
 		if err != nil {
 			if _, ok := err.(*github.AcceptedError); ok && resp.StatusCode == 202 {
 				// This meens forking is happening asynchronously
@@ -205,25 +200,25 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 				fmt.Printf("Warning, got 500: %s", resp.Body)
 				return false, nil
 			}
-			return false, fmt.Errorf("Error forking %s/%s: %v", sourceOrgName, sourceName, err)
+			return false, fmt.Errorf("Error forking %s/%s: %v", g.organization, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 5)
+	}, time.Second * 10, time.Minute * 30)
 	if err1 != nil {
-		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", sourceOrgName, sourceName, err1)
+		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", g.organization, sourceName, err1)
 	}
 
 	err2 := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		// Using this to detect repo is created and populated with content
 		// https://stackoverflow.com/questions/33666838/determine-if-a-fork-is-ready
-		_, _, err = g.client.Repositories.ListCommits(ctx, targetOrgName, fork.GetName(), &github.CommitsListOptions{})
+		_, _, err = g.client.Repositories.ListCommits(ctx, g.organization, fork.GetName(), &github.CommitsListOptions{})
 		if err != nil {
 			return false, nil
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 10)
 	if err2 != nil {
-		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
+		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", g.organization, sourceName, err2)
 	}
 
 	editedRepo := &github.Repository{
@@ -231,35 +226,20 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 	}
 
 	err3 := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		repo, resp, err = g.client.Repositories.Edit(ctx, targetOrgName, fork.GetName(), editedRepo)
+		repo, resp, err = g.client.Repositories.Edit(ctx, g.organization, fork.GetName(), editedRepo)
 		if err != nil {
 			if resp.StatusCode == 422 {
 				// This started to happen recently. Docs says 422 is "Validation failed, or the endpoint has been spammed." so we need to be patient.
 				// Error we are getting: "422 Validation Failed [{Resource:Repository Field:name Code:custom Message:name a repository operation is already in progress}]"
 				return false, nil
 			}
-			return false, fmt.Errorf("Error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
+			return false, fmt.Errorf("Error renaming %s/%s to %s: %v\n", g.organization, fork.GetName(), targetName, err)
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 10)
 	if err3 != nil {
-		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", targetOrgName, targetName, err3)
+		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", g.organization, targetName, err3)
 	}
 
 	return repo, nil
-}
-
-// Fork repository in our organization
-func (g *Github) ForkRepository(sourceName, targetName string) (*github.Repository, error) {
-	return g.ForkRepositoryWithOrgs(g.organization, sourceName, g.organization, targetName)
-}
-
-// For repozitory from our organization to another org
-func (g *Github) ForkRepositoryToOrg(sourceName, targetName, targetOrgName string) (*github.Repository, error) {
-	return g.ForkRepositoryWithOrgs(g.organization, sourceName, targetOrgName, targetName)
-}
-
-// Fork repository from another organization to our org
-func (g *Github) ForkRepositoryFromOrg(sourceName, targetName, sourceOrgName string) (*github.Repository, error) {
-	return g.ForkRepositoryWithOrgs(sourceOrgName, sourceName, g.organization, targetName)
 }
