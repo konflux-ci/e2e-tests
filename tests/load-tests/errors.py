@@ -332,7 +332,7 @@ def find_trs(plr):
 
 
 def check_failed_taskrun(data_dir, ns, tr_name):
-    datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
+    datafile = os.path.join(data_dir, ns, "0", "collected-taskrun-" + tr_name + ".json")
     try:
         data = load(datafile)
     except FileNotFoundError as e:
@@ -354,7 +354,7 @@ def check_failed_taskrun(data_dir, ns, tr_name):
 
 
 def find_failed_containers(data_dir, ns, tr_name):
-    datafile = os.path.join(data_dir, ns, "1", "collected-taskrun-" + tr_name + ".json")
+    datafile = os.path.join(data_dir, ns, "0", "collected-taskrun-" + tr_name + ".json")
     data = load(datafile)
 
     try:
@@ -370,7 +370,7 @@ def find_failed_containers(data_dir, ns, tr_name):
 
 
 def load_container_log(data_dir, ns, pod_name, cont_name):
-    datafile = os.path.join(data_dir, ns, "1", "pod-" + pod_name + "-" + cont_name + ".log")
+    datafile = os.path.join(data_dir, ns, "0", "pod-" + pod_name + "-" + cont_name + ".log")
     print(f"Checking errors in {datafile}")
     with open(datafile, "r") as fd:
         return fd.read()
