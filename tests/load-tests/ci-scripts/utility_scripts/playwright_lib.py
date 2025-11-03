@@ -6,7 +6,7 @@ import time
 
 def goto_login_and_accept_cookies(page):
     """Open a login page and accept cookies dialog"""
-    page.goto("https://console.dev.redhat.com")
+    page.goto("https://console.redhat.com")
     page.wait_for_url("https://sso.redhat.com/**")
 
     # Accept cookies
@@ -14,7 +14,10 @@ def goto_login_and_accept_cookies(page):
     cookies_button = cookies_iframe.get_by_role(
         "button", name="Agree and proceed with standard settings"
     )
-    cookies_button.click()
+    if cookies_button.is_visible():
+        cookies_button.click()
+    else:
+        print("Cookies button not found or already clicked.")
 
 
 def form_login(page, username, password):
@@ -30,5 +33,6 @@ def form_login(page, username, password):
     input_pass.wait_for(state="visible")
     input_pass.fill(password)
     page.locator('//button[@id="rh-password-verification-submit-button"]').click()
-    page.wait_for_url("https://console.dev.redhat.com/**")
+    page.wait_for_url("https://console.redhat.com/**")
     page.wait_for_selector('//h2[text()="Welcome to your Hybrid Cloud Console."]')
+

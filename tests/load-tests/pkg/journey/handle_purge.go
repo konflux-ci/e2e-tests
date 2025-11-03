@@ -22,6 +22,11 @@ func purgeStage(f *framework.Framework, namespace string) error {
 		return fmt.Errorf("Error when deleting components in namespace %s: %v", namespace, err)
 	}
 
+	err = f.AsKubeDeveloper.HasController.DeleteAllImageRepositoriesInASpecificNamespace(namespace, time.Minute*5)
+	if err != nil {
+		return fmt.Errorf("Error when deleting image repositories in namespace %s: %v", namespace, err)
+	}
+
 	err = f.AsKubeDeveloper.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)
 	if err != nil {
 		return fmt.Errorf("Error when deleting pipeline runs in namespace %s: %v", namespace, err)
@@ -47,13 +52,13 @@ func purgeCi(f *framework.Framework, username string) error {
 }
 
 func Purge() error {
-	if !MainContexts[0].Opts.Purge {
+	if !PerUserContexts[0].Opts.Purge {
 		return nil
 	}
 
 	errCounter := 0
 
-	for _, ctx := range MainContexts {
+	for _, ctx := range PerUserContexts {
 		if ctx.Opts.Stage {
 			err := purgeStage(ctx.Framework, ctx.Namespace)
 			if err != nil {

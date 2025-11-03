@@ -143,7 +143,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -269,10 +269,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				Eventually(func() bool {
+				Eventually(func() (bool, error) {
 					exists, err := gitClient.BranchExists(helloWorldRepository, customDefaultComponentBranch)
-					Expect(err).ShouldNot(HaveOccurred())
-					return exists
+					if err != nil {
+						Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+						return false, nil
+					}
+					return exists, nil
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", customDefaultComponentBranch, helloWorldComponentGitSourceRepoName))
 			})
 
@@ -319,7 +322,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -666,7 +669,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -776,7 +779,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 							},
 						},
 					}
-					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -900,7 +903,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = fw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 
 			})
@@ -1046,7 +1049,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("creates second component", func() {
@@ -1063,7 +1066,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -1179,7 +1182,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
 				Expect(component).ToNot(BeNil())
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -1241,7 +1244,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6)),
 				ContainerImage: containerImageSource,
 			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
+			_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
@@ -1405,12 +1408,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				println("deleting branch " + c.componentBranch)
 				err = gitClient.DeleteBranch(repositories[i], c.componentBranch)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
 				}
 				err = gitClient.DeleteBranch(repositories[i], c.pacBranchName)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
 				}
+
 				// Cleanup parent repo webhooks
 				err = gitClient.CleanupWebhooks(componentDependenciesParentRepoName, f.ClusterAppDomain)
 				if err != nil {
@@ -1446,7 +1450,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					if comp.repoName == componentDependenciesParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
 					}
-					comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})
