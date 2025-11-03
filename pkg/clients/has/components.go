@@ -367,10 +367,6 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 
 // DeleteComponent delete an has component from a given name and namespace
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
-	// temporary logs
-	start := time.Now()
-	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339Nano))
-
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -386,19 +382,11 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 	// RHTAPBUGS-978: temporary timeout to 15min
 	err := utils.WaitUntil(h.ComponentDeleted(&component), 15*time.Minute)
 
-	// temporary logs
-	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339Nano), deletionTime)
-
 	return err
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	// temporary logs
-	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
-
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
@@ -411,10 +399,6 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 		}
 		return len(componentList.Items) == 0, nil
 	}, timeout)
-
-	// temporary logs
-	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
@@ -571,10 +555,6 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 
 // DeleteAllImageRepositoriesInASpecificNamespace removes all image repository CRs from a specific namespace. Useful when cleaning up a namespace and component cleanup did not cleaned it's image repository
 func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
-	// temporary logs
-	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all image repositories in namespace '%s' at %s\n", namespace, start.Format(time.RFC3339Nano))
-
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
 	}
@@ -587,10 +567,6 @@ func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace
 		}
 		return len(imageRepositoryList.Items) == 0, nil
 	}, timeout)
-
-	// temporary logs
-	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all image repositories in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339Nano), deletionTime)
 
 	return err
 }
