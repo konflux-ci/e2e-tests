@@ -22,9 +22,20 @@ set -eu -o pipefail
 #
 #   jq -r '. | keys[]' load-test-timings.json | grep -v '^KPI$' | while read m; do echo "horreum_schema_label_present '\$.results.measurements.$m.error_rate'"; echo "horreum_schema_label_present '\$.results.measurements.$m.pass.duration.mean'"; done | LANG=C sort >/tmp/list.sh
 #   meld /tmp/list.sh ci-scripts/config/horreum-labels.sh
+#
+# To generate some labels, I have used:
+#
+#   for i in build/buildah-remote-oci-ta-linux/amd64 build/buildah-remote-oci-ta-linux/arm64 build/buildah-remote-oci-ta-linux/ppc64le build/buildah-remote-oci-ta-linux/s390x; do
+#       echo "horreum_schema_label_present '$.results.durations.stats.platformtaskruns.\"$i\".passed.duration.samples'"
+#       for ii in duration idle running scheduled; do
+#           echo "horreum_schema_label_present '$.results.durations.stats.platformtaskruns.\"$i\".passed.$ii.mean'"
+#       done
+#   done
 
 function horreum_schema_label_present() {
     local extractor="$1"
+    # local extractor_under="$( echo "$extractor" | sed 's/[^a-z0-9]/_/g' )"
+    # echo "Processing:  $extractor_under  $extractor"
     shovel.py \
         --verbose \
         horreum \
@@ -42,6 +53,26 @@ function horreum_schema_label_present() {
 horreum_schema_label_present '$.metadata.env.ARTIFACT_DIR'
 horreum_schema_label_present '$.metadata.env.BUILD_ID'
 horreum_schema_label_present '$.parameters.options.PipelineRepoTemplatingSourceDir'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/amd64".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/amd64".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/amd64".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/amd64".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/amd64".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/arm64".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/arm64".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/arm64".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/arm64".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/arm64".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/ppc64le".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/ppc64le".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/ppc64le".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/ppc64le".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/ppc64le".passed.scheduled.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/s390x".passed.duration.samples'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/s390x".passed.duration.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/s390x".passed.idle.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/s390x".passed.running.mean'
+horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/buildah-remote-oci-ta-linux/s390x".passed.scheduled.mean'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.duration.mean'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.duration.samples'
 horreum_schema_label_present '$.results.durations.stats.platformtaskruns."build/calculate-deps-linux/amd64".passed.idle.mean'
