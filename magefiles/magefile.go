@@ -130,6 +130,9 @@ func (ci CI) init() error {
 	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service-catalog" {
 		pr.RemoteName = "konflux-ci"
 		pr.BranchName = "staging"
+	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service" {
+		pr.RemoteName = "konflux-ci"
+		pr.BranchName = "main"
 	}
 
 	rctx = rulesengine.NewRuleCtx()
