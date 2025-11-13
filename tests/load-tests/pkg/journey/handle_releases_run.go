@@ -110,29 +110,34 @@ func validateReleaseCondition(f *framework.Framework, namespace, releaseName str
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		release, err := f.AsKubeDeveloper.ReleaseController.GetRelease(releaseName, "", namespace)
 		if err != nil {
-			logging.Logger.Debug("Can not get release %s in namespace %s: %v\n", releaseName, namespace, err)
+			logging.Logger.Debug("Can not get release %s in namespace %s: %v", releaseName, namespace, err)
 			return false, nil
 		}
 
 		// Check if there are some conditions
 		if len(release.Status.Conditions) == 0 {
-			logging.Logger.Debug("Release %s in namespace %s lacks status conditions\n", releaseName, namespace)
+			logging.Logger.Debug("Release %s in namespace %s lacks status conditions", releaseName, namespace)
 			return false, nil
 		}
 
 		// Check right condition status
 		for _, condition := range release.Status.Conditions {
-			if condition.Type == "Released" && condition.Reason == "Progressing" {
-				return false, nil
-			}
-			if condition.Type == "Released" && condition.Status == "False" {
-				return false, fmt.Errorf("Release %s in namespace %s failed: %+v", releaseName, namespace, condition)
-			}
-			if condition.Type == "Released" && condition.Status == "True" {
-				return true, nil
+			if condition.Type == "Released" {
+				if condition.Reason == "Progressing" {
+					logging.Logger.Debug("Release %s in namespace %s is still progressing", releaseName, namespace)
+					return false, nil
+				}
+				if condition.Status == "False" {
+					return false, fmt.Errorf("Release %s in namespace %s failed: %+v", releaseName, namespace, condition)
+				}
+				if condition.Status == "True" {
+					return true, nil
+				}
+				logging.Logger.Debug("Release %s in namespace %s condition have unexpected status: %s/%s", releaseName, namespace, condition.Status, condition.Reason)
 			}
 		}
 
+		logging.Logger.Debug("Release %s in namespace %s missing expected condition", releaseName, namespace)
 		return false, nil
 	}, interval, timeout)
 
