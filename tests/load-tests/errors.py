@@ -112,6 +112,7 @@ ERRORS = {
     ("Timeout waiting for build pipeline to be created", r"Build Pipeline Run failed creation: context deadline exceeded"),
     ("Timeout waiting for integration test scenario to validate", r"Integration test scenario failed validation: context deadline exceeded"),
     ("Timeout waiting for release pipeline to be created", r"Release pipeline run failed creation: context deadline exceeded"),
+    ("Timeout waiting for release to succeed", r"Release failed: context deadline exceeded"),
     ("Timeout waiting for snapshot to be created", r"Snapshot failed creation: context deadline exceeded"),
     ("Timeout waiting for test pipeline to create", r"Test Pipeline Run failed creation: context deadline exceeded"),
     ("Timeout waiting for test pipeline to finish", r"Test Pipeline Run failed run: context deadline exceeded"),
