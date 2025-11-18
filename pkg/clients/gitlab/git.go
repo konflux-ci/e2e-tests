@@ -302,7 +302,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 			}
 		}
 
-		if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+		if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID + "-deletion_scheduled-")) {
 			errDel := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
 			if errDel != nil {
 				return false, errDel
