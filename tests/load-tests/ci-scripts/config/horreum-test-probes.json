@@ -1,0 +1,59 @@
+{
+  "access": "PUBLIC",
+  "owner": "rhtap-perf-test-team",
+  "id": 372,
+  "name": "Konflux cluster probe",
+  "folder": "rhtap-perf-test-team",
+  "description": "",
+  "datastoreId": null,
+  "timelineLabels": [
+    ".started"
+  ],
+  "fingerprintLabels": [
+    ".metadata.env.MEMBER_CLUSTER",
+    ".repo_type"
+  ],
+  "transformers": [],
+  "notificationsEnabled": true,
+  "variables": [
+    {
+      "id": 5309119,
+      "testId": 372,
+      "name": ".results.measurements.KPI.errors",
+      "order": 0,
+      "labels": [
+        ".results.measurements.KPI.errors"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309120,
+      "testId": 372,
+      "name": ".results.measurements.KPI.mean",
+      "order": 1,
+      "labels": [
+        ".results.measurements.KPI.mean"
+      ],
+      "changeDetection": []
+    }
+  ],
+  "missingDataRules": [
+    {
+      "id": 5047034,
+      "name": "Do not miss data too long",
+      "labels": [],
+      "condition": "",
+      "maxStaleness": 259200000,
+      "testId": 372
+    }
+  ],
+  "experiments": [],
+  "actions": [],
+  "subscriptions": {
+    "id": null,
+    "users": [],
+    "optout": [],
+    "teams": [],
+    "testId": 372
+  }
+}
