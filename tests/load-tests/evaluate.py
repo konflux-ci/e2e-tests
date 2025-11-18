@@ -23,6 +23,7 @@ COLUMN_ERROR = 8
 # Metrics we care about that together form KPI metric duration
 METRICS = [
     "HandleUser",
+    "HandleRepoForking",
     "createApplication",
     "validateApplication",
     "createIntegrationTestScenario",
@@ -225,6 +226,11 @@ def main():
             "fail": {"duration": [], "when": []},
         }
 
+    # Count passes that failed before they even started
+    # E.g. application creation fails, user/app/comp is 0/0/-1, so identifier
+    # is incomplete and would never be counted
+    failed_before_start = 0
+
     with open(input_file, "r") as fp:
         csvreader = csv.reader(fp)
         for row in csvreader:
@@ -248,16 +254,25 @@ def main():
             stats_raw[metric]["fail" if error else "pass"]["when"].append(when)
 
             # Second add this record to stats_passes that allows us to track full completed passes
-            if not error:
-                identifier = (per_user_t, per_app_t, per_comp_t, repeats_counter)
+            identifier = (per_user_t, per_app_t, per_comp_t, repeats_counter)
 
-                if SinglePass.i_complete(identifier):
-                    if identifier not in stats_passes:
-                        stats_passes[identifier] = SinglePass()
+            if SinglePass.i_complete(identifier):
+                if identifier not in stats_passes:
+                    stats_passes[identifier] = SinglePass()
+                # When timing with a first complete identifier failed, create
+                # it, just do not populate it with the duration. That way
+                # it will not be considered complete journey pass later
+                if not error:
                     stats_passes[identifier].add(metric, duration)
-                else:
-                    # Safe this metric for later once we have all passes
+            else:
+                if not error:
+                    # Save this metric for later once we have all passes
                     rows_incomplete.append((identifier, metric, duration))
+                else:
+                    # Every time when we see timing with incomplete identifier
+                    # to fail, we can safely assume this is a failure we are
+                    # not counting elsewhere
+                    failed_before_start += 1
 
     # Now when we have data about all passes, add metrics that had incomplete identifiers (with wildcards)
     for incomplete in rows_incomplete:
@@ -282,7 +297,7 @@ def main():
     stats = {}
     kpi_mean_data = []
     kpi_successes = 0
-    kpi_errors = 0
+    kpi_errors = failed_before_start
 
     for m in expected_metrics:
         stats[m] = {"pass": {"duration": {"samples": 0}, "when": {}}, "fail": {"duration": {"samples": 0}, "when": {}}}
