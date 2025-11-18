@@ -4461,6 +4461,646 @@
       "filtering": false,
       "metrics": true,
       "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/prefetch-dependencies-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/prefetch-dependencies-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/prefetch-dependencies-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/prefetch-dependencies-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_prefetch_dependencies_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/prefetch-dependencies-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/push-dockerfile-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/push-dockerfile-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/push-dockerfile-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/push-dockerfile-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_push_dockerfile_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/push-dockerfile-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-shell-check-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-shell-check-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-shell-check-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-shell-check-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_shell_check_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-shell-check-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-snyk-check-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-snyk-check-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-snyk-check-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-snyk-check-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_snyk_check_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-snyk-check-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-unicode-check-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-unicode-check-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-unicode-check-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-unicode-check-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_sast_unicode_check_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/sast-unicode-check-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/source-build-oci-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/source-build-oci-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/source-build-oci-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/source-build-oci-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__build_source_build_oci_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"build/source-build-oci-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_collect_data__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_collect_data__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/collect-data\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_collect_data__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_collect_data__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/collect-data\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_collect_data__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_collect_data__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/collect-data\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_collect_data__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_collect_data__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/collect-data\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_collect_data__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_collect_data__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/collect-data\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_duration_samples",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_duration_samples",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/verify-conforma-konflux-ta\".passed.duration.samples",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_duration_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_duration_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/verify-conforma-konflux-ta\".passed.duration.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_idle_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_idle_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/verify-conforma-konflux-ta\".passed.idle.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_running_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_running_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/verify-conforma-konflux-ta\".passed.running.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_scheduled_mean",
+      "extractors": [
+        {
+          "name": "__results_durations_stats_taskruns__managed_verify_conforma_konflux_ta__passed_scheduled_mean",
+          "jsonpath": "$.results.durations.stats.taskruns.\"managed/verify-conforma-konflux-ta\".passed.scheduled.mean",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
     }
   ],
   "transformers": []
