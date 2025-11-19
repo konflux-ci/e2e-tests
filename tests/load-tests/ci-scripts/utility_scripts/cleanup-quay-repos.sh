@@ -29,7 +29,7 @@ while true; do
     done
 
     next_page="$( echo "$response" | jq '.next_page' )"
-    if [[ -z $next_page || $next_page == "none" ]]; then
+    if [[ -z $next_page || $next_page == "null" ]]; then
         echo "No more pages"
         break
     fi
