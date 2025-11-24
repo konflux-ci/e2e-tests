@@ -8,8 +8,17 @@ options=""
 [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && for s in $PIPELINE_IMAGE_PULL_SECRETS; do options="$options --pipeline-image-pull-secrets $s"; done
 
 trap "date -Ins --utc >ended" EXIT
+
+if type loadtest &>/dev/null; then
+    cmd="loadtest"
+    echo "Running loadtest from $( type -p loadtest ) binary"
+else
+    cmd="go run loadtest.go"
+    echo "Running loadtest from $( pwd ) with '$cmd' command"
+fi
+
 date -Ins --utc >started
-go run loadtest.go \
+$cmd \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
     --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
     --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
