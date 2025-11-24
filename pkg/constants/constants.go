@@ -252,6 +252,7 @@ const (
 	CheckrunConclusionSuccess = "success"
 	CheckrunConclusionFailure = "failure"
 	CheckrunStatusCompleted   = "completed"
+	CheckrunConclusionNeutral = "neutral"
 
 	DockerBuild                   BuildPipelineType = "docker-build"
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
