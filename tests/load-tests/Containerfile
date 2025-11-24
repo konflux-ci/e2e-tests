@@ -5,7 +5,7 @@ FROM registry.access.redhat.com/ubi10/go-toolset:latest AS builder_go
 COPY go.mod go.sum .
 RUN go mod download -x
 # Copy rest of the source code and build it
-COPY --exclude=**/OLD/ --exclude=**/venv/ --exclude=**/Containerfile --exclude=**/.*.swp ../../ e2e-tests
+COPY ../../ e2e-tests
 RUN go build -C e2e-tests/tests/load-tests/ -v -o ../../../loadtest loadtest.go
 # Test executable is OK
 RUN e2e-tests/tests/load-tests/loadtest --help
