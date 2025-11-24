@@ -467,7 +467,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-konflux-e2e-tests
   workspaces:
   - name: workspace
     volumeClaimTemplate:
