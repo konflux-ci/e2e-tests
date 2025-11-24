@@ -21,7 +21,7 @@ import (
 
 const (
 	testTaskName = "buildah-min"
-	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.6"
+	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.7"
 )
 
 func GetBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {
@@ -70,7 +70,7 @@ func CreateCustomBuildBundle(pipelineName constants.BuildPipelineType) (string, 
 
 	pipelineObject := tektonObj.(*tektonpipeline.Pipeline)
 
-	// Update build-container step task ref to buildah-min:0.2 instead of buildah
+	// Update build-container step task ref to buildah-min instead of buildah
 	for i := range pipelineObject.PipelineSpec().Tasks {
 		t := &pipelineObject.PipelineSpec().Tasks[i]
 		if t.Name == "build-container" {
