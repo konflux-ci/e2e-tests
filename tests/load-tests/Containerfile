@@ -15,9 +15,19 @@ RUN ./loadtest --help
 # Builder for oc
 # (this is to awoid installing tar to our runner image)
 FROM registry.access.redhat.com/ubi10/ubi:latest AS builder_oc
-# Download and install it
-RUN curl -v https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/openshift-client-linux.tar.gz && \
-    tar zxvf /tmp/openshift-client-linux.tar.gz -C /usr/bin/
+# Download and install it, try multiple times as this is error prone
+RUN attempt=1; \
+    while true; do \
+        echo "Attempt $attempt"; \
+        curl -v https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/openshift-client-linux.tar.gz && \
+            tar zxvf /tmp/openshift-client-linux.tar.gz -C /usr/bin/ && \
+            break; \
+        if [[ $attempt -ge 5 ]]; then \
+            echo "All attempts failed, giving up" >&2; \
+        fi; \
+        sleep 1; \
+        let attempt+=1; \
+    done
 # Test it was installed correctly
 RUN oc version --client
 
