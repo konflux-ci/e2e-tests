@@ -1,0 +1,41 @@
+# Builder for Go
+# (this is to avoid installing all Golang dependencies to our runner image)
+FROM registry.access.redhat.com/ubi10/go-toolset:latest AS builder_go
+# Download dependencies based on just these two files to be able to cache the layer
+COPY go.mod go.sum .
+RUN go mod download -x
+# Copy rest of the source code and build it
+COPY --exclude=**/OLD/ --exclude=**/venv/ --exclude=**/Containerfile --exclude=**/.*.swp ../../ e2e-tests
+RUN go build -C e2e-tests/tests/load-tests/ -v -o ../../../loadtest loadtest.go
+# Test executable is OK
+RUN e2e-tests/tests/load-tests/loadtest --help
+
+
+
+# Builder for oc
+# (this is to awoid installing tar to our runner image)
+FROM registry.access.redhat.com/ubi10/ubi:latest AS builder_oc
+# Download and install it
+RUN curl -s https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o - | tar zxvf - -C /usr/bin/
+# Test it was installed correctly
+RUN oc version --client
+
+
+
+# Runner
+FROM registry.access.redhat.com/ubi10/python-312-minimal:latest
+# Copy loadtest binary from builder container
+COPY --from=builder_go /opt/app-root/src/loadtest /usr/bin/
+# Copy OpenShift CLI binary from builder container
+COPY --from=builder_oc /usr/bin/oc /usr/bin/
+COPY --from=builder_oc /usr/bin/kubectl /usr/bin/
+# Install dependencies for our python scripts
+USER 0
+RUN INSTALL_PKGS="git-core" && \
+    microdnf -y --setopt=tsflags=nodocs --setopt=install_weak_deps=0 install $INSTALL_PKGS && \
+    microdnf -y clean all --enablerepo='*'
+USER 1001
+RUN python3 -m pip install -U pip && \
+    python3 -m pip install "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core" && \
+    python3 -m pip install tabulate matplotlib
+CMD ["loadtest", "-h"]
