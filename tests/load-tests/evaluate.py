@@ -103,7 +103,7 @@ class SinglePass:
 
     def add(self, metric, duration):
         """Adds given metric to data about this pass."""
-        assert metric not in self._metrics
+        assert metric not in self._metrics, f"Metric {metric} can not be in current metrics"
         self._metrics[metric] = duration
 
     def complete(self, expected_metrics):
