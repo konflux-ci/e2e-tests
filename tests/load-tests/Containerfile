@@ -42,7 +42,7 @@ COPY --from=builder_oc /usr/bin/oc /usr/bin/
 COPY --from=builder_oc /usr/bin/kubectl /usr/bin/
 # Install dependencies for our python scripts
 USER 0
-RUN INSTALL_PKGS="git-core" && \
+RUN INSTALL_PKGS="git-core jq" && \
     microdnf -y --setopt=tsflags=nodocs --setopt=install_weak_deps=0 install $INSTALL_PKGS && \
     microdnf -y clean all --enablerepo='*'
 USER 1001
