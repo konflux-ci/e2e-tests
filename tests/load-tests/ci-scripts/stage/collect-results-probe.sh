@@ -10,6 +10,7 @@ echo "[$(date --utc -Ins)] Collecting load test results"
 
 # Setup directories
 ARTIFACT_DIR=${ARTIFACT_DIR:-artifacts}
+SOURCE_DIR=${SOURCE_DIR:-.}
 mkdir -p ${ARTIFACT_DIR}
 pushd "${2:-./tests/load-tests}"
 
@@ -21,10 +22,12 @@ TOKEN=${OCP_PROMETHEUS_TOKEN}
 {
 
 echo "[$(date --utc -Ins)] Collecting artifacts"
-find . -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
-find . -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
-find . -maxdepth 1 -type f -name 'load-test-options.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
-find . -maxdepth 1 -type d -name 'collected-data' -exec cp -r {} "${ARTIFACT_DIR}" \;
+find $SOURCE_DIR -maxdepth 1 -type f -name '*.log' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find $SOURCE_DIR -maxdepth 1 -type f -name '*.csv' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find $SOURCE_DIR -maxdepth 1 -type f -name 'load-test-options.json' -exec cp -vf {} "${ARTIFACT_DIR}" \;
+find $SOURCE_DIR -maxdepth 1 -type d -name 'collected-data' -exec cp -r {} "${ARTIFACT_DIR}" \;
+time_started="$( cat $SOURCE_DIR/started )"
+time_ended="$( cat $SOURCE_DIR/ended )"
 
 echo "[$(date --utc -Ins)] Create summary JSON with timings"
 ./evaluate.py "${ARTIFACT_DIR}/load-test-options.json" "${ARTIFACT_DIR}/load-test-timings.csv" "${ARTIFACT_DIR}/load-test-timings.json"
@@ -43,12 +46,12 @@ echo "[$(date --utc -Ins)] Creating main status data file"
 STATUS_DATA_FILE="${ARTIFACT_DIR}/load-test.json"
 status_data.py \
     --status-data-file "${STATUS_DATA_FILE}" \
-    --set "name=Konflux loadtest" "started=$( cat started )" "ended=$( cat ended )" \
+    --set "name=Konflux loadtest" "started=$time_started" "ended=$time_ended" \
     --set-subtree-json "parameters.options=${ARTIFACT_DIR}/load-test-options.json" "results.measurements=${ARTIFACT_DIR}/load-test-timings.json" "results.errors=${ARTIFACT_DIR}/load-test-errors.json" "results.durations=${ARTIFACT_DIR}/get-taskruns-durations.json"
 
 echo "[$(date --utc -Ins)] Adding monitoring data"
-mstarted="$( date -d "$( cat started )" --utc -Iseconds )"
-mended="$( date -d "$( cat ended )" --utc -Iseconds )"
+mstarted="$( date -d "$time_started" --utc -Iseconds )"
+mended="$( date -d "$time_ended" --utc -Iseconds )"
 mhost="https://$PROMETHEUS_HOST"
 mrawdir="${ARTIFACT_DIR}/monitoring-raw-data-dir/"
 mkdir -p "$mrawdir"
