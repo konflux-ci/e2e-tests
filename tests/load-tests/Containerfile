@@ -19,7 +19,7 @@ FROM registry.access.redhat.com/ubi10/ubi:latest AS builder_oc
 RUN attempt=1; \
     while true; do \
         echo "Attempt $attempt"; \
-        curl -v https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/openshift-client-linux.tar.gz && \
+        curl -v -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/openshift-client-linux.tar.gz && \
             tar zxvf /tmp/openshift-client-linux.tar.gz -C /usr/bin/ && \
             break; \
         if [[ $attempt -ge 5 ]]; then \
