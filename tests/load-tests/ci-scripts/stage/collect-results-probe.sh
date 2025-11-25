@@ -63,8 +63,6 @@ status_data.py \
     --monitoring-raw-data-dir "$mrawdir" \
     &>"${ARTIFACT_DIR}/monitoring-collection.log"
 
-deactivate
-
 } 2>&1 | tee "${ARTIFACT_DIR}/collect-results.log"
 
 popd
