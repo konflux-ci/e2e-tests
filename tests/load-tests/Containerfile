@@ -24,6 +24,7 @@ RUN attempt=1; \
             break; \
         if [[ $attempt -ge 5 ]]; then \
             echo "All attempts failed, giving up" >&2; \
+            exit 1; \
         fi; \
         sleep 1; \
         let attempt+=1; \
