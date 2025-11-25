@@ -87,10 +87,10 @@ After changing the value, run `kubectl apply -k konflux-ci/build-service` for ap
 
 8. Set the below two environment variables needed for the gitlab tests
 ```
-# gitlab qe org we used to set [here](https://github.com/konflux-ci/e2e-tests/blob/c03c22276fdadaf3e9bf63d56829c4f7c22ad385/default.env#L126)
+# Same as GITLAB_QE_ORG used in https://github.com/konflux-ci/e2e-tests/blob/main/default.env
 export GITLAB_QE_ORG=<gitlab_org>
 
-# gitlab bot token we used to set [here](https://github.com/konflux-ci/e2e-tests/blob/c03c22276fdadaf3e9bf63d56829c4f7c22ad385/default.env#L121)
+# Same as GITLAB_BOT_TOKEN used in https://github.com/konflux-ci/e2e-tests/blob/main/default.env
 export GITLAB_BOT_TOKEN=<gitlab_bot_token>
 ```
 
