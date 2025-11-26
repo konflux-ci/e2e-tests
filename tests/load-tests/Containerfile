@@ -54,6 +54,7 @@ RUN python3 -m pip install -U pip && \
 COPY tests/load-tests/run-stage.sh \
      tests/load-tests/evaluate.py \
      tests/load-tests/errors.py \
-     tests/load-tests/ci-scripts/ \
      ./
+COPY tests/load-tests/ci-scripts/ \
+     ./ci-scripts/
 CMD ["sleep", "5d"]
