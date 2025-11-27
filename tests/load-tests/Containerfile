@@ -41,8 +41,12 @@ COPY --from=builder_go /opt/app-root/src/loadtest /usr/bin/
 # Copy OpenShift CLI binary from builder container
 COPY --from=builder_oc /usr/bin/oc /usr/bin/
 COPY --from=builder_oc /usr/bin/kubectl /usr/bin/
-# Install dependencies for our python scripts
+# Install internal CA certificate
+COPY tests/load-tests/ci-scripts/config/2022-IT-Root-CA.pem \
+     /etc/pki/ca-trust/source/anchors/2022-IT-Root-CA.pem
 USER 0
+RUN update-ca-trust
+# Install dependencies for our python scripts
 RUN INSTALL_PKGS="git-core jq" && \
     microdnf -y --setopt=tsflags=nodocs --setopt=install_weak_deps=0 install $INSTALL_PKGS && \
     microdnf -y clean all --enablerepo='*'
