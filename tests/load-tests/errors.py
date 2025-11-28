@@ -206,6 +206,7 @@ FAILED_PLR_ERRORS = {
     ("Script oras failed to fetch blob from Quay after 10 retries", r"Executing: oras blob fetch --registry-config [^ ]+ quay.io/[^ ]+ --output - error: Command failed after 10 tries with status 141"),
     ("Script rpm_verifier failed to access image layer from quay.io because 502 Bad Gateway", r"rpm_verifier --image-url quay.io/.* Image: quay.io/.* error: unable to access the source layer sha256:[0-9a-z]+: received unexpected HTTP status: 502 Bad Gateway"),
     ("Script rpm_verifier failed to pull image from quay.io because 502 Bad Gateway", r"rpm_verifier.*error: unable to read image quay.io/[^ ]+: Get .https://quay.io/[^ ]+.: received unexpected HTTP status: 502 Bad Gateway"),
+    ("Script rpm_verifier was probbaly OOMKilled (had no output)", r"\+ rpm_verifier --image-url [^ ]+ --image-digest [^ ]+ --workdir /tmp$"),   # This tool should detect OOMKills from TaskRun/Pod manifests
 }
 
 FAILED_TR_ERRORS = {
