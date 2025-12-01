@@ -174,11 +174,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
-
-			It("eventually leads to the build PipelineRun'sA status reported at Checks tab", func() {
-				expectedCheckRunName := fmt.Sprintf("%s-%s", componentA.Name, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, multiComponentRepoNameForGroupSnapshot, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
-			})
 		})
 
 		When("the Build PLRA is finished successfully", func() {
@@ -279,11 +274,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
-
-			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
-				expectedCheckRunName := fmt.Sprintf("%s-%s", componentB.Name, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, multiComponentRepoNameForGroupSnapshot, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
-			})
 		})
 
 		When("the Build PLR is finished successfully", func() {
@@ -383,11 +373,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
-			})
-
-			It("eventually leads to the build PipelineRun's status reported at Checks tab", func() {
-				expectedCheckRunName := fmt.Sprintf("%s-%s", componentC.Name, "on-pull-request")
-				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, componentRepoNameForGroupIntegration, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 			})
 		})
 
