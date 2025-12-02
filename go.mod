@@ -17,7 +17,6 @@ require (
 	github.com/conforma/crds/api v0.1.0
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v27.1.1+incompatible
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
@@ -104,7 +103,7 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.29.4
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.4
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.4
-	vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
+	vbom.ml/util => github.com/fvbommel/util v0.0.3
 )
 
 require (
