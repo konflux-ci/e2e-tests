@@ -15,6 +15,7 @@ import (
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
+	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
 	"github.com/konflux-ci/operator-toolkit/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,7 +34,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var pipelineRun, testPipelinerun, failedPipelineRun *tektonv1.PipelineRun
-	var integrationTestScenarioPass, integrationTestScenarioFail *integrationv1beta2.IntegrationTestScenario
+	var integrationTestScenarioPass, integrationTestScenarioFail, integrationTestScenarioOptional *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 	var mergeResult *github.PullRequestMergeResult
 	var labels, annotations map[string]string
@@ -68,6 +69,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
+			Expect(err).ShouldNot(HaveOccurred())
+			integrationTestScenarioOptional, err = f.AsKubeAdmin.IntegrationController.CreateOptionalIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Eventually(func() error {
@@ -168,6 +171,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				Expect(err).ToNot(HaveOccurred())
 				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
 				Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenarioFail.Name))
+
+				testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenarioOptional.Name, snapshot.Name, testNamespace)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+				Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenarioOptional.Name))
 			})
 		})
 
@@ -175,6 +183,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			It("should eventually complete successfully", func() {
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioOptional, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 		})
 
@@ -199,6 +208,29 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			It("eventually leads to the status reported at Checks tab for the failed Integration PipelineRun", func() {
 				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioFail.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionFailure))
+			})
+
+			It("eventually leads to the status reported at Checks tab for the optional Integration PipelineRun", func() {
+				Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioOptional.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionNeutral))
+			})
+
+			It("checks if the optional Integration Test Scenario status is reported in the Snapshot", func() {
+				Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, integrationTestScenarioOptional.Name)
+					Expect(err).ToNot(HaveOccurred())
+
+					if statusDetail.Status != intgteststat.IntegrationTestStatusTestFail {
+						return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestFail)
+					}
+					return nil
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
+			})
+
+			It("checks if the finalizer was removed from the optional Integration PipelineRun", func() {
+				Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromIntegrationPipeline(integrationTestScenarioOptional, snapshot, testNamespace)).To(Succeed())
 			})
 
 			It("merging the PR, expected to succeed ", func() {
