@@ -131,6 +131,9 @@ find_release_pipelines_from_pr() {
     for tc in "${ALL_TESTCASES[@]}"; do
         if [[ "$pplname" == "$tc" ]]; then
             SELECTED_TESTCASES+=("$pplname")
+            # Automatically add idempotent variant if it exists
+            # Ginkgo will skip if no test with this label exists
+            SELECTED_TESTCASES+=("${pplname}-idempotent")
         fi
     done
   done
