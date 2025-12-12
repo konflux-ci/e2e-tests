@@ -44,6 +44,10 @@ spec:
     - name: container-image
       default: 'quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:latest'
       description: 'Konflux e2e tests container. Contain the ginkgo binary to run the e2e tests in any Konflux component.'
+    - name: artifact-browser-url
+      description: "URL to the artifact browser deployment. If provided, a link will be added to PR comments."
+      default: ""
+      type: string
   tasks:
     - name: rosa-hcp-metadata
       taskRef:
@@ -242,3 +246,5 @@ spec:
           value: cluster-provision.log
         - name: enable-test-results-analysis
           value: "true"
+        - name: artifact-browser-url
+          value: $(params.artifact-browser-url)
