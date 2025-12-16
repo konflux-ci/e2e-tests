@@ -207,9 +207,9 @@ func (i *InstallAppStudio) cloneInfraDeployments() error {
 	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}}); err != nil {
 		return err
 	}
-	if err := utils.ExecuteCommandInASpecificDirectory("git", []string{"pull", "--rebase", "upstream", "main"}, i.InfraDeploymentsCloneDir); err != nil {
-		return err
-	}
+	// if err := utils.ExecuteCommandInASpecificDirectory("git", []string{"pull", "--rebase", "upstream", "main"}, i.InfraDeploymentsCloneDir); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
