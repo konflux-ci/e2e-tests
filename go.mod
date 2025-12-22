@@ -17,7 +17,6 @@ require (
 	github.com/conforma/crds/api v0.1.0
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v27.1.1+incompatible
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
@@ -77,7 +76,7 @@ replace (
 	github.com/apcera/gssapi => github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/distribution/reference => github.com/distribution/reference v0.5.0
-	github.com/docker/docker => github.com/docker/docker v23.0.7+incompatible
+	github.com/docker/docker => github.com/docker/docker v23.0.18+incompatible
 	k8s.io/api => k8s.io/api v0.29.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.29.4
