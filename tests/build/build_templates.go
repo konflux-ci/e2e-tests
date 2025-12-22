@@ -211,7 +211,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		components := make(map[string]ComponentScenarioSpec)
 		var pipelineRunsWithE2eFinalizer []string
 
-		for _, gitUrl := range componentUrls {
+		for _, gitUrl := range GetScenarios() {
 			scenario := GetComponentScenarioDetailsFromGitUrl(gitUrl)
 			Expect(scenario.PipelineBundleNames).ShouldNot(BeEmpty())
 			for _, pipelineBundleName := range scenario.PipelineBundleNames {
