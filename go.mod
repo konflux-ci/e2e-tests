@@ -17,14 +17,13 @@ require (
 	github.com/conforma/crds/api v0.1.0
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v27.1.1+incompatible
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/go-github/v44 v44.1.0
 	github.com/h2non/gock v1.2.0
-	github.com/konflux-ci/application-api v0.0.0-20240812090716-e7eb2ecfb409
+	github.com/konflux-ci/application-api v0.0.0-20251210122215-555a927cf6d9
 	github.com/konflux-ci/build-service v0.0.0-20240611083846-2dee6cfe6fe4
 	github.com/konflux-ci/image-controller v0.0.0-20240530145826-3296e4996f6f
 	github.com/konflux-ci/integration-service v0.0.0-20250605083515-7ca8993ef047
