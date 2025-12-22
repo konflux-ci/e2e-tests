@@ -57,7 +57,7 @@ var (
 	jobName          = utils.GetEnv("JOB_NAME", "")
 	// can be periodic, presubmit or postsubmit
 	jobType                    = utils.GetEnv("JOB_TYPE", "")
-	reposToDeleteDefaultRegexp = "jvm-build|e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
+	reposToDeleteDefaultRegexp = "e2e-dotnet|build-suite|e2e|pet-clinic-e2e|test-app|e2e-quayio|petclinic|test-app|integ-app|^dockerfile-|new-|^python|my-app|^test-|^multi-component"
 	repositoriesWithWebhooks   = []string{"devfile-sample-hello-world", "hacbs-test-project", "secret-lookup-sample-repo-two"}
 	// determine whether CI will run tests that require to register SprayProxy
 	// in order to run tests that require PaC application
@@ -283,7 +283,7 @@ func (Local) CleanupQuayTags() error {
 
 // Deletes the private repos whose names match prefixes as stored in `repoNamePrefixes` array
 func (Local) CleanupPrivateRepos() error {
-	repoNamePrefixes := []string{"build-e2e", "konflux", "multi-platform", "jvm-build-service"}
+	repoNamePrefixes := []string{"build-e2e", "konflux", "multi-platform"}
 	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
 	if quayOrgToken == "" {
 		return fmt.Errorf("%s", quayTokenNotFoundError)
