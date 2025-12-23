@@ -28,7 +28,7 @@ require (
 	github.com/konflux-ci/build-service v0.0.0-20240611083846-2dee6cfe6fe4
 	github.com/konflux-ci/image-controller v0.0.0-20240530145826-3296e4996f6f
 	github.com/konflux-ci/integration-service v0.0.0-20250605083515-7ca8993ef047
-	github.com/konflux-ci/operator-toolkit v0.0.0-20240402130556-ef6dcbeca69d
+	github.com/konflux-ci/operator-toolkit b4f41f073069
 	github.com/konflux-ci/release-service v0.0.0-20241016090118-bd730698b9c5
 	github.com/magefile/mage v1.14.0
 	github.com/mitchellh/go-homedir v1.1.0
