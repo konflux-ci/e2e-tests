@@ -28,6 +28,7 @@ type Opts struct {
 	LogInfo                          bool
 	LogTrace                         bool
 	OutputDir                        string
+	ReleaseOciStorage                string
 	PipelineImagePullSecrets         []string
 	PipelineMintmakerDisabled        bool
 	PipelineRepoTemplating           bool

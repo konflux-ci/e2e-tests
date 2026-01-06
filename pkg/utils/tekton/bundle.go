@@ -45,7 +45,7 @@ func ExtractTektonObjectFromBundle(bundleRef, kind string, name constants.BuildP
 
 // BuildAndPushTektonBundle builds a Tekton bundle from YAML and pushes to remote container registry
 func BuildAndPushTektonBundle(YamlContent []byte, ref name.Reference, remoteOption remoteimg.Option) error {
-	img, err := bundle.BuildTektonBundle([]string{string(YamlContent)}, map[string]string{}, time.Now(), os.Stdout)
+	img, err := bundle.BuildTektonBundle([]string{string(YamlContent)}, map[string]string{}, map[string]string{}, time.Now(), os.Stdout)
 	if err != nil {
 		return fmt.Errorf("error when building a bundle %s: %v", ref.String(), err)
 	}
