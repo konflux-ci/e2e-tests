@@ -42,6 +42,7 @@ $cmd \
     --release-pipeline-url "${RELEASE_PIPELINE_URL:-https://github.com/konflux-ci/release-service-catalog.git}" \
     --release-pipeline-revision "${RELEASE_PIPELINE_REVISION:-production}" \
     --release-pipeline-path "${RELEASE_PIPELINE_PATH:-pipelines/managed/e2e/e2e.yaml}" \
+    --release-ociStorage "${OCI_STORAGE:-quay.io/rhtap-test-local/perf-release-service-trusted-artifacts}" \
     --release-pipeline-service-account "${RELEASE_PIPELINE_SERVICE_ACCOUNT:-release-serviceaccount}" \
     --runprefix "${USER_PREFIX:-undef}" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
