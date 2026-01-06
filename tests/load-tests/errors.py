@@ -152,6 +152,7 @@ FAILED_PLR_ERRORS = {
     ("Error allocating host because of insufficient free addresses in subnet", r"Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances."),
     ("Error allocating host because of provisioning error", r"Error allocating host: failed to provision host"),
     ("Error allocating host because timeouted waiting for address", r"Error allocating host: timed out waiting for instance address"),
+    ("Error from GitHub API when getting release-service-catalog last commit SHA", r"\+\+ curl -s https://api.github.com/repos/rhtap-test-local/release-service-catalog/commits/production \+\+ jq -r '.sha // ..' parse error: Invalid numeric literal at line [0-9]+, column [0-9]+ \+ sha= ?$"),
     ("Failed because CPU is not x86-64-v4", r"ERROR: CPU is not x86-64-v4, aborting build."),
     ("Failed because of quay.io returned 502", r"level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway."),
     ("Failed because registry.access.redhat.com returned 503 when reading manifest", r"source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable"),
