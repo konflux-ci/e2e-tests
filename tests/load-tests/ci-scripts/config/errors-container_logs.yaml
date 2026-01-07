@@ -511,3 +511,9 @@
   regexp: 'Error: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: determining manifest MIME type for docker://registry.access.redhat.com/[^ ]+: Manifest does not match provided manifest digest [^ ]+.*/usr/bin/mock-hermetic-repo.*subprocess.CalledProcessError.*Command ...podman....pull.* returned non-zero exit status 125'
   related_issues: []
   test_dir: []
+- active: true
+  reason: Image unmarshalling failed due to unexpected end of JSON input
+  description: The rpm_verifier tool failed to unmarshall image content, indicating an issue with image manifest parsing or content retrieval.
+  regexp: 'error unmarshalling content: unexpected end of JSON input'
+  test_dir:
+    - run-stone-stage-p01-2026_01_05T15_50_40_547000000_00_00
