@@ -19,11 +19,12 @@ COLUMN_MESSAGE = 2
 
 # Errors patterns we recognize (when newlines were removed)
 # Generic guideline on constructing error reasons: <who - which tool failed> <what - what action failed> <why - why it failed>
-with open("ci-scripts/config/errors-loadtest_output.yaml", "r") as fd:
+dir_path = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(dir_path, "ci-scripts/config/errors-loadtest_output.yaml"), "r") as fd:
     ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
-with open("ci-scripts/config/errors-container_logs.yaml", "r") as fd:
+with open(os.path.join(dir_path, "ci-scripts/config/errors-container_logs.yaml"), "r") as fd:
     FAILED_PLR_ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
-with open("ci-scripts/config/errors-tr_conditions.yaml", "r") as fd:
+with open(os.path.join(dir_path, "ci-scripts/config/errors-tr_conditions.yaml"), "r") as fd:
     FAILED_TR_ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
 
 
