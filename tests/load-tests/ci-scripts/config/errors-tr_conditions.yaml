@@ -1,0 +1,126 @@
+- active: true
+  description: ''
+  reason: Build failed for unspecified reasons
+  regexp: build failed for unspecified reasons.
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: TaskRun was cancelled as its PipelineRun was cancelled
+  regexp: TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has been cancelled.
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev
+  regexp: 'failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Back-off pulling task run image from registry.redhat.io
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.redhat.io/.*'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: "Another special error to avoid printing 'Unknown error:' message"
+  reason: SKIP
+  regexp: '\"message\": \".* exited with code 1.*\"'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Back-off pulling task run image from quay.io
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"quay.io/.*'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: TaskRun was cancelled because it timeouted
+  regexp: '.message.: .TaskRun [^ ]+ failed to finish within [^ ]+., .reason.: .TaskRunTimeout.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Pod stuck in incorrect status
+  regexp: '.message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: TaskRun was cancelled as its PipelineRun timeouted
+  regexp: '.message.: .TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has timed out.., .reason.: .TaskRunCancelled.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Not enough nodes to schedule pod
+  regexp: '.message.: .pod status ..PodScheduled..:..False..; message: ..[0-9/]+ nodes are available: .*: [0-9]+ Preemption is not helpful for scheduling.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: 'This is special error, meaning everithing failed basically'
+  reason: Missing expected fields in TaskRun
+  regexp: Missing expected fields in TaskRun
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Pod creation failed because ETCD timeouted
+  regexp: '.message.: .failed to create task run pod [^ ]+: etcdserver: request timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Pod creation failed with reason error
+  regexp: '\"message\": \".* exited with code 2: Error\"'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: TaskRun resolution failed because validation.webhook.pipeline.tekton.dev returned EOF
+  regexp: '.message.: .error requesting remote resource: error updating resource request [^ ]+ with data: Internal error occurred: failed calling webhook .*validation.webhook.pipeline.tekton.dev.*: failed to call webhook: Post .*https://tekton-pipelines-webhook.openshift-pipelines.svc:443/resource-validation.timeout=10s.*: EOF., .reason.: .TaskRunResolutionFailed.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: 'This is special error, meaning everithing failed basically'
+  reason: Missing expected TaskRun file
+  regexp: Missing expected TaskRun file
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Pod creation failed because resource quota evaluation timed out
+  regexp: '.message.: .failed to create task run pod [^ ]+: Internal error occurred: resource quota evaluation timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev
+  regexp: 'failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": EOF. Maybe missing or invalid Task.*PodCreationFailed'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: "Another special error to avoid printing 'Unknown error:' message"
+  reason: SKIP
+  regexp: '\"message\": \"All Steps have completed executing\"'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: "Another special error to avoid printing 'Unknown error:' message"
+  reason: SKIP
+  regexp: '\"message\": \".* exited with code 255.*\"'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Pod creation failed because serviceaccounts not found
+  regexp: '.message.: .failed to create task run pod [^ ]+: translating TaskSpec to Pod: serviceaccounts [^ ]+ not found. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: ''
+  reason: Back-off pulling task run image from registry.access.redhat.com
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.access.redhat.com/.*'
+  related_issues: []
+  test_dir: []
