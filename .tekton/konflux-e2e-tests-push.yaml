@@ -33,12 +33,16 @@ spec:
   - name: update-build-tasks-dockerfiles-script
     value: |
       sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' integration-tests/tasks/e2e-test.yaml
+  - name: build-platforms
+    value:
+      - "linux/x86_64"
+      - "linux/arm64"
   pipelineSpec:
     finally:
     - name: show-sbom
       params:
       - name: IMAGE_URL
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       taskRef:
         params:
         - name: name
@@ -57,7 +61,7 @@ spec:
       - name: image-url
         value: $(params.output-image)
       - name: build-task-status
-        value: $(tasks.build-container.status)
+        value: $(tasks.build-image-index.status)
       taskRef:
         params:
         - name: name
@@ -127,6 +131,13 @@ spec:
       description: Path to a file with build arguments for buildah, see https://www.mankier.com/1/buildah-build#--build-arg-file
       name: build-args-file
       type: string
+    - default:
+      - "linux/x86_64"
+      - "linux/arm64"
+      description: List of platforms to build the container images on. The available
+        set of values is determined by the configuration of the multi-platform-controller.
+      name: build-platforms
+      type: array
     - default: ""
       name: build-definitions-update-script
     - default: ""
@@ -134,10 +145,10 @@ spec:
     results:
     - description: ""
       name: IMAGE_URL
-      value: $(tasks.build-container.results.IMAGE_URL)
+      value: $(tasks.build-image-index.results.IMAGE_URL)
     - description: ""
       name: IMAGE_DIGEST
-      value: $(tasks.build-container.results.IMAGE_DIGEST)
+      value: $(tasks.build-image-index.results.IMAGE_DIGEST)
     - description: ""
       name: CHAINS-GIT_URL
       value: $(tasks.clone-repository.results.url)
@@ -216,7 +227,12 @@ spec:
         workspace: git-auth
       - name: netrc
         workspace: netrc
-    - name: build-container
+    - name: build-images
+      matrix:
+        params:
+          - name: PLATFORM
+            value:
+              - $(params.build-platforms)
       params:
       - name: IMAGE
         value: $(params.output-image)
@@ -237,14 +253,16 @@ spec:
         - $(params.build-args[*])
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
+      - name: IMAGE_APPEND_PLATFORM
+        value: "true"
       runAfter:
       - prefetch-dependencies
       taskRef:
         params:
         - name: name
-          value: buildah
+          value: buildah-remote
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah:0.4@sha256:1799515338c544f6917044398777714c9e0691895231a9d7f456dca75c6f4b65
+          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote:0.7
         - name: kind
           value: task
         resolver: bundles
@@ -256,12 +274,41 @@ spec:
       workspaces:
       - name: source
         workspace: workspace
+    - name: build-image-index
+      params:
+      - name: IMAGE
+        value: $(params.output-image)
+      - name: COMMIT_SHA
+        value: $(tasks.clone-repository.results.commit)
+      - name: IMAGE_EXPIRES_AFTER
+        value: $(params.image-expires-after)
+      - name: ALWAYS_BUILD_INDEX
+        value: "true"
+      - name: IMAGES
+        value:
+          - $(tasks.build-images.results.IMAGE_REF[*])
+      runAfter:
+      - build-images
+      taskRef:
+        params:
+        - name: name
+          value: build-image-index
+        - name: bundle
+          value: quay.io/konflux-ci/tekton-catalog/task-build-image-index:0.2@sha256:39561ac43e325159497c10c0284cf61dfddf39e39100ca5e3df6b73c5d96db8b
+        - name: kind
+          value: task
+        resolver: bundles
+      when:
+      - input: $(tasks.init.results.build)
+        operator: in
+        values:
+        - "true"
     - name: build-source-image
       params:
       - name: BINARY_IMAGE
-        value: $(params.output-image)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -286,11 +333,11 @@ spec:
     - name: deprecated-base-image-check
       params:
       - name: IMAGE_URL
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       - name: IMAGE_DIGEST
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
+        value: $(tasks.build-image-index.results.IMAGE_DIGEST)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -306,13 +353,18 @@ spec:
         values:
         - "false"
     - name: clair-scan
+      matrix:
+        params:
+          - name: image-platform
+            value:
+              - $(params.build-platforms)
       params:
       - name: image-digest
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
+        value: $(tasks.build-image-index.results.IMAGE_DIGEST)
       - name: image-url
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -328,11 +380,16 @@ spec:
         values:
         - "false"
     - name: ecosystem-cert-preflight-checks
+      matrix:
+        params:
+          - name: platform
+            value:
+              - $(params.build-platforms)
       params:
       - name: image-url
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -350,11 +407,11 @@ spec:
     - name: sast-snyk-check
       params:
       - name: image-digest
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
+        value: $(tasks.build-image-index.results.IMAGE_DIGEST)
       - name: image-url
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -375,11 +432,11 @@ spec:
     - name: apply-tags
       params:
       - name: IMAGE
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       - name: ADDITIONAL_TAGS
         value: ["latest"]
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -392,15 +449,15 @@ spec:
     - name: push-dockerfile
       params:
       - name: IMAGE
-        value: $(tasks.build-container.results.IMAGE_URL)
+        value: $(tasks.build-image-index.results.IMAGE_URL)
       - name: IMAGE_DIGEST
-        value: $(tasks.build-container.results.IMAGE_DIGEST)
+        value: $(tasks.build-image-index.results.IMAGE_DIGEST)
       - name: DOCKERFILE
         value: $(params.dockerfile)
       - name: CONTEXT
         value: $(params.path-context)
       runAfter:
-      - build-container
+      - build-image-index
       taskRef:
         params:
         - name: name
@@ -415,7 +472,7 @@ spec:
         workspace: workspace
     - name: update-build-definitions-repo
       runAfter:
-      - build-container
+      - build-image-index
       params:
         - name: ORIGIN_REPO
           value: $(params.git-url)
@@ -439,7 +496,7 @@ spec:
         resolver: bundles
     - name: update-build-tasks-dockerfiles-repo
       runAfter:
-      - build-container
+      - build-image-index
       params:
         - name: ORIGIN_REPO
           value: $(params.git-url)
@@ -479,7 +536,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: 5Gi
       status: {}
   - name: git-auth
     secret:
