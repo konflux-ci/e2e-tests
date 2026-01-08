@@ -139,3 +139,4 @@
   related_issues: []
   test_dir:
     - run-stone-prd-rh02-2026_01_05T18_19_27_596000000_00_00
+    - run-kflux-prd-rh03-2026_01_05T17_45_18_955000000_00_00

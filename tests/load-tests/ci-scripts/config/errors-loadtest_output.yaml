@@ -596,3 +596,23 @@
   related_issues: []
   test_dir:
     - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
+- active: true
+  description: ''
+  reason: Release creation failed due to context deadline exceeded
+  regexp: 'Release failed creation: context deadline exceeded'
+  related_issues: []
+  test_dir:
+    - run-stone-prd-rh01-2026_01_06T10_03_22_218000000_00_00
+- active: true
+  description: ''
+  reason: Pipeline failed to retrieve task due to invalid runtime object (missing Kind)
+  regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .* invalid runtime object: Object ''Kind'' is missing in '''''
+  related_issues: []
+  test_dir:
+    - run-stone-prd-rh02-2026_01_05T18_33_24_765000000_00_00
+- active: true
+  description: 'Git clone failed due to unexpected disconnect during fetch-pack'
+  reason: Pipeline Task retrieval failed due to git clone disconnect
+  regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .* fetch-pack: unexpected disconnect'
+  related_issues: []
+  test_dir: []

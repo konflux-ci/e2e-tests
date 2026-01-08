@@ -555,3 +555,27 @@
     - KFLUXSPRT-5840
   test_dir:
     - run-stone-prd-rh02-2026_01_05T16_23_19_676000000_00_00
+- active: true
+  description: 'Quay returned 401 during upload'
+  reason: Quay.io 401 Unauthorized during SBOM upload
+  regexp: 'HEAD https://quay.io/v2/.*: unexpected status code 401 Unauthorized'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: 'Quay upload failed with EOF'
+  reason: Quay.io blob upload failed due to EOF
+  regexp: 'POST "https://quay.io/v2/.*/blobs/uploads/": .* failed to decode response: EOF'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: 'Quay returned 502 Bad Gateway'
+  reason: Quay.io returned 502 Bad Gateway
+  regexp: 'endpoint "https://quay.io" does not support v2 API .got 502 Bad Gateway.'
+  related_issues: []
+  test_dir: []
+- active: true
+  description: 'Tar extraction failed with unexpected EOF'
+  reason: Artifact extraction failed due to unexpected end of file
+  regexp: 'mismatched digest .* gzip: stdin: unexpected end of file'
+  related_issues: []
+  test_dir: []
