@@ -144,7 +144,7 @@ def check_failed_taskrun(data_dir, ns, tr_name):
         data = load(datafile)
     except FileNotFoundError as e:
         print(f"ERROR: Missing file: {str(e)}")
-        return False, "Missing expected TaskRun file"
+        return False, "Missing expected TaskRun file", datafile
 
     try:
         pod_name = data["status"]["podName"]
@@ -155,9 +155,9 @@ def check_failed_taskrun(data_dir, ns, tr_name):
         return False, "Missing expected fields in TaskRun"
     else:
         if pod_name == "":
-            return False, json.dumps(condition, sort_keys=True)
+            return False, json.dumps(condition, sort_keys=True), datafile
         else:
-            return True, json.dumps(condition, sort_keys=True)
+            return True, json.dumps(condition, sort_keys=True), datafile
 
 
 def find_failed_containers(data_dir, ns, tr_name):
@@ -194,7 +194,7 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
         plr_ns = plr["metadata"]["namespace"]
 
         for tr_name in find_trs(plr):
-            tr_ok, tr_message = check_failed_taskrun(dump_dir, plr_ns, tr_name)
+            tr_ok, tr_message, tr_file = check_failed_taskrun(dump_dir, plr_ns, tr_name)
 
             if tr_ok:
                 try:
@@ -209,6 +209,7 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
                 except FileNotFoundError as e:
                     print(f"Failed to locate required files: {e}")
 
+            print(f"Checking errors in condition message of {tr_file}")
             reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
             if reason != "SKIP":
                 reasons.append(reason)
@@ -300,7 +301,7 @@ def investigate_all_failed_plr(dump_dir):
         plr_ns = plr["metadata"]["namespace"]
 
         for tr_name in find_trs(plr):
-            tr_ok, tr_message = check_failed_taskrun(dump_dir, plr_ns, tr_name)
+            tr_ok, tr_message, tr_file = check_failed_taskrun(dump_dir, plr_ns, tr_name)
 
             if tr_ok:
                 try:
@@ -315,6 +316,7 @@ def investigate_all_failed_plr(dump_dir):
                 except FileNotFoundError as e:
                     print(f"Failed to locate required files: {e}")
 
+            print(f"Checking errors in condition message of {tr_file}")
             reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
             if reason != "SKIP":
                 reasons.append(reason)
