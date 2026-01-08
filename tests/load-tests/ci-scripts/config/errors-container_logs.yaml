@@ -560,13 +560,15 @@
   reason: Quay.io 401 Unauthorized during SBOM upload
   regexp: 'HEAD https://quay.io/v2/.*: unexpected status code 401 Unauthorized'
   related_issues: []
-  test_dir: []
+  test_dir:
+    - run-kflux-rhel-p01-2026_01_05T18_47_13_308000000_00_00
 - active: true
   description: 'Quay upload failed with EOF'
   reason: Quay.io blob upload failed due to EOF
   regexp: 'POST "https://quay.io/v2/.*/blobs/uploads/": .* failed to decode response: EOF'
   related_issues: []
-  test_dir: []
+  test_dir:
+    - run-kflux-rhel-p01-2026_01_05T18_13_33_821000000_00_00
 - active: true
   description: 'Quay returned 502 Bad Gateway'
   reason: Quay.io returned 502 Bad Gateway

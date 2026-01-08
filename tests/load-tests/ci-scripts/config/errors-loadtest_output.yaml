@@ -615,4 +615,5 @@
   reason: Pipeline Task retrieval failed due to git clone disconnect
   regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .* fetch-pack: unexpected disconnect'
   related_issues: []
-  test_dir: []
+  test_dir:
+    - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
