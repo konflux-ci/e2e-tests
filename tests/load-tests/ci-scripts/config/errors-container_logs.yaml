@@ -581,3 +581,12 @@
   regexp: 'mismatched digest .* gzip: stdin: unexpected end of file'
   related_issues: []
   test_dir: []
+- active: true
+  description: ''
+  reason: Image pull failed due to Gateway Time-out
+  regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out)'
+  related_issues:
+    - KONFLUX-9369
+    - KONFLUX-9150
+  test_dir:
+    - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00

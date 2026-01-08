@@ -617,3 +617,10 @@
   related_issues: []
   test_dir:
     - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
+- active: true
+  description: ''
+  reason: Repo-templating failed because file not found (404)
+  regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .* 404 Not Found'
+  related_issues: []
+  test_dir:
+    - run-kflux-ocp-p01-2025_12_30T03_50_17_869000000_00_00
