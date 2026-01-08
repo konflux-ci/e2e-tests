@@ -577,7 +577,7 @@
   regexp: 'Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*'
   related_issues: []
   test_dir: []
-- reason: Repo-templating cleanup failed GitLab merge failed (422 Branch cannot be merged)
+- reason: Repo-templating cleanup failed GitLab merge failed because 422 error
   regexp: 'Repo-templating workflow component cleanup failed: Merging \d+ failed: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^/]+/[^/]+/merge_requests/\d+/merge: 422 {message: Branch cannot be merged}'
   active: true
   test_dir:

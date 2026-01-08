@@ -512,8 +512,8 @@
   related_issues: []
   test_dir: []
 - active: true
-  reason: Image unmarshalling failed due to unexpected end of JSON input
-  description: The rpm_verifier tool failed to unmarshall image content, indicating an issue with image manifest parsing or content retrieval.
-  regexp: 'error unmarshalling content: unexpected end of JSON input'
+  reason: rpm_verifier failed to unmarshall image due to quay.io returning unexpected end of JSON input
+  description: The rpm_verifier tool failed to unmarshall image content when talking to quay.io, indicating an issue with image manifest parsing or content retrieval.
+  regexp: 'rpm_verifier.*error: unable to read image quay.io/[^ ]+: error unmarshalling content: unexpected end of JSON input'
   test_dir:
     - run-stone-stage-p01-2026_01_05T15_50_40_547000000_00_00
