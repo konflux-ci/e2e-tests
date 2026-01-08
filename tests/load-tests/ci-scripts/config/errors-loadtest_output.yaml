@@ -582,3 +582,17 @@
   active: true
   test_dir:
     - run-kflux-rhel-p01-2026_01_03T07_07_42_134000000_00_00
+- active: true
+  description: ''
+  reason: Repo templating failed when merging PR on github.com because 502
+  regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 502 Server Error'
+  related_issues: []
+  test_dir:
+    - run-stone-prd-rh02-2025_12_20T05_44_30_733000000_00_00
+- active: true
+  description: ''
+  reason: Timeout waiting for release pipeline run to finish
+  regexp: 'Release pipeline run failed: context deadline exceeded'
+  related_issues: []
+  test_dir:
+    - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
