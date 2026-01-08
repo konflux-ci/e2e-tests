@@ -521,7 +521,9 @@
   description: ''
   reason: Git clone failed because error setting certificate file
   regexp: 'fatal: unable to access ''https://.*'': error setting certificate file: .*'
-  related_issues: []
+  related_issues:
+    - KFLUXSPRT-1914
+    - OCPBUGS-45223
   test_dir:
     - run-kfluxfedorap01-2025_12_19T13_48_56_778000000_00_00
 - active: true
@@ -549,6 +551,7 @@
   description: ''
   reason: Mobster failed because invalid digest format
   regexp: 'File "/app/src/mobster/image.py", line .*, in digest_hex_val .* ValueError: not enough values to unpack'
-  related_issues: []
+  related_issues:
+    - KFLUXSPRT-5840
   test_dir:
     - run-stone-prd-rh02-2026_01_05T16_23_19_676000000_00_00
