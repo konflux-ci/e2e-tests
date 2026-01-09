@@ -609,3 +609,10 @@
   related_issues: []
   test_dir:
   - run-kflux-ocp-p01-2025_12_30T03_50_17_869000000_00_00
+- id: loadtest_probe_failed_to_create_application_because_service_account_permissions_forbidden
+  note: Happening on Staging clusters since 2026-01-08
+  reason: Loadtest probe failed to create Application because service account permissions forbidden
+  regexp: 'FAIL\(30\): Application failed creation: Unable to create the Application [^:]+: applications.appstudio.redhat.com is forbidden: User "system:serviceaccount:[^:]+:loadtest-probe-serviceaccount" cannot create resource "applications" in API group "appstudio.redhat.com" in the namespace "[^"]+"'
+  related_issues: []
+  test_dir:
+  - run-stone-stg-rh01-2026_01_08T20_39_18_904000000_00_00
