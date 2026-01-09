@@ -590,3 +590,17 @@
   - KONFLUX-9150
   test_dir:
   - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00
+- id: taskrun_failed_because_aws_ec2_insufficientinstancecapacity
+  note: AWS capacity issue for specific instance types
+  reason: TaskRun failed because AWS EC2 InsufficientInstanceCapacity
+  regexp: 'api error InsufficientInstanceCapacity: We currently do not have sufficient [^ ]+ capacity in the Availability Zone you requested'
+  related_issues:
+  - KFLUXSPRT-6086
+  test_dir:
+  - run-kfluxfedorap01-2026_01_08T17_56_17_965000000_00_00
+- id: skip_0
+  note: Empty log file, skip it
+  reason: SKIP
+  regexp: ^ *$
+  related_issues: []
+  test_dir: []

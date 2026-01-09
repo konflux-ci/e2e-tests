@@ -34,7 +34,7 @@
   regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"quay.io/.*'
   related_issues: []
   test_dir:
-  - run-2025-10-02T08_32_47_515723247_00_00
+  - run-kflux-ocp-p01-2026_01_08T22_50_18_062000000_00_00
 - id: taskrun_was_cancelled_because_it_timeouted
   note: ''
   reason: TaskRun was cancelled because it timeouted
@@ -100,7 +100,8 @@
   reason: Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev
   regexp: 'failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": EOF. Maybe missing or invalid Task.*PodCreationFailed'
   related_issues: []
-  test_dir: []
+  test_dir:
+  - run-stone-prd-rh02-2026_01_08T21_18_19_659000000_00_00
 - id: skip_0
   note: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
@@ -140,3 +141,12 @@
   test_dir:
   - run-stone-prd-rh02-2026_01_05T18_19_27_596000000_00_00
   - run-kflux-prd-rh03-2026_01_05T17_45_18_955000000_00_00
+- id: pipelinerun_failed_because_pod_stuck_in_pending_place_scripts_incomplete
+  note: Init container place-scripts failed to complete
+  reason: PipelineRun failed because pod stuck in Pending (place-scripts incomplete)
+  regexp: '.message.: .pod status ..Initialized..:..False..; message: ..containers with incomplete status: \[.*place-scripts.*\].'
+  related_issues:
+  - KFLUXSPRT-1343
+  - KFLUXSPRT-901
+  test_dir:
+  - run-stone-prd-rh02-2026_01_08T15_08_01_609000000_00_00
