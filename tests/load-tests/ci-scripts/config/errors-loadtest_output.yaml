@@ -173,22 +173,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: |
-    Last time I seen this we discussed it here:
-
-      https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749
-
-    And it manifested itself by check on initial PR failing with:
-
-      the namespace of the provided object does not match the namespace sent on the request
-
-    And folks noticed this in the PaC controller logs:
-
-      There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun
-      test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has
-      reported this error: ```Internal error occurred: failed calling webhook "vpipelineruns.konflux-ci.dev": failed
-      to call webhook: Post "https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s":
-      context deadline exceeded```
+  description: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   related_issues: []
@@ -577,50 +562,50 @@
   regexp: 'Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*'
   related_issues: []
   test_dir: []
-- reason: Repo-templating cleanup failed GitLab merge failed because 422 error
+- active: true
+  reason: Repo-templating cleanup failed GitLab merge failed because 422 error
   regexp: 'Repo-templating workflow component cleanup failed: Merging \d+ failed: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^/]+/[^/]+/merge_requests/\d+/merge: 422 {message: Branch cannot be merged}'
-  active: true
   test_dir:
-    - run-kflux-rhel-p01-2026_01_03T07_07_42_134000000_00_00
+  - run-kflux-rhel-p01-2026_01_03T07_07_42_134000000_00_00
 - active: true
   description: ''
   reason: Repo templating failed when merging PR on github.com because 502
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 502 Server Error'
   related_issues: []
   test_dir:
-    - run-stone-prd-rh02-2025_12_20T05_44_30_733000000_00_00
+  - run-stone-prd-rh02-2025_12_20T05_44_30_733000000_00_00
 - active: true
   description: ''
   reason: Timeout waiting for release pipeline run to finish
   regexp: 'Release pipeline run failed: context deadline exceeded'
   related_issues: []
   test_dir:
-    - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
+  - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
 - active: true
   description: ''
   reason: Release creation failed due to context deadline exceeded
   regexp: 'Release failed creation: context deadline exceeded'
   related_issues: []
   test_dir:
-    - run-stone-prd-rh01-2026_01_06T10_03_22_218000000_00_00
+  - run-stone-prd-rh01-2026_01_06T10_03_22_218000000_00_00
 - active: true
   description: ''
   reason: Pipeline failed to retrieve task due to invalid runtime object (missing Kind)
   regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .* invalid runtime object: Object ''Kind'' is missing in '''''
   related_issues: []
   test_dir:
-    - run-stone-prd-rh02-2026_01_05T18_33_24_765000000_00_00
+  - run-stone-prd-rh02-2026_01_05T18_33_24_765000000_00_00
 - active: true
-  description: 'Git clone failed due to unexpected disconnect during fetch-pack'
+  description: Git clone failed due to unexpected disconnect during fetch-pack
   reason: Pipeline Task retrieval failed due to git clone disconnect
   regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .* fetch-pack: unexpected disconnect'
   related_issues: []
   test_dir:
-    - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
+  - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
 - active: true
   description: ''
   reason: Repo-templating failed because file not found (404)
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .* 404 Not Found'
   related_issues: []
   test_dir:
-    - run-kflux-ocp-p01-2025_12_30T03_50_17_869000000_00_00
+  - run-kflux-ocp-p01-2025_12_30T03_50_17_869000000_00_00

@@ -117,7 +117,7 @@
   reason: No podman installed on a MPC VM
   regexp: 'remote_cmd podman unshare setfacl .* \+ ssh -o StrictHostKeyChecking=no [^ ]+ podman unshare setfacl .* bash: line 1: podman: command not found'
   related_issues:
-    - KONFLUX-9944
+  - KONFLUX-9944
   test_dir: []
 - active: true
   description: ''
@@ -144,7 +144,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: 'This tool should detect OOMKills from TaskRun/Pod manifests'
+  description: This tool should detect OOMKills from TaskRun/Pod manifests
   reason: Script rpm_verifier was probbaly OOMKilled (had no output)
   regexp: \+ rpm_verifier --image-url [^ ]+ --image-digest [^ ]+ --workdir /tmp$
   related_issues: []
@@ -234,7 +234,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: "This is a special 'wildcard' error, let's keep it on top and do not change 'SKIP' reason as it is used in the code"
+  description: This is a special 'wildcard' error, let's keep it on top and do not change 'SKIP' reason as it is used in the code
   reason: SKIP
   regexp: Skipping step because a previous step failed
   related_issues: []
@@ -328,7 +328,7 @@
   reason: Failed to provision MPC VM due to resource quota evaluation timed out
   regexp: 'cat /ssh/error Error allocating host: Internal error occurred: resource quota evaluation timed out'
   related_issues:
-    - KONFLUX-9798
+  - KONFLUX-9798
   test_dir: []
 - active: true
   description: ''
@@ -497,7 +497,7 @@
   reason: Failed to ssh to remote MPC VM
   regexp: '[^ ]+@[0-9.]+: Permission denied .publickey,gssapi-keyex,gssapi-with-mic..\s*$'
   related_issues:
-    - KONFLUX-9742
+  - KONFLUX-9742
   test_dir: []
 - active: true
   description: ''
@@ -512,71 +512,71 @@
   related_issues: []
   test_dir: []
 - active: true
-  reason: rpm_verifier failed to unmarshall image due to quay.io returning unexpected end of JSON input
   description: The rpm_verifier tool failed to unmarshall image content when talking to quay.io, indicating an issue with image manifest parsing or content retrieval.
+  reason: rpm_verifier failed to unmarshall image due to quay.io returning unexpected end of JSON input
   regexp: 'rpm_verifier.*error: unable to read image quay.io/[^ ]+: error unmarshalling content: unexpected end of JSON input'
   test_dir:
-    - run-stone-stage-p01-2026_01_05T15_50_40_547000000_00_00
+  - run-stone-stage-p01-2026_01_05T15_50_40_547000000_00_00
 - active: true
   description: ''
   reason: Git clone failed because error setting certificate file
   regexp: 'fatal: unable to access ''https://.*'': error setting certificate file: .*'
   related_issues:
-    - KFLUXSPRT-1914
-    - OCPBUGS-45223
+  - KFLUXSPRT-1914
+  - OCPBUGS-45223
   test_dir:
-    - run-kfluxfedorap01-2025_12_19T13_48_56_778000000_00_00
+  - run-kfluxfedorap01-2025_12_19T13_48_56_778000000_00_00
 - active: true
   description: ''
   reason: Curl failed to download file because src.fedoraproject.org returned 503
   regexp: 'curl .* https://src.fedoraproject.org/.*curl: \(22\) The requested URL returned error: 503'
   related_issues: []
   test_dir:
-    - run-kfluxfedorap01-2025_12_19T22_56_19_949000000_00_00
+  - run-kfluxfedorap01-2025_12_19T22_56_19_949000000_00_00
 - active: true
   description: ''
   reason: Failed to setup VM because connection closed by remote host
-  regexp: 'Setup VM .* Connection closed by .* port 22'
+  regexp: Setup VM .* Connection closed by .* port 22
   related_issues: []
   test_dir:
-    - run-stone-stg-rh01-2025_12_19T23_09_18_072000000_00_00
+  - run-stone-stg-rh01-2025_12_19T23_09_18_072000000_00_00
 - active: true
   description: ''
   reason: Git clone failed because github.com failed with TLS handshake timeout
   regexp: 'Error: error cloning repository: Get "https://github.com/.*": net/http: TLS handshake timeout'
   related_issues: []
   test_dir:
-    - run-stone-prd-rh01-2025_12_22T21_57_06_059000000_00_00
+  - run-stone-prd-rh01-2025_12_22T21_57_06_059000000_00_00
 - active: true
   description: ''
   reason: Mobster failed because invalid digest format
   regexp: 'File "/app/src/mobster/image.py", line .*, in digest_hex_val .* ValueError: not enough values to unpack'
   related_issues:
-    - KFLUXSPRT-5840
+  - KFLUXSPRT-5840
   test_dir:
-    - run-stone-prd-rh02-2026_01_05T16_23_19_676000000_00_00
+  - run-stone-prd-rh02-2026_01_05T16_23_19_676000000_00_00
 - active: true
-  description: 'Quay returned 401 during upload'
+  description: Quay returned 401 during upload
   reason: Quay.io 401 Unauthorized during SBOM upload
   regexp: 'HEAD https://quay.io/v2/.*: unexpected status code 401 Unauthorized'
   related_issues: []
   test_dir:
-    - run-kflux-rhel-p01-2026_01_05T18_47_13_308000000_00_00
+  - run-kflux-rhel-p01-2026_01_05T18_47_13_308000000_00_00
 - active: true
-  description: 'Quay upload failed with EOF'
+  description: Quay upload failed with EOF
   reason: Quay.io blob upload failed due to EOF
   regexp: 'POST "https://quay.io/v2/.*/blobs/uploads/": .* failed to decode response: EOF'
   related_issues: []
   test_dir:
-    - run-kflux-rhel-p01-2026_01_05T18_13_33_821000000_00_00
+  - run-kflux-rhel-p01-2026_01_05T18_13_33_821000000_00_00
 - active: true
-  description: 'Quay returned 502 Bad Gateway'
+  description: Quay returned 502 Bad Gateway
   reason: Quay.io returned 502 Bad Gateway
-  regexp: 'endpoint "https://quay.io" does not support v2 API .got 502 Bad Gateway.'
+  regexp: endpoint "https://quay.io" does not support v2 API .got 502 Bad Gateway.
   related_issues: []
   test_dir: []
 - active: true
-  description: 'Tar extraction failed with unexpected EOF'
+  description: Tar extraction failed with unexpected EOF
   reason: Artifact extraction failed due to unexpected end of file
   regexp: 'mismatched digest .* gzip: stdin: unexpected end of file'
   related_issues: []
@@ -586,7 +586,7 @@
   reason: Image pull failed due to Gateway Time-out
   regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out)'
   related_issues:
-    - KONFLUX-9369
-    - KONFLUX-9150
+  - KONFLUX-9369
+  - KONFLUX-9150
   test_dir:
-    - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00
+  - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00

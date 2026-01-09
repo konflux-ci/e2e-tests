@@ -23,7 +23,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: "Another special error to avoid printing 'Unknown error:' message"
+  description: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
   regexp: '\"message\": \".* exited with code 1.*\"'
   related_issues: []
@@ -34,7 +34,7 @@
   regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"quay.io/.*'
   related_issues: []
   test_dir:
-    - run-2025-10-02T08_32_47_515723247_00_00
+  - run-2025-10-02T08_32_47_515723247_00_00
 - active: true
   description: ''
   reason: TaskRun was cancelled because it timeouted
@@ -60,7 +60,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: 'This is special error, meaning everithing failed basically'
+  description: This is special error, meaning everithing failed basically
   reason: Missing expected fields in TaskRun
   regexp: Missing expected fields in TaskRun
   related_issues: []
@@ -84,7 +84,7 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: 'This is special error, meaning everithing failed basically'
+  description: This is special error, meaning everithing failed basically
   reason: Missing expected TaskRun file
   regexp: Missing expected TaskRun file
   related_issues: []
@@ -102,13 +102,13 @@
   related_issues: []
   test_dir: []
 - active: true
-  description: "Another special error to avoid printing 'Unknown error:' message"
+  description: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
   regexp: '\"message\": \"All Steps have completed executing\"'
   related_issues: []
   test_dir: []
 - active: true
-  description: "Another special error to avoid printing 'Unknown error:' message"
+  description: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
   regexp: '\"message\": \".* exited with code 255.*\"'
   related_issues: []
@@ -131,12 +131,12 @@
   regexp: 'Internal error occurred: admission plugin \\"MutatingAdmissionWebhook\\" failed to complete mutation in .*s'
   related_issues: []
   test_dir:
-    - run-stone-stg-rh01-2025_12_23T05_47_23_049000000_00_00
+  - run-stone-stg-rh01-2025_12_23T05_47_23_049000000_00_00
 - active: true
   description: ''
   reason: Pod creation failed due to unexpected end of JSON input
   regexp: '.message.: .failed to create task run pod [^ ]+: translating TaskSpec to Pod: unexpected end of JSON input. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
   related_issues: []
   test_dir:
-    - run-stone-prd-rh02-2026_01_05T18_19_27_596000000_00_00
-    - run-kflux-prd-rh03-2026_01_05T17_45_18_955000000_00_00
+  - run-stone-prd-rh02-2026_01_05T18_19_27_596000000_00_00
+  - run-kflux-prd-rh03-2026_01_05T17_45_18_955000000_00_00
