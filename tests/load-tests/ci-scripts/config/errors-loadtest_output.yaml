@@ -1,609 +1,609 @@
-- active: true
-  description: ''
+- id: timeout_forking_the_repo_before_the_actual_test
+  note: ''
   reason: Timeout forking the repo before the actual test
   regexp: 'Repo forking failed: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: application_creation_timed_out_waiting_for_quota_evaluation
+  note: ''
   reason: Application creation timed out waiting for quota evaluation
   regexp: 'Application failed creation: Unable to create the Application .*: Internal error occurred: resource quota evaluation timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_component_creation_because_it_already_exists
+  note: ''
   reason: Failed component creation because it already exists
   regexp: 'Component failed creation: Unable to create the Component [^ ]+: components.appstudio.redhat.com \"[^ ]+\" already exists'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_bundles_resolver_from_quay_io_due_to_digest_mismatch
+  note: ''
   reason: Couldnt get task via bundles resolver from quay.io due to digest mismatch
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: error getting \"bundleresolver\" .*: cannot retrieve the oci image: manifest digest: [^ ]+ does not match requested digest: [^ ]+ for .quay.io/'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: component_creation_timed_out_waiting_for_image_repository_to_be_ready
+  note: ''
   reason: Component creation timed out waiting for image repository to be ready
   regexp: 'Component failed creation: Unable to create the Component .* timed out waiting for image repository to be ready for component .* in namespace .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_to_merge_mr_on_cee_gitlab_due_to_dns_error
+  note: ''
   reason: Failed to merge MR on CEE GitLab due to DNS error
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*Temporary failure in name resolution'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_forking_the_repo_before_the_actual_test_0
+  note: ''
   reason: Timeout forking the repo before the actual test
   regexp: 'Repo forking failed: Error waiting for project [^ ]+ .ID: [0-9]+. fork to complete: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git fetch error: error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_application_creation_when_calling_mapplication_kb_io_webhook
+  note: ''
   reason: Failed application creation when calling mapplication.kb.io webhook
   regexp: 'Application failed creation: Unable to create the Application .*: Internal error occurred: failed calling webhook .*mapplication.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application.* no endpoints available for service .*application-service-webhook-service'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_bundles_resolver_because_control_characters_in_yaml
+  note: ''
   reason: Couldnt get task via bundles resolver because control characters in yaml
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .* invalid runtime object: yaml: control characters are not allowed'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_429
+  note: ''
   reason: Couldnt get task via buldles resolver from quay.io due to 429
   regexp: Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 429 Too Many Requests
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_getting_build_service_account
+  note: ''
   reason: Timeout getting build service account
   regexp: 'Component build SA not present: Component build SA .* not present: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_the_target_is_still_being_deleted
+  note: ''
   reason: Repo forking failed as the target is still being deleted
   regexp: 'Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: gitlab_token_used_by_test_expired
+  note: ''
   reason: GitLab token used by test expired
   regexp: 'Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*error: invalid_token.*error_description: Token is expired. You can either do re-authorization or token refresh'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: component_creation_timed_out_waiting_for_image_controller_annotations
+  note: ''
   reason: Component creation timed out waiting for image-controller annotations
   regexp: 'Component failed creation: Unable to create the Component .* timed out when waiting for image-controller annotations to be updated on component'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_0
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git fetch error: error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429 fatal: expected ''acknowledgments'': exit status 128'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_creating_integration_test_scenario_because_cannot_set_blockownerdeletion_if_an_ownerreference_refers_to_a_resource_you_can_t_set_finalizers_on
+  note: ''
   reason: Failed creating integration test scenario because cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* is forbidden: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can''t set finalizers on'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: post_test_data_collection_failed
+  note: ''
   reason: Post-test data collection failed
   regexp: Failed to collect release related JSONs
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_we_got_tls_handshake_timeout_talking_to_gitlab_cee
+  note: ''
   reason: Repo forking failed as we got TLS handshake timeout talking to GitLab CEE
   regexp: 'Repo forking failed: Error getting project [^ ]+: Get \"https://gitlab.cee.redhat.com/api/v4/projects/.*\": net/http: TLS handshake timeout'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_creating_application_calling_mapplication_kb_io_webhook
+  note: ''
   reason: Timeout creating application calling mapplication.kb.io webhook
   regexp: 'Application failed creation: Unable to create the Application [^ ]+: Internal error occurred: failed calling webhook .mapplication.kb.io.: failed to call webhook: Post .https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application[^ ]+.: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_getting_pipeline
+  note: ''
   reason: Timeout getting pipeline
   regexp: Message:.*resolver failed to get Pipeline.*resolution took longer than global timeout of .*
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_we_got_tls_handshake_timeout_talking_to_gitlab_cee_0
+  note: ''
   reason: Repo forking failed as we got TLS handshake timeout talking to GitLab CEE
   regexp: 'Repo forking failed: Error deleting project .*: Delete \"https://gitlab.cee.redhat.com/api/v4/projects/.*\": net/http: TLS handshake timeout'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_creating_integration_test_scenario_because_it_already_exists
+  note: ''
   reason: Failed creating integration test scenario because it already exists
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* already exists'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_pipeline_because_etcd_timeouted
+  note: ''
   reason: Couldnt get pipeline because ETCD timeouted
   regexp: 'Release pipeline run failed: PipelineRun .* in namespace .* failed: .* Reason:CouldntGetPipeline Message:Error retrieving pipeline for pipelinerun .*: resolver failed to get Pipeline : error requesting remote resource: error updating resource request .* with data: etcdserver: request timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_1
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: error resolving repository: git clone error: Cloning into .* error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429 fatal: expected ''packfile'': exit status 128'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_2
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git fetch error: remote: Retry later fatal: unable to access .*: The requested URL returned error: 429: exit status 128'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_build_pipeline_to_be_created
+  note: ''
   reason: Timeout waiting for build pipeline to be created
   regexp: 'Build Pipeline Run failed creation: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_integration_test_scenario_when_calling_dintegrationtestscenario_kb_io_webhook
+  note: ''
   reason: Failed Integration test scenario when calling dintegrationtestscenario.kb.io webhook
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario .*: Internal error occurred: failed calling webhook .*dintegrationtestscenario.kb.io.*: failed to call webhook: Post .*https://integration-service-webhook-service.integration-service.svc:443/mutate-appstudio-redhat-com-v1beta2-integrationtestscenario.*: no endpoints available for service .*integration-service-webhook-service'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_pipeline_via_git_resolver_from_gitlab_cee_due_to_429
+  note: ''
   reason: Couldnt get pipeline via git resolver from gitlab.cee due to 429
   regexp: 'Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429'
   related_issues: []
   test_dir: []
-- active: true
-  description: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
+- id: timeout_listing_pipeline_runs
+  note: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_because_github_token_expired
+  note: ''
   reason: Repo forking failed because GitHub token expired
   regexp: 'Repo forking failed: Error checking repository [^ ]+: GET https://api.github.com/repos/[^ ]+: 401 Bad credentials'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_to_merge_mr_on_cee_gitlab_due_to_405
+  note: ''
   reason: Failed to merge MR on CEE GitLab due to 405
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_manifest_unknown
+  note: ''
   reason: Couldnt get task via buldles resolver from quay.io due to manifest unknown
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .* cannot retrieve the oci image: GET https://quay.io/[^ ]+: MANIFEST_UNKNOWN: manifest unknown'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_getting_pac_pull_number_when_validating_component
+  note: ''
   reason: Timeout getting PaC pull number when validating component
   regexp: 'Component failed validation: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_forking_the_repo_before_the_actual_test_1
+  note: ''
   reason: Timeout forking the repo before the actual test
   regexp: 'Repo forking failed: Error forking project .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: test_pipeline_failed
+  note: ''
   reason: Test Pipeline failed
   regexp: 'Test Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_getting_pac_pull_number_because_pac_public_route_does_not_exist
+  note: ''
   reason: Failed getting PaC pull number because PaC public route does not exist
   regexp: 'Component failed validation: Unable to get PaC pull number for component .* in namespace .*: PaC component .* in namespace .* failed on PR annotation: Incorrect state: .*\"error-message\":\"52: Pipelines as Code public route does not exist\"'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_bundles_resolver_from_quay_io_due_to_unexpected_end_of_json_input
+  note: ''
   reason: Couldnt get task via bundles resolver from quay.io due to unexpected end of JSON input
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: error getting \"bundleresolver\" .*: cannot retrieve the oci image: unexpected end of JSON input'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: release_failed_in_progress_without_error_given
+  note: ''
   reason: Release failed in progress without error given
   regexp: 'Release failed: Release .* in namespace .* failed: .Type:Released Status:False .* Reason:Progressing Message:.$'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: application_creation_failed_because_resourcequota_object_has_been_modified
+  note: ''
   reason: Application creation failed because resourcequota object has been modified
   regexp: 'Application failed creation: Unable to create the Application [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified; please apply your changes to the latest version and try again'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_gitlab_cee_says_401_unauthorized
+  note: ''
   reason: Repo forking failed as GitLab CEE says 401 Unauthorized
   regexp: 'Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: post_test_data_collection_failed_0
+  note: ''
   reason: Post-test data collection failed
   regexp: Failed to collect application JSONs
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_on_gitlab_com_because_401_unauthorized
+  note: ''
   reason: Repo forking failed on gitlab.com because 401 Unauthorized
   regexp: 'Repo forking failed: Error getting project [^ ]+: GET https://gitlab.com/[^ ]+: 401 .message: 401 Unauthorized.'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: error_updating_tekton_file_in_gitlab_cee_redhat_com
+  note: ''
   reason: Error updating .tekton file in gitlab.cee.redhat.com
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+ in repo .*: Failed to update/create file: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^ ]+/repository/files/.tekton/.*: 400 .message: A file with this name doesn''t exist.'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: application_creation_failed_because_it_already_exists
+  note: ''
   reason: Application creation failed because it already exists
   regexp: 'Application failed creation: Unable to create the Application .*: applications.appstudio.redhat.com .* already exists'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_3
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git clone error: Cloning into .* error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: unable_to_connect_to_server
+  note: ''
   reason: Unable to connect to server
   regexp: 'Error: Unable to connect to server'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_4
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: error resolving repository: git clone error: Cloning into .* remote: Retry later fatal: unable to access ''https://gitlab.cee.redhat.com/.*'': The requested URL returned error: 429: exit status 128'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_release_pipeline_to_be_created
+  note: ''
   reason: Timeout waiting for release pipeline to be created
   regexp: 'Release pipeline run failed creation: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_component_creation_because_resource_quota_evaluation_timed_out
+  note: ''
   reason: Failed component creation because resource quota evaluation timed out
   regexp: 'Component failed creation: Unable to create the Component .*: Internal error occurred: resource quota evaluation timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_to_add_imagepullsecrets_to_build_sa
+  note: ''
   reason: Failed to add imagePullSecrets to build SA
   regexp: 'Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account build-pipeline-.*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_templating_failed_when_updating_file_on_github_com_because_502
+  note: ''
   reason: Repo templating failed when updating file on github.com because 502
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+.yaml in repo [^ ]+ revision main: error when updating a file on github: PUT https://api.github.com/repos/[^ ]+: 502 Server Error'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_pipeline_because_etcd_timeouted_0
+  note: ''
   reason: Couldnt get pipeline because ETCD timeouted
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetPipeline Message:Error retrieving pipeline for pipelinerun .*: resolver failed to get Pipeline : error requesting remote resource: etcdserver: request timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: release_failure_pipelinerun_not_created
+  note: ''
   reason: 'Release failure: PipelineRun not created'
   regexp: couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_when_deleting_target_repo_on_gitlab_com_not_cee_due_unathorized
+  note: ''
   reason: Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized
   regexp: 'Repo forking failed: Error deleting project .* DELETE https://gitlab.com/.* 401 .* Unauthorized'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_integration_test_scenario_to_validate
+  note: ''
   reason: Timeout waiting for integration test scenario to validate
   regexp: 'Integration test scenario failed validation: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_onboarding_component
+  note: ''
   reason: Timeout onboarding component
   regexp: 'Component failed onboarding: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_snapshot_to_be_created
+  note: ''
   reason: Timeout waiting for snapshot to be created
   regexp: 'Snapshot failed creation: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_templating_failed_because_token_expired
+  note: ''
   reason: Repo templating failed because token expired
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to get file [^ ]+/COMPONENT-pull-request.yaml from repo konflux-probe-test-templates revision main: error when listing file contents: GET https://api.github.com/repos/rhtap-perf-test/konflux-probe-test-templates/contents/[^ ]+/COMPONENT-pull-request.yaml.*: 401 Bad credentials'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_listing_pipeline_runs_0
+  note: ''
   reason: Timeout listing pipeline runs
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_creating_integration_test_scenario_because_of_timeout
+  note: ''
   reason: Failed creating integration test scenario because of timeout
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario [^ ]+ in namespace jhutar-tenant: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_404
+  note: ''
   reason: Couldnt get task via buldles resolver from quay.io due to 404
   regexp: Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 404 Not Found
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_bundles_resolver_because_etcd_timeouted
+  note: ''
   reason: Couldnt get task via bundles resolver because ETCD timeouted
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: etcdserver: request timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_because_gitlab_com_returned_503
+  note: ''
   reason: Repo forking failed because gitlab.com returned 503
   regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 503 No server is currently available to service your request. Sorry about that. Please try resubmitting your request and contact us if the problem persists.*'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: post_test_data_collection_failed_1
+  note: ''
   reason: Post-test data collection failed
   regexp: Failed to collect pipeline run JSONs
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_gitlab_cee_says_405_method_not_allowed
+  note: ''
   reason: Repo forking failed as GitLab CEE says 405 Method Not Allowed
   regexp: 'Repo forking failed: Error deleting project [^ ]+: DELETE https://gitlab.cee.redhat.com/[^ ]+: 405 .message: Non GET methods are not allowed for moved projects.'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: release_pipeline_failed
+  note: ''
   reason: Release Pipeline failed
   regexp: 'Release pipeline run failed:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_getting_task_via_git_resolver_from_gitlab_cee
+  note: ''
   reason: Timeout getting task via git resolver from gitlab.cee
   regexp: Message:.*Couldn't retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* resolution took longer than global timeout of .*
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_5
+  note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Message:.*Couldn''t retrieve Task .*resolver type git.*https://gitlab.cee.redhat.com/.* status code: 429'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_templating_failed_when_updating_file_on_github_com_because_504
+  note: ''
   reason: Repo templating failed when updating file on github.com because 504
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+.yaml in repo [^ ]+ revision main: error when updating a file on github: PUT https://api.github.com/repos/[^ ]+: 504 We couldn''t respond to your request in time. Sorry about that. Please try resubmitting your request and contact us if the problem persists.'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: build_pipeline_run_was_cancelled
+  note: ''
   reason: Build Pipeline Run was cancelled
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:Cancelled.*Message:PipelineRun .* was cancelled'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_creating_integration_test_scenario_because_admission_webhook_dintegrationtestscenario_kb_io_could_not_find_application
+  note: ''
   reason: Failed creating integration test scenario because admission webhook dintegrationtestscenario.kb.io could not find application
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario [^ ]+: admission webhook \"dintegrationtestscenario.kb.io\" denied the request: could not find application ''[^ ]+'' in namespace ''[^ ]+'''
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_http_resolver_from_gitlab_cee
+  note: ''
   reason: Couldnt get task via http resolver from gitlab.cee
   regexp: Message:.*Couldn't retrieve Task .*resolver type http.*error getting.*requested URL .*https://gitlab.cee.redhat.com/.* is not found
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_git_resolver_because_etcd_timeouted
+  note: ''
   reason: Couldnt get task via git resolver because ETCD timeouted
   regexp: 'PipelineRun .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type git.*url = https://github.com/.*: error requesting remote resource: error updating resource request .* with data: etcdserver: request timed out'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_validating_release_condition
+  note: ''
   reason: Failed validating release condition
   regexp: 'Release .* in namespace .* failed: .*Message:Release validation failed.*'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: error_deleting_on_pull_request_default_pipelinerun
+  note: ''
   reason: Error deleting on-pull-request default PipelineRun
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_test_pipeline_to_create
+  note: ''
   reason: Timeout waiting for test pipeline to create
   regexp: 'Test Pipeline Run failed creation: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_pipeline_via_bundles_resolver_from_quay_io_due_to_429
+  note: ''
   reason: Couldnt get pipeline via bundles resolver from quay.io due to 429
   regexp: 'Message:Error retrieving pipeline for pipelinerun .*bundleresolver.* cannot retrieve the oci image: GET https://quay.io/v2/.*unexpected status code 429 Too Many Requests'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_templating_failed_when_obtaining_file_from_github_com_because_503
+  note: ''
   reason: Repo templating failed when obtaining file from github.com because 503
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to get file [^ ]+ from repo [^ ]+ revision [^ ]+: error when listing file contents: GET https://api.github.com/repos/[^ ]+: 503'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_pipeline_via_http_resolver_from_gitlab_cee
+  note: ''
   reason: Couldnt get pipeline via http resolver from gitlab.cee
   regexp: Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Http.*https://gitlab.cee.redhat.com/.* is not found
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_test_pipeline_to_finish
+  note: ''
   reason: Timeout waiting for test pipeline to finish
   regexp: 'Test Pipeline Run failed run: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: timeout_waiting_for_release_to_succeed
+  note: ''
   reason: Timeout waiting for release to succeed
   regexp: 'Release failed: context deadline exceeded'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: component_creation_failed_because_resourcequota_object_has_been_modified
+  note: ''
   reason: Component creation failed because resourcequota object has been modified
   regexp: 'Component failed creation: Unable to create the Component [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified; please apply your changes to the latest version and try again'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_when_deleting_target_repo_on_github_com_because_504
+  note: ''
   reason: Repo forking failed when deleting target repo on github.com because 504
   regexp: 'Repo forking failed: Error deleting repository .*: DELETE https://api.github.com/repos/.*: 504 We couldn''t respond to your request in time. Sorry about that. Please try resubmitting your request and contact us if the problem persists.'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_to_git_fetch_from_gitlab_cee_due_to_connectivity_issues
+  note: ''
   reason: Failed to git fetch from gitlab.cee due to connectivity issues
   regexp: 'Error running git .fetch.*: exit status 128.*remote: Retry later.*fatal: unable to access ''https://gitlab.cee.redhat.com/[^ ]+'': The requested URL returned error: 429.*Error fetching git repository: failed to fetch [^ ]+: exit status 128'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_because_import_failed
+  note: ''
   reason: Repo forking failed because import failed
   regexp: 'Repo forking failed: Error waiting for project [^ ]+ .ID: [0-9]+. fork to complete: Forking of project [^ ]+ .ID: [0-9]+. failed with import status: failed'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_to_link_pipeline_image_pull_secret_to_build_service_account_because_sa_was_not_found
+  note: ''
   reason: Failed to link pipeline image pull secret to build service account because SA was not found
   regexp: 'Failed to configure pipeline imagePullSecrets: Unable to add secret .* to service account .*: serviceaccounts .* not found'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: pipeline_failed
+  note: ''
   reason: Pipeline failed
   regexp: 'Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: couldnt_get_task_via_bundles_resolver_because_can_not_validate_referenced_object
+  note: ''
   reason: Couldnt get task via bundles resolver because can not validate referenced object
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .*: retryable error validating referenced object [^ ]+: Internal error occurred: failed calling webhook .webhook.pipeline.tekton.dev.: failed to call webhook: Post .https://tekton-pipelines-webhook.openshift-pipelines.svc:443/[^ ]+.: EOF'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_as_gitlab_cee_says_500_internal_server_error
+  note: ''
   reason: Repo forking failed as GitLab CEE says 500 Internal Server Error
   regexp: 'Repo forking failed: Error deleting project .*: GET https://gitlab.cee.redhat.com/.*: 500 failed to parse unknown error format.*500: We''re sorry, something went wrong on our end'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_forking_failed_because_gitlab_cee_certificate_did_not_verified
+  note: ''
   reason: Repo forking failed because GitLab CEE certificate did not verified
   regexp: 'Repo forking failed: Error getting project [^ ]+: Get .https://gitlab.cee.redhat.com/[^ ]+.: tls: failed to verify certificate: x509: certificate signed by unknown authority'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: application_creation_failed_because_of_tls_handshake_timeout
+  note: ''
   reason: Application creation failed because of TLS handshake timeout
   regexp: 'Application failed creation: Unable to create the Application .*: failed to get API group resources: unable to retrieve the complete list of server APIs: appstudio.redhat.com/v1alpha1: Get .*: net/http: TLS handshake timeout'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: repo_templating_failed_when_updating_file_on_github_com_because_500
+  note: ''
   reason: Repo templating failed when updating file on github.com because 500
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+.yaml in repo [^ ]+ revision main: error when updating a file on github: PUT https://api.github.com/repos/[^ ]+: 500'
   related_issues: []
   test_dir: []
-- active: true
-  description: ''
+- id: failed_component_creation_when_calling_mcomponent_kb_io_webhook
+  note: ''
   reason: Failed component creation when calling mcomponent.kb.io webhook
   regexp: 'Component failed creation: Unable to create the Component .*: Internal error occurred: failed calling webhook .*mcomponent.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-component.* no endpoints available for service .*application-service-webhook-service.*'
   related_issues: []
   test_dir: []
-- active: true
+- id: repo_templating_cleanup_failed_gitlab_merge_failed_because_422_error
   reason: Repo-templating cleanup failed GitLab merge failed because 422 error
   regexp: 'Repo-templating workflow component cleanup failed: Merging \d+ failed: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^/]+/[^/]+/merge_requests/\d+/merge: 422 {message: Branch cannot be merged}'
   test_dir:
   - run-kflux-rhel-p01-2026_01_03T07_07_42_134000000_00_00
-- active: true
-  description: ''
+- id: repo_templating_failed_when_merging_pr_on_github_com_because_502
+  note: ''
   reason: Repo templating failed when merging PR on github.com because 502
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 502 Server Error'
   related_issues: []
   test_dir:
   - run-stone-prd-rh02-2025_12_20T05_44_30_733000000_00_00
-- active: true
-  description: ''
+- id: timeout_waiting_for_release_pipeline_run_to_finish
+  note: ''
   reason: Timeout waiting for release pipeline run to finish
   regexp: 'Release pipeline run failed: context deadline exceeded'
   related_issues: []
   test_dir:
   - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
-- active: true
-  description: ''
+- id: release_creation_failed_due_to_context_deadline_exceeded
+  note: ''
   reason: Release creation failed due to context deadline exceeded
   regexp: 'Release failed creation: context deadline exceeded'
   related_issues: []
   test_dir:
   - run-stone-prd-rh01-2026_01_06T10_03_22_218000000_00_00
-- active: true
-  description: ''
+- id: pipeline_failed_to_retrieve_task_due_to_invalid_runtime_object_missing_kind
+  note: ''
   reason: Pipeline failed to retrieve task due to invalid runtime object (missing Kind)
   regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .* invalid runtime object: Object ''Kind'' is missing in '''''
   related_issues: []
   test_dir:
   - run-stone-prd-rh02-2026_01_05T18_33_24_765000000_00_00
-- active: true
-  description: Git clone failed due to unexpected disconnect during fetch-pack
+- id: pipeline_task_retrieval_failed_due_to_git_clone_disconnect
+  note: Git clone failed due to unexpected disconnect during fetch-pack
   reason: Pipeline Task retrieval failed due to git clone disconnect
   regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .* fetch-pack: unexpected disconnect'
   related_issues: []
   test_dir:
   - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
-- active: true
-  description: ''
+- id: repo_templating_failed_because_file_not_found_404
+  note: ''
   reason: Repo-templating failed because file not found (404)
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .* 404 Not Found'
   related_issues: []
