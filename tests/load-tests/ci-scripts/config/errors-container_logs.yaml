@@ -2,514 +2,426 @@
   note: ''
   reason: buildah failed to pull image from Quay.io because unauthorized
   regexp: 'Executing: unshare .* buildah pull .* Trying to pull quay.io/[^ ]+ Error: internal error: unable to copy from source docker://quay.io/[^ ]+: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: unauthorized: access to the requested resource is not authorized warning: Command failed and will retry, 1 try error: Unauthorized error, wrong registry credentials provided, won''t retry Failed to pull base image quay.io/[^ ]+'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_download_repodata_from_koji
   note: ''
   reason: DNF failed to download repodata from Koji
   regexp: 'ERROR Command returned error: Failed to download metadata \(baseurl: \"https://kojipkgs.fedoraproject.org/repos/[^ ]+\"\) for repository \"build\": Usable URL not found'
-  related_issues: []
   test_dir: []
 - id: failed_because_of_quay_io_returned_502
   note: ''
   reason: Failed because of quay.io returned 502
   regexp: 'level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.'
-  related_issues: []
   test_dir: []
 - id: release_failed_because_unauthorized_when_pushing_artifact
   note: ''
   reason: Release failed because unauthorized when pushing artifact
   regexp: 'Prepared artifact from /var/workdir/release .* Token not found for quay.io/konflux-ci/release-service-trusted-artifacts Uploading [0-9a-z]+ sourceDataArtifact Error response from registry: unauthorized: access to the requested resource is not authorized: map.. Command exited with non-zero status 1'
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_because_etcd_timeouted
   note: ''
   reason: Error allocating host because ETCD timeouted
   regexp: 'Error allocating host: etcdserver: request timed out'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
   regexp: 'unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials. .* subprocess.CalledProcessError: Command ...podman....pull.*registry.access.redhat.com/.* returned non-zero exit status 125'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_fedoraproject_org
   note: ''
   reason: Failed to pull container from registry.fedoraproject.org
   regexp: 'Error: internal error: unable to copy from source docker://registry.fedoraproject.org/[^ ]+: initializing source docker://registry.fedoraproject.org/[^ ]+: pinging container registry registry.fedoraproject.org: Get \"https://registry.fedoraproject.org/v2/\": dial tcp [^ ]+: connect: connection refused'
-  related_issues: []
   test_dir: []
 - id: failed_to_prefetch_dependencies_due_to_go_env_error
   note: ''
   reason: Failed to prefetch dependencies due to go env error
   regexp: 'ERROR PackageManagerError: Go execution failed: .go env GOWORK. failed with rc=1'
-  related_issues: []
   test_dir: []
 - id: failed_to_prefetch_dependencies_due_to_invalid_input_when_fetching_tags
   note: ''
   reason: Failed to prefetch dependencies due to invalid input when fetching tags
   regexp: 'Executing: git fetch --tags.*ERROR InvalidInput: 1 validation error for user input.*packages.*Value error, package path does not exist .or is not a directory.:'
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_because_timeouted_waiting_for_address
   note: ''
   reason: Error allocating host because timeouted waiting for address
   regexp: 'Error allocating host: timed out waiting for instance address'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_remote_tls_error
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of remote tls error
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+ copying system image from manifest list: reading blob [^ ]+: Get .https://cdn[0-9]+.quay.io/[^ ]+ remote error: tls: internal error'
-  related_issues: []
   test_dir: []
 - id: getting_repo_tags_from_quay_io_failed_because_of_502_bad_gateway
   note: ''
   reason: Getting repo tags from quay.io failed because of 502 Bad Gateway
   regexp: 'Error determining repository tags: pinging container registry quay.io: received unexpected HTTP status: 502 Bad Gateway'
-  related_issues: []
   test_dir: []
 - id: container_build_failed_because_make_failed_with_137
   note: ''
   reason: Container build failed because make failed with 137
   regexp: 'make: \*\*\* \[Makefile:137: [^ ]+\] Error 1 subprocess exited with status 2'
-  related_issues: []
   test_dir: []
 - id: go_failed_installation_because_it_was_killed
   note: ''
   reason: Go failed installation because it was killed
   regexp: Run buildah build .* go install [^ ]+ subprocess exited on killed subprocess exited with status 1
-  related_issues: []
   test_dir: []
 - id: script_opm_failed_to_load_or_rebuild_cache_because_some_package_has_duplicate_bundle
   note: ''
   reason: Script opm failed to load or rebuild cache because some package has duplicate bundle
   regexp: 'level=fatal msg=.failed to load or rebuild cache: failed to rebuild cache: build package index: process package [^ ]+: package [^ ]+ has duplicate bundle [^ ]+..*Error: building at STEP .RUN /bin/opm serve .*.: exit status 1'
-  related_issues: []
   test_dir: []
 - id: failed_because_cpu_is_not_x86_64_v4
   note: ''
   reason: Failed because CPU is not x86-64-v4
   regexp: 'ERROR: CPU is not x86-64-v4, aborting build.'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_quay_io_due_to_404
   note: ''
   reason: Failed to pull container from quay.io due to 404
   regexp: 'Error response from registry: recognizable error message not found: PUT .https://quay.io/[^ ]+.: response status code 404: Not Found Command exited with non-zero status 1'
-  related_issues: []
   test_dir: []
 - id: gateway_time_out_when_pulling_container_image_from_quay_io
   note: ''
   reason: Gateway Time-out when pulling container image from quay.io
   regexp: 'Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 504 Gateway Time-out'
-  related_issues: []
   test_dir: []
 - id: git_failed_to_clone_submodule_because_gitlab_cee_giving_429
   note: ''
   reason: Git failed to clone submodule because GitLab CEE giving 429
   regexp: 'Error running git .*: exit status 1.*error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429.*fatal: Fetched in submodule path ''[^ ]+'', but it did not contain [^ ]+. Direct fetching of that commit failed'
-  related_issues: []
   test_dir: []
 - id: no_podman_installed_on_a_mpc_vm
   note: ''
   reason: No podman installed on a MPC VM
   regexp: 'remote_cmd podman unshare setfacl .* \+ ssh -o StrictHostKeyChecking=no [^ ]+ podman unshare setfacl .* bash: line 1: podman: command not found'
-  related_issues:
-  - KONFLUX-9944
   test_dir: []
 - id: invalid_reference_when_processing_sbom
   note: ''
   reason: Invalid reference when processing SBOM
   regexp: 'SBOM .* error during command execution: could not parse reference: quay.io/[^ ]+'
-  related_issues: []
   test_dir: []
 - id: enterprise_contract_results_failed_validation
   note: ''
   reason: Enterprise contract results failed validation
   regexp: ^false *$
-  related_issues: []
   test_dir: []
 - id: script_opm_failed_because_catalog_is_missing
   note: ''
   reason: Script opm failed because catalog is missing
   regexp: 'Running opm alpha render-template basic -o yaml [^ ]+ --migrate-level=bundle-object-to-csv-metadata . catalog/catalog-prod.yaml.*unable to open .catalog/[^ ]+.: open catalog/[^ ]+: no such file or directory'
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_because_of_provisioning_error
   note: ''
   reason: Error allocating host because of provisioning error
   regexp: 'Error allocating host: failed to provision host'
-  related_issues: []
   test_dir: []
 - id: script_rpm_verifier_was_probbaly_oomkilled_had_no_output
   note: This tool should detect OOMKills from TaskRun/Pod manifests
   reason: Script rpm_verifier was probbaly OOMKilled (had no output)
   regexp: \+ rpm_verifier --image-url [^ ]+ --image-digest [^ ]+ --workdir /tmp$
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_because_all_available_hosts_failed
   note: ''
   reason: Error allocating host because all available hosts failed
   regexp: 'Error allocating host: all available hosts for the platform have failed'
-  related_issues: []
   test_dir: []
 - id: script_merge_catalogs_sh_due_to_permission_error
   note: ''
   reason: Script merge_catalogs.sh due to permission error
   regexp: 'RUN ./merge_catalogs.sh /bin/sh: line 1: ./merge_catalogs.sh: Permission denied subprocess exited with status 126 subprocess exited with status 126'
-  related_issues: []
   test_dir: []
 - id: failed_to_prefetch_dependencies_due_to_subscription_manager_failed_to_register_because_system_is_already_registered
   note: ''
   reason: Failed to prefetch dependencies due to subscription-manager failed to register because system is already registered
   regexp: 'Executing: subscription-manager register --org [^ ]+ --activationkey [^ ]+ This system is already registered. Use --force to override error: Command failed after [0-9]+ tries with status 64 Subscription-manager register failed'
-  related_issues: []
   test_dir: []
 - id: buildah_build_failed_to_pull_container_from_registry_access_redhat_com_because_digest_mismatch
   note: ''
   reason: buildah build failed to pull container from registry.access.redhat.com because digest mismatch
   regexp: 'buildah build.*FROM registry.access.redhat.com/[^ ]+ Trying to pull registry.access.redhat.com/[^ ]+ Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: copying system image from manifest list: parsing image configuration: Download config.json digest [^ ]+ does not match expected [^ ]+'
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_because_of_insufficient_free_addresses_in_subnet
   note: ''
   reason: Error allocating host because of insufficient free addresses in subnet
   regexp: 'Error allocating host: failed to launch EC2 instance for .* operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: .*, api error InsufficientFreeAddressesInSubnet: There are not enough free addresses in subnet .* to satisfy the requested number of instances.'
-  related_issues: []
   test_dir: []
 - id: git_failed_to_fetch_because_gitlab_cee_giving_429
   note: ''
   reason: Git failed to fetch because GitLab CEE giving 429
   regexp: 'Error running git .*: exit status 128.*error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429.*Error fetching git repository: failed to fetch [^ ]+: exit status 128'
-  related_issues: []
   test_dir: []
 - id: oras_failed_to_fetch_blob_from_quay_io_because_it_was_terminated
   note: ''
   reason: oras failed to fetch blob from Quay.io because it was terminated
   regexp: 'Executing: oras blob fetch --registry-config [^ ]+ quay.io/[^ ]+ --output [^ ]+ Terminated'
-  related_issues: []
   test_dir: []
 - id: git_failed_to_fetch_because_gitlab_cee_giving_429_0
   note: ''
   reason: Git failed to fetch because GitLab CEE giving 429
   regexp: 'Error running git .*: exit status 1.*remote: Retry later.*fatal: unable to access ''https://gitlab.cee.redhat.com/.*'': The requested URL returned error: 429.*Error fetching git repository: failed to fetch [^ ]+: exit status 1'
-  related_issues: []
   test_dir: []
 - id: bad_gateway_when_pulling_container_image_from_quay_io
   note: ''
   reason: Bad Gateway when pulling container image from quay.io
   regexp: 'Error: initializing source docker://quay.io/[^ ]+: reading manifest [^ ]+ in quay.io/[^ ]+: received unexpected HTTP status: 502 Bad Gateway '
-  related_issues: []
   test_dir: []
 - id: script_gather_rpms_py_failed_because_of_too_many_values_to_unpack
   note: ''
   reason: Script gather-rpms.py failed because of too many values to unpack
   regexp: 'Handling archdir [^ ]+ Traceback.*File \"/usr/bin/gather-rpms.py\".*nvr, btime, size, sigmd5, _ = .*ValueError: too many values to unpack'
-  related_issues: []
   test_dir: []
 - id: failed_to_compile_with_clang
   note: ''
   reason: Failed to compile with clang
   regexp: 'ERROR: [^ ]+: Compiling [^ ]+.cc .for tool. failed: .Exit 1.: clang-[0-9]+ failed: error executing CppCompile command'
-  related_issues: []
   test_dir: []
 - id: introspection_failed_because_of_incomplete_docker_config_json
   note: ''
   reason: Introspection failed because of incomplete .docker/config.json
   regexp: '.* level=fatal msg=\"Error parsing image name .*: getting username and password: reading JSON file .*/tekton/home/.docker/config.json.*: unmarshaling JSON at .*: unexpected end of JSON input\"'
-  related_issues: []
   test_dir: []
 - id: can_not_find_chroot_scan_tar_gz_file
   note: ''
   reason: Can not find chroot_scan.tar.gz file
   regexp: 'tar: .*/chroot_scan.tar.gz: Cannot open: No such file or directory'
-  related_issues: []
   test_dir: []
 - id: git_failed_to_clone_submodule_because_gitlab_cee_giving_429_0
   note: ''
   reason: Git failed to clone submodule because GitLab CEE giving 429
   regexp: 'Error running git .*: exit status 1.*error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429.*fatal: clone of ''https://gitlab.cee.redhat.com/[^ ]+'' into submodule path ''[^ ]+'' failed'
-  related_issues: []
   test_dir: []
 - id: skip
   note: This is a special 'wildcard' error, let's keep it on top and do not change 'SKIP' reason as it is used in the code
   reason: SKIP
   regexp: Skipping step because a previous step failed
-  related_issues: []
   test_dir: []
 - id: prefetch_dependencies_failed_to_download_from_rhsm_pulp_corp_redhat_com_because_not_whole_content_was_fetched
   note: ''
   reason: Prefetch dependencies failed to download from rhsm-pulp.corp.redhat.com because not whole content was fetched
   regexp: 'Reading RPM lockfile: [^ ]+ .* Unsuccessful download: https://rhsm-pulp.corp.redhat.com/content/[^ ]+ .* ERROR FetchError: exception_name: ClientPayloadError, details: Response payload is not completed: .ContentLengthError: 400, message=''Not enough data to satisfy content length header.''.'
-  related_issues: []
   test_dir: []
 - id: can_not_find_dockerfile
   note: ''
   reason: Can not find Dockerfile
   regexp: Cannot find Dockerfile [^ ]+
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_500_internal_server_error
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of 500 Internal Server Error
   regexp: 'Trying to pull registry.access.redhat.com/[^ ]+ Getting image source signatures Error: copying system image from manifest list: reading signatures: reading signature from https://access.redhat.com/[^ ]+: status 500 .Internal Server Error.'
-  related_issues: []
   test_dir: []
 - id: script_mock_hermetic_repo_failed_because_pull_from_registry_access_redhat_com_failed
   note: ''
   reason: Script mock-hermetic-repo failed because pull from registry.access.redhat.com failed
   regexp: 'mock-hermetic-repo.*Error: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: determining manifest MIME type for docker://registry.access.redhat.com/[^ ]+: Manifest does not match provided manifest digest.*subprocess.CalledProcessError.*Command ...podman....pull.* returned non-zero exit status 125'
-  related_issues: []
   test_dir: []
 - id: script_rpm_verifier_failed_to_access_image_layer_from_quay_io_because_502_bad_gateway
   note: ''
   reason: Script rpm_verifier failed to access image layer from quay.io because 502 Bad Gateway
   regexp: 'rpm_verifier --image-url quay.io/.* Image: quay.io/.* error: unable to access the source layer sha256:[0-9a-z]+: received unexpected HTTP status: 502 Bad Gateway'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_access_redhat_com_because_of_dns_error
   note: ''
   reason: Failed to pull container from access.redhat.com because of DNS error
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: reading signatures: Get \"https://access.redhat.com/.*\": dial tcp: lookup access.redhat.com: Temporary failure in name resolution'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized_0
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
   regexp: 'unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials. .* subprocess.CalledProcessError: Command ...skopeo....inspect.*docker://registry.access.redhat.com/.* returned non-zero exit status 1'
-  related_issues: []
   test_dir: []
 - id: script_oras_failed_to_fetch_blob_from_quay_after_10_retries
   note: ''
   reason: Script oras failed to fetch blob from Quay after 10 retries
   regexp: 'Executing: oras blob fetch --registry-config [^ ]+ quay.io/[^ ]+ --output - error: Command failed after 10 tries with status 141'
-  related_issues: []
   test_dir: []
 - id: failed_to_push_sbom_to_quay_io
   note: ''
   reason: Failed to push SBOM to quay.io
   regexp: 'Uploading SBOM file for [^ ]+ to [^ ]+ with mediaType [^ ]+.  Error: Get .https://quay.io/v2/.: dial tcp .[0-9a-f:]+.:443: connect: network is unreachable [^ ]+: error during command execution: Get .https://quay.io/v2/.: dial tcp .[0-9a-f:]+.:443: connect: network is unreachable'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_dns_error
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of DNS error
   regexp: 'Error: initializing source docker://registry.access.redhat.com/.* pinging container registry registry.access.redhat.com: Get \"https://registry.access.redhat.com/v2/\": dial tcp: lookup registry.access.redhat.com: Temporary failure in name resolution'
-  related_issues: []
   test_dir: []
 - id: failed_downloading_rpms_for_hermetic_builds
   note: ''
   reason: Failed downloading rpms for hermetic builds
   regexp: mock-hermetic-repo.*ERROR:__main__:RPM deps downloading failed
-  related_issues: []
   test_dir: []
 - id: go_failed_build_because_of_incompatible_version
   note: ''
   reason: Go failed build because of incompatible version
   regexp: 'go: go.mod requires go >= [^ ]+ \(running go [^ ]+; .*\) .* exit status 1'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_download_repodata_from_download_devel_because_timeout
   note: ''
   reason: DNF failed to download repodata from Download Devel because timeout
   regexp: 'dnf.exceptions.RepoError: Failed to download metadata for repo ''build'': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .* CRITICAL Error: Failed to download metadata for repo ''build'': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .*/mock/.*Failed to connect to download.devel.redhat.com'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_download_package_from_koji
   note: ''
   reason: DNF failed to download package from Koji
   regexp: '.librepo. Error during transfer: Status code: 503 for https://kojipkgs.fedoraproject.org/repos/[^ ]+.rpm.*ERROR Command returned error: Failed to download packages'
-  related_issues: []
   test_dir: []
 - id: failed_to_provision_mpc_vm_due_to_resource_quota_evaluation_timed_out
   note: ''
   reason: Failed to provision MPC VM due to resource quota evaluation timed out
   regexp: 'cat /ssh/error Error allocating host: Internal error occurred: resource quota evaluation timed out'
-  related_issues:
-  - KONFLUX-9798
   test_dir: []
 - id: release_failed_because_unauthorized_when_pulling_policy
   note: ''
   reason: Release failed because unauthorized when pulling policy
   regexp: 'Error: pulling policy: GET .https://quay.io/v2/konflux-ci/konflux-vanguard/data-acceptable-bundles/blobs/sha256:[0-9a-z]+.: response status code 401: Unauthorized'
-  related_issues: []
   test_dir: []
 - id: buildah_build_failed_to_pull_container_from_registry_access_redhat_com_because_of_500_internal_server_error
   note: ''
   reason: buildah build failed to pull container from registry.access.redhat.com because of 500 Internal Server Error
   regexp: 'buildah build.*FROM registry.access.redhat.com/[^ ]+ Trying to pull registry.access.redhat.com/[^ ]+ Getting image source signatures Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+ copying system image from manifest list: reading signatures: reading signature from https://access.redhat.com/[^ ]+ received unexpected HTTP status: 500 Internal Server Error'
-  related_issues: []
   test_dir: []
 - id: prefetch_dependencies_failed_to_download_from_download_devel_redhat_com_because_of_timeout
   note: ''
   reason: Prefetch dependencies failed to download from download.devel.redhat.com because of timeout
   regexp: 'Reading RPM lockfile: [^ ]+ .* Unsuccessful download: https://download.devel.redhat.com/[^ ]+ .* ERROR FetchError: exception_name: TimeoutError, details:  Error: FetchError: exception_name: TimeoutError,'
-  related_issues: []
   test_dir: []
 - id: failed_because_registry_access_redhat_com_returned_503_when_reading_manifest
   note: ''
   reason: Failed because registry.access.redhat.com returned 503 when reading manifest
   regexp: 'source-build:ERROR:command execution failure, status: 1, stderr: time=.* level=fatal msg=.Error parsing image name .* reading manifest .* in registry.access.redhat.com/.* received unexpected HTTP status: 503 Service Unavailable'
-  related_issues: []
   test_dir: []
 - id: failed_reading_signatures_from_access_redhat_com_due_to_500
   note: ''
   reason: Failed reading signatures from access.redhat.com due to 500
   regexp: 'internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: copying system image from manifest list: reading signatures: reading signature from https://access.redhat.com/webassets/docker/content/sigstore/[^ ]+: received unexpected HTTP status: 500 Internal Server Error'
-  related_issues: []
   test_dir: []
 - id: failed_to_push_to_quai_io_due_to_404
   note: ''
   reason: Failed to push to quai.io due to 404
   regexp: 'Error response from registry: recognizable error message not found: PUT \"https://quay.io/[^ ]+\": response status code 404'
-  related_issues: []
   test_dir: []
 - id: script_rpm_verifier_failed_to_pull_image_from_quay_io_because_502_bad_gateway
   note: ''
   reason: Script rpm_verifier failed to pull image from quay.io because 502 Bad Gateway
   regexp: 'rpm_verifier.*error: unable to read image quay.io/[^ ]+: Get .https://quay.io/[^ ]+.: received unexpected HTTP status: 502 Bad Gateway'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_download_repodata_from_download_devel_because_timeout_0
   note: ''
   reason: DNF failed to download repodata from Download Devel because timeout
   regexp: 'dnf.exceptions.RepoError: Failed to download metadata for repo ''build'': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried .* CRITICAL Error: Failed to download metadata for repo ''build'': Cannot download repomd.xml: Cannot download repodata/repomd.xml: All mirrors were tried [^ ]+/mock/.*Failed to connect to download-[0-9]+.beak-[0-9]+.prod.iad2.dc.redhat.com'
-  related_issues: []
   test_dir: []
 - id: script_mock_hermetic_repo_failed_because_pull_from_registry_access_redhat_com_failed_0
   note: ''
   reason: Script mock-hermetic-repo failed because pull from registry.access.redhat.com failed
   regexp: '/usr/bin/mock-hermetic-repo.*Error: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: initializing source docker://registry.access.redhat.com/[^ ]+: unable to retrieve auth token: invalid username/password: unauthorized.*subprocess.CalledProcessError.*Command ''.''podman'', ''pull'', ''--arch'', ''[^ ]+'', ''registry.access.redhat.com/[^ ]+''.'' returned non-zero exit status 125'
-  related_issues: []
   test_dir: []
 - id: failed_to_compile_with_clang_0
   note: ''
   reason: Failed to compile with clang
   regexp: 'ERROR: [^ ]+: Compiling [^ ]+.c failed: .Exit 1.: clang-[0-9]+ failed: error executing CppCompile command'
-  related_issues: []
   test_dir: []
 - id: failed_to_prefetch_dependencies_due_to_download_timeout
   note: ''
   reason: Failed to prefetch dependencies due to download timeout
   regexp: 'ERROR Unsuccessful download: .* ERROR FetchError: exception_name: TimeoutError.*If the issue seems to be on the cachi2 side, please contact the maintainers.'
-  related_issues: []
   test_dir: []
 - id: failed_downloading_rpms_for_hermetic_builds_due_to_504_errors
   note: ''
   reason: Failed downloading rpms for hermetic builds due to 504 errors
   regexp: 'mock-hermetic-repo.*urllib3.exceptions.MaxRetryError: HTTPSConnectionPool.*: Max retries exceeded with url: .*.rpm .Caused by ResponseError..too many 504 error responses...'
-  related_issues: []
   test_dir: []
 - id: error_from_github_api_when_getting_release_service_catalog_last_commit_sha
   note: ''
   reason: Error from GitHub API when getting release-service-catalog last commit SHA
   regexp: '\+\+ curl -s https://api.github.com/repos/rhtap-test-local/release-service-catalog/commits/production \+\+ jq -r ''.sha // ..'' parse error: Invalid numeric literal at line [0-9]+, column [0-9]+ \+ sha= ?$'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_install_package_because_gpg_check_failed
   note: ''
   reason: DNF failed to install package because GPG check failed
   regexp: 'dnf -y install .* is not signed.*Error: GPG check FAILED.*exit status 1'
-  related_issues: []
   test_dir: []
 - id: git_failed_to_fetch_because_gitlab_cee_giving_429_1
   note: ''
   reason: Git failed to fetch because GitLab CEE giving 429
   regexp: 'Error running git .*: exit status 1.*remote: Retry later.*fatal: unable to access ''https://gitlab.cee.redhat.com/.*'': The requested URL returned error: 429.*Error fetching git repository: exit status 1'
-  related_issues: []
   test_dir: []
 - id: failed_to_push_sbom_to_quay_io_0
   note: ''
   reason: Failed to push SBOM to quay.io
   regexp: 'Uploading SBOM file for [^ ]+ to [^ ]+ with mediaType [^ ]+.  Error: PUT https://quay.io/v2/[^ ]+: unexpected status code 200 OK [^ ]+: error during command execution: PUT https://quay.io/v2/[^ ]+: unexpected status code 200 OK'
-  related_issues: []
   test_dir: []
 - id: script_opm_failed_because_catalog_is_missing_0
   note: ''
   reason: Script opm failed because catalog is missing
   regexp: 'Running opm alpha render-template basic -o yaml [^ ]+ . catalog/catalog-prod.yaml.*unable to open .catalog/[^ ]+.: open catalog/[^ ]+: no such file or directory'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_quay_io_because_of_dns_error
   note: ''
   reason: Failed to pull container from quay.io because of DNS error
   regexp: 'Error: copying system image from manifest list: reading blob .*: Get \"https://cdn[0-9]+.quay.io/.*\": dial tcp: lookup cdn[0-9]+.quay.io: Temporary failure in name resolution'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized_1
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: initializing source docker://registry.access.redhat.com/[^ ]+: unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials.'
-  related_issues: []
   test_dir: []
 - id: error_allocating_host_as_provision_tr_already_exists
   note: ''
   reason: Error allocating host as provision TR already exists
   regexp: 'Error allocating host: taskruns.tekton.dev \".*provision\" already exists'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_remote_tls_error_0
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of remote tls error
   regexp: 'Trying to pull registry.access.redhat.com/[^ ]+ Error: copying system image from manifest list: parsing image configuration: Get .https://cdn[0-9]+.quay.io/[^ ]+ remote error: tls: internal error'
-  related_issues: []
   test_dir: []
 - id: gateway_time_out_when_pulling_container_image
   note: ''
   reason: Gateway Time-out when pulling container image
   regexp: 'Error: copying system image from manifest list: parsing image configuration: fetching blob: received unexpected HTTP status: 504 Gateway Time-out'
-  related_issues: []
   test_dir: []
 - id: script_opm_failed_because_failed_to_pull_image_from_registry_redhat_io
   note: ''
   reason: Script opm failed because failed to pull image from registry.redhat.io
   regexp: 'Running opm alpha render-template basic -o yaml [^ ]+ . [^ ]+.*render reference .registry.redhat.io/[^ ]+.: failed to pull image .registry.redhat.io/[^ ]+.: Source image rejected: reading signature from https://registry.redhat.io/[^ ]+: received unexpected HTTP status: 500 Internal Server Error'
-  related_issues: []
   test_dir: []
 - id: rpm_build_failed_bool_cannot_be_defined_via_typedef
   note: ''
   reason: 'RPM build failed: bool cannot be defined via typedef'
   regexp: 'error: .bool. cannot be defined via .typedef..*error: Bad exit status from /var/tmp/rpm-tmp..* ..build.'
-  related_issues: []
   test_dir: []
 - id: failed_to_pull_container_from_quay_io_due_to_dial_tcp_i_o_timeout
   note: ''
   reason: Failed to pull container from quay.io due to dial tcp i/o timeout
   regexp: 'pinging container registry quay.io: Get ..https://quay.io/v2/..: dial tcp [^ ]+:443: i/o timeout'
-  related_issues: []
   test_dir: []
 - id: dnf_failed_to_download_repodata_from_download_devel_because_could_not_resolve_host
   note: ''
   reason: DNF failed to download repodata from Download Devel because could not resolve host
   regexp: 'Errors during downloading metadata for repository ''[^ ]+'':   - Curl error .6.: Couldn''t resolve host name for http://download.devel.redhat.com/brewroot/repos/[^ ]+ .Could not resolve host: download\.devel\.redhat\.com.'
-  related_issues: []
   test_dir: []
 - id: failed_to_connect_to_mpc_vm
   note: ''
   reason: Failed to connect to MPC VM
   regexp: 'ssh: connect to host [0-9]+.[0-9]+.[0-9]+.[0-9]+ port 22: Connection timed out'
-  related_issues: []
   test_dir: []
 - id: failed_to_ssh_to_remote_mpc_vm
   note: ''
   reason: Failed to ssh to remote MPC VM
   regexp: '[^ ]+@[0-9.]+: Permission denied .publickey,gssapi-keyex,gssapi-with-mic..\s*$'
-  related_issues:
-  - KONFLUX-9742
   test_dir: []
 - id: buildah_build_failed_to_pull_container_from_registry_access_redhat_com_because_of_403
   note: ''
   reason: buildah build failed to pull container from registry.access.redhat.com because of 403
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: determining manifest MIME type for docker://registry.access.redhat.com/.*: reading manifest .* in registry.access.redhat.com/.*: StatusCode: 403'
-  related_issues: []
   test_dir: []
 - id: script_mock_hermetic_repo_failed_because_pull_from_registry_access_redhat_com_failed_1
   note: ''
   reason: Script mock-hermetic-repo failed because pull from registry.access.redhat.com failed
   regexp: 'Error: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: determining manifest MIME type for docker://registry.access.redhat.com/[^ ]+: Manifest does not match provided manifest digest [^ ]+.*/usr/bin/mock-hermetic-repo.*subprocess.CalledProcessError.*Command ...podman....pull.* returned non-zero exit status 125'
-  related_issues: []
   test_dir: []
 - id: rpm_verifier_failed_to_unmarshall_image_due_to_quay_io_returning_unexpected_end_of_json_input
   note: The rpm_verifier tool failed to unmarshall image content when talking to quay.io, indicating an issue with image manifest parsing or content retrieval.
@@ -521,86 +433,68 @@
   note: ''
   reason: Git clone failed because error setting certificate file
   regexp: 'fatal: unable to access ''https://.*'': error setting certificate file: .*'
-  related_issues:
-  - KFLUXSPRT-1914
-  - OCPBUGS-45223
   test_dir:
   - run-kfluxfedorap01-2025_12_19T13_48_56_778000000_00_00
 - id: curl_failed_to_download_file_because_src_fedoraproject_org_returned_503
   note: ''
   reason: Curl failed to download file because src.fedoraproject.org returned 503
   regexp: 'curl .* https://src.fedoraproject.org/.*curl: \(22\) The requested URL returned error: 503'
-  related_issues: []
   test_dir:
   - run-kfluxfedorap01-2025_12_19T22_56_19_949000000_00_00
 - id: failed_to_setup_vm_because_connection_closed_by_remote_host
   note: ''
   reason: Failed to setup VM because connection closed by remote host
   regexp: Setup VM .* Connection closed by .* port 22
-  related_issues: []
   test_dir:
   - run-stone-stg-rh01-2025_12_19T23_09_18_072000000_00_00
 - id: git_clone_failed_because_github_com_failed_with_tls_handshake_timeout
   note: ''
   reason: Git clone failed because github.com failed with TLS handshake timeout
   regexp: 'Error: error cloning repository: Get "https://github.com/.*": net/http: TLS handshake timeout'
-  related_issues: []
   test_dir:
   - run-stone-prd-rh01-2025_12_22T21_57_06_059000000_00_00
 - id: mobster_failed_because_invalid_digest_format
   note: ''
   reason: Mobster failed because invalid digest format
   regexp: 'File "/app/src/mobster/image.py", line .*, in digest_hex_val .* ValueError: not enough values to unpack'
-  related_issues:
-  - KFLUXSPRT-5840
   test_dir:
   - run-stone-prd-rh02-2026_01_05T16_23_19_676000000_00_00
 - id: quay_io_401_unauthorized_during_sbom_upload
   note: Quay returned 401 during upload
   reason: Quay.io 401 Unauthorized during SBOM upload
   regexp: 'HEAD https://quay.io/v2/.*: unexpected status code 401 Unauthorized'
-  related_issues: []
   test_dir:
   - run-kflux-rhel-p01-2026_01_05T18_47_13_308000000_00_00
 - id: quay_io_blob_upload_failed_due_to_eof
   note: Quay upload failed with EOF
   reason: Quay.io blob upload failed due to EOF
   regexp: 'POST "https://quay.io/v2/.*/blobs/uploads/": .* failed to decode response: EOF'
-  related_issues: []
   test_dir:
   - run-kflux-rhel-p01-2026_01_05T18_13_33_821000000_00_00
 - id: quay_io_returned_502_bad_gateway
   note: Quay returned 502 Bad Gateway
   reason: Quay.io returned 502 Bad Gateway
   regexp: endpoint "https://quay.io" does not support v2 API .got 502 Bad Gateway.
-  related_issues: []
   test_dir: []
 - id: artifact_extraction_failed_due_to_unexpected_end_of_file
   note: Tar extraction failed with unexpected EOF
   reason: Artifact extraction failed due to unexpected end of file
   regexp: 'mismatched digest .* gzip: stdin: unexpected end of file'
-  related_issues: []
   test_dir: []
 - id: image_pull_failed_due_to_gateway_time_out
   note: ''
   reason: Image pull failed due to Gateway Time-out
   regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out)'
-  related_issues:
-  - KONFLUX-9369
-  - KONFLUX-9150
   test_dir:
   - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00
 - id: taskrun_failed_because_aws_ec2_insufficientinstancecapacity
   note: AWS capacity issue for specific instance types
   reason: TaskRun failed because AWS EC2 InsufficientInstanceCapacity
   regexp: 'api error InsufficientInstanceCapacity: We currently do not have sufficient [^ ]+ capacity in the Availability Zone you requested'
-  related_issues:
-  - KFLUXSPRT-6086
   test_dir:
   - run-kfluxfedorap01-2026_01_08T17_56_17_965000000_00_00
 - id: skip_0
   note: Empty log file, skip it
   reason: SKIP
   regexp: ^ *$
-  related_issues: []
   test_dir: []
