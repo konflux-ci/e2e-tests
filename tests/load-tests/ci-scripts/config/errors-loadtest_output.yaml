@@ -183,7 +183,8 @@
   reason: Repo forking failed because GitHub token expired
   regexp: 'Repo forking failed: Error checking repository [^ ]+: GET https://api.github.com/repos/[^ ]+: 401 Bad credentials'
   related_issues: []
-  test_dir: []
+  test_dir:
+  - run-kflux-prd-rh03-2026_01_09T15_48_17_524000000_00_00
 - id: failed_to_merge_mr_on_cee_gitlab_due_to_405
   note: ''
   reason: Failed to merge MR on CEE GitLab due to 405
@@ -351,7 +352,8 @@
   reason: Repo templating failed because token expired
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to get file [^ ]+/COMPONENT-pull-request.yaml from repo konflux-probe-test-templates revision main: error when listing file contents: GET https://api.github.com/repos/rhtap-perf-test/konflux-probe-test-templates/contents/[^ ]+/COMPONENT-pull-request.yaml.*: 401 Bad credentials'
   related_issues: []
-  test_dir: []
+  test_dir:
+  - run-kflux-ocp-p01-2026_01_09T15_50_15_335000000_00_00
 - id: timeout_listing_pipeline_runs_0
   note: ''
   reason: Timeout listing pipeline runs
