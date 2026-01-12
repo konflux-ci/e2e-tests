@@ -21,7 +21,7 @@
 - id: skip
   note: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
-  regexp: '\"message\": \".* exited with code 1.*\"'
+  regexp: '\"message\": ?\"\\\"[a-zA-Z0-9-]+\\\" exited with code 1\"'
   test_dir: []
 - id: back_off_pulling_task_run_image_from_quay_io
   note: ''
@@ -124,3 +124,9 @@
   regexp: '.message.: .pod status ..Initialized..:..False..; message: ..containers with incomplete status: \[.*place-scripts.*\].'
   test_dir:
   - run-stone-prd-rh02-2026_01_08T15_08_01_609000000_00_00
+- id: init_container_prepare_failed_with_code_137
+  note: Likely OOMKilled
+  reason: Init container prepare failed with code 137
+  regexp: 'init container failed, ..prepare.. exited with code 137: ContainerStatusUnknown'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_11T19_09_19_153000000_00_00
