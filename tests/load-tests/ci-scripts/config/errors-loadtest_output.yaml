@@ -474,7 +474,7 @@
   reason: Repo-templating cleanup failed GitLab merge failed because 422 error
   regexp: 'Repo-templating workflow component cleanup failed: Merging \d+ failed: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^/]+/[^/]+/merge_requests/\d+/merge: 422 {message: Branch cannot be merged}'
   test_dir:
-  - run-kflux-rhel-p01-2026_01_03T07_07_42_134000000_00_00
+  - run-kflux-ocp-p01-2026_01_12T05_15_19_169000000_00_00
 - id: repo_templating_failed_when_merging_pr_on_github_com_because_502
   note: ''
   reason: Repo templating failed when merging PR on github.com because 502
@@ -516,4 +516,10 @@
   reason: Loadtest probe failed to create Application because service account permissions forbidden
   regexp: 'FAIL\(30\): Application failed creation: Unable to create the Application [^:]+: applications.appstudio.redhat.com is forbidden: User "system:serviceaccount:[^:]+:loadtest-probe-serviceaccount" cannot create resource "applications" in API group "appstudio.redhat.com" in the namespace "[^"]+"'
   test_dir:
-  - run-stone-stg-rh01-2026_01_08T20_39_18_904000000_00_00
+  - run-stone-stg-rh01-2026_01_11T09_09_18_354000000_00_00
+- id: pipelinerun_failed_due_to_etcd_request_timeout
+  note: ''
+  reason: PipelineRun failed due to etcd request timeout
+  regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .*: error requesting remote resource: error updating resource request .* with data: etcdserver: request timed out'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_12T05_39_19_860000000_00_00
