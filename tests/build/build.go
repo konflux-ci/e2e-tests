@@ -47,6 +47,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var timeout, interval time.Duration
 
 		var prNumber int
+		var purgePrNumber int
 		var prHeadSha string
 		var buildPipelineAnnotation map[string]string
 
@@ -110,7 +111,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
 
-			err := gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, prNumber)
+			err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, prNumber)
 			if err != nil {
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
@@ -149,7 +150,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It("correctly targets the default branch (that is not named 'main') with PaC", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -325,6 +326,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
+			AfterAll(func() {
+				// Close Pruge PR if exists
+				err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, purgePrNumber)
+				if err != nil {
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+				}
+			})
 
 			It("triggers a PipelineRun", func() {
 				timeout = time.Second * 600
@@ -343,7 +351,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It("should lead to a PaC init PR creation", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
@@ -488,7 +496,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It("should lead to a PaC init PR update", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
@@ -673,6 +681,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
+			AfterAll(func() {
+				//Get the Purge PR number created after deleting the component
+				Eventually(func() bool {
+					prs, err := gitClient.ListPullRequests(helloWorldRepository)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.TargetBranch == componentBaseBranchName {
+							GinkgoWriter.Printf("Found purge PR with id: %d\n", pr.Number)
+							purgePrNumber = pr.Number
+							return true
+						}
+					}
+					return false
+				}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldComponentGitSourceRepoName))
+
+			})
+
 			It("should no longer lead to a creation of a PaC PR", func() {
 				timeout = time.Second * 10
 				interval = time.Second * 2
@@ -800,7 +826,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 				It(fmt.Sprintf("should lead to a PaC PR creation for component %s", componentName), func() {
 					timeout = time.Second * 300
-					interval := time.Second * 1
+					interval := time.Second * 5
 
 					Eventually(func() bool {
 						prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentGitSourceRepoName)
@@ -1488,7 +1514,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for child component %s", ChildComponentDef.componentName), func() {
 				timeout = time.Second * 300
-				interval := time.Second * 1
+				interval := time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(childRepository)
@@ -1552,7 +1578,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// This actually happens immediately, but we only need the PR number now
 			It(fmt.Sprintf("should lead to a PaC PR creation for parent component %s", ParentComponentDef.componentName), func() {
 				timeout = time.Second * 300
-				interval := time.Second * 1
+				interval := time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(parentRepository)
@@ -1606,7 +1632,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), func() {
 				timeout = time.Minute * 20
-				interval := time.Second * 1
+				interval := time.Second * 10
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(componentDependenciesChildRepository)
