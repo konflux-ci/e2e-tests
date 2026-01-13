@@ -17,7 +17,6 @@ require (
 	github.com/conforma/crds/api v0.1.0
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v27.1.1+incompatible
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
@@ -159,7 +158,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v24.0.7+incompatible // indirect
+	github.com/docker/docker v24.0.9+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
