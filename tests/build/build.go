@@ -47,6 +47,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var timeout, interval time.Duration
 
 		var prNumber int
+		var purgePrNumber int
 		var prHeadSha string
 		var buildPipelineAnnotation map[string]string
 
@@ -110,7 +111,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
 
-			err := gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, prNumber)
+			err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, prNumber)
 			if err != nil {
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
@@ -324,6 +325,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
 				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
+			})
+			AfterAll(func() {
+				// Close Pruge PR if exists
+				err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, purgePrNumber)
+				if err != nil {
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+				}
 			})
 
 			It("triggers a PipelineRun", func() {
@@ -671,6 +679,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			AfterAll(func() {
+				//Get the Purge PR number created after deleting the component
+				Eventually(func() bool {
+					prs, err := gitClient.ListPullRequests(helloWorldRepository)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.TargetBranch == componentBaseBranchName {
+							GinkgoWriter.Printf("Found purge PR with id: %d\n", pr.Number)
+							purgePrNumber = pr.Number
+							return true
+						}
+					}
+					return false
+				}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldComponentGitSourceRepoName))
+
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
