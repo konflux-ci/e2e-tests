@@ -20,8 +20,15 @@ import (
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"github.com/konflux-ci/operator-toolkit/metadata"
 )
 
+var (
+	shortTimeout = time.Duration(10 * time.Minute)
+	superLongTimeout = time.Duration(20 * time.Minute)
+	// SnapshotIntegrationTestRun contains name of test we want to trigger run
+	SnapshotIntegrationTestRun = "test.appstudio.openshift.io/run"
+)
 // CreateIntegrationPipelineRun creates new integrationPipelineRun.
 func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, namespace, componentName, integrationTestScenarioName string) (*tektonv1.PipelineRun, error) {
 	testpipelineRun := &tektonv1.PipelineRun{
@@ -64,7 +71,7 @@ func (i *IntegrationController) CreateIntegrationPipelineRun(snapshotName, names
 func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationName, namespace string, pacBuild bool, sha string) (*tektonv1.PipelineRun, error) {
 	var pipelineRun *tektonv1.PipelineRun
 
-	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, superLongTimeout, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName, "pipelines.appstudio.openshift.io/type": "build"}
 
 		if sha != "" {
@@ -128,7 +135,7 @@ func (i *IntegrationController) GetIntegrationPipelineRun(integrationTestScenari
 func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScenarioName, snapshotName, appNamespace string) (*tektonv1.PipelineRun, error) {
 	var testPipelinerun *tektonv1.PipelineRun
 
-	err := wait.PollUntilContextTimeout(context.Background(), time.Second*2, time.Minute*5, true, func(ctx context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, shortTimeout, true, func(ctx context.Context) (done bool, err error) {
 		testPipelinerun, err = i.GetIntegrationPipelineRun(testScenarioName, snapshotName, appNamespace)
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenarioName, appNamespace, snapshotName)
@@ -147,7 +154,7 @@ func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScena
 // WaitForIntegrationPipelineToBeFinished wait for given integration pipeline to finish.
 // In case of failure, this function retries till it gets timed out.
 func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScenario *integrationv1beta2.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 20*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, superLongTimeout, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
@@ -181,6 +188,7 @@ func (i *IntegrationController) isScenarioInExpectedScenarios(testScenario *inte
 
 // WaitForAllIntegrationPipelinesToBeFinished wait for all integration pipelines to finish.
 func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testNamespace, applicationName string, snapshot *appstudioApi.Snapshot, expectedTestScenarios []string) error {
+	time.Sleep(5 * time.Minute)
 	integrationTestScenarios, err := i.GetIntegrationTestScenarios(applicationName, testNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to get IntegrationTestScenarios for Application %s/%s. Error: %v", testNamespace, applicationName, err)
@@ -225,7 +233,7 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPi
 // WaitForFinalizerToGetRemovedFromIntegrationPipeline waits for the
 // given finalizer to get removed from the given integration pipelinerun
 func (i *IntegrationController) WaitForFinalizerToGetRemovedFromIntegrationPipeline(testScenario *integrationv1beta2.IntegrationTestScenario, snapshot *appstudioApi.Snapshot, appNamespace string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, shortTimeout, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
 			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
@@ -270,8 +278,11 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 
 // WaitForBuildPipelineToBeFinished wait for given build pipeline to finish.
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
-func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) error {
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 15*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) (error, string) {
+	var logs string
+	// sllep 5 mins before starting to get build PLR's final state since one build PLR need at 6 mins to reduce the useless calls
+	time.Sleep(5 * time.Minute)
+	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, sha)
 		if err != nil {
 			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s, and component %s", testNamespace, applicationName, componentName)
@@ -287,12 +298,12 @@ func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, 
 			if pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).IsTrue() {
 				return true, nil
 			} else {
-				logs, _ := tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun)
+				logs, _ = tekton.GetFailedPipelineRunLogs(i.KubeRest(), i.KubeInterface(), pipelineRun)
 				return false, fmt.Errorf("%s", logs)
 			}
 		}
 		return false, nil
-	})
+	}), logs
 }
 
 func (i *IntegrationController) IsIntegrationPipelinerunCancelled(integrationTestScenarioName string, snapshot *appstudioApi.Snapshot) (bool, error) {
@@ -304,4 +315,21 @@ func (i *IntegrationController) IsIntegrationPipelinerunCancelled(integrationTes
 		return true, nil
 	}
 	return true, nil
+}
+
+// AddIntegrationTestRerunLabel adding re-run label to snapshot
+func (i *IntegrationController) AddIntegrationTestRerunLabel(snapshot *appstudioApi.Snapshot, integrationTestScenarioName string) error {
+	patch := client.MergeFrom(snapshot.DeepCopy())
+	newLabel := map[string]string{}
+	newLabel[SnapshotIntegrationTestRun] = integrationTestScenarioName
+	err := metadata.AddLabels(snapshot, newLabel)
+	if err != nil {
+		return fmt.Errorf("failed to add label %s: %w", SnapshotIntegrationTestRun, err)
+	}
+	err = i.KubeRest().Patch(context.Background(), snapshot, patch)
+	if err != nil {
+		return fmt.Errorf("failed to patch snapshot: %w", err)
+	}
+
+	return nil
 }

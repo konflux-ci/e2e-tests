@@ -21,7 +21,7 @@ import (
 
 const (
 	testTaskName = "buildah-min"
-	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.4"
+	testBundle   = "quay.io/konflux-ci/tekton-catalog/task-buildah-min:0.7"
 )
 
 func GetBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineType) map[string]string {
@@ -52,6 +52,7 @@ func CreateCustomBuildBundle(pipelineName constants.BuildPipelineType) (string, 
 	var nameParam *tektonpipeline.Param
 	var pipelineBundle string
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	var err error
 
 	if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
@@ -69,7 +70,7 @@ func CreateCustomBuildBundle(pipelineName constants.BuildPipelineType) (string, 
 
 	pipelineObject := tektonObj.(*tektonpipeline.Pipeline)
 
-	// Update build-container step task ref to buildah-min:0.2 instead of buildah
+	// Update build-container step task ref to buildah-min instead of buildah
 	for i := range pipelineObject.PipelineSpec().Tasks {
 		t := &pipelineObject.PipelineSpec().Tasks[i]
 		if t.Name == "build-container" {
@@ -91,17 +92,20 @@ func CreateCustomBuildBundle(pipelineName constants.BuildPipelineType) (string, 
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
 
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
-
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
 	newBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 
-	var newBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newBuildPipelineImg, tag))
+	var newBuildPipelineRef, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newBuildPipelineImg, tag))
+
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newBuildPipelineRef, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
+
 	// Build and Push the tekton bundle
-	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newBuildPipeline, authOption); err != nil {
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newBuildPipelineRef, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
-	return newBuildPipeline.String(), nil
+	return newBuildPipelineRef.String(), nil
 }

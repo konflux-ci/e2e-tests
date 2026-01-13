@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -12,8 +13,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 )
 
 // Creates a new secret in a specified namespace
@@ -176,10 +178,23 @@ func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace stri
 
 // copy the quay secret to a user defined namespace
 func (s *SuiteController) CreateQuayRegistrySecret(namespace string) error {
+	var dockerConfigJsonData []byte
 	sharedSecret, err := s.GetSecret(constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
 	if err != nil {
-		return err
+		klog.Warningf("couldn't find a secret %s/%s, will try to retrieve it from QUAY_TOKEN env var", constants.QuayRepositorySecretNamespace, constants.QuayRepositorySecretName)
+		quayToken := os.Getenv("QUAY_TOKEN")
+		if quayToken == "" {
+			return fmt.Errorf("failed to obtain quay token from 'QUAY_TOKEN' env; make sure the env var exists")
+		}
+
+		dockerConfigJsonData, err = base64.StdEncoding.DecodeString(quayToken)
+		if err != nil {
+			return fmt.Errorf("failed to decode quay token. Make sure that QUAY_TOKEN env contain a base64 token")
+		}
+	} else {
+		dockerConfigJsonData = sharedSecret.Data[".dockerconfigjson"]
 	}
+
 	_, err = s.GetSecret(namespace, constants.QuayRepositorySecretName)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
@@ -194,7 +209,7 @@ func (s *SuiteController) CreateQuayRegistrySecret(namespace string) error {
 
 	repositorySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: constants.QuayRepositorySecretName, Namespace: namespace},
 		Type: corev1.SecretTypeDockerConfigJson,
-		Data: map[string][]byte{corev1.DockerConfigJsonKey: sharedSecret.Data[".dockerconfigjson"]}}
+		Data: map[string][]byte{corev1.DockerConfigJsonKey: dockerConfigJsonData}}
 	_, err = s.CreateSecret(namespace, repositorySecret)
 	if err != nil {
 		return err

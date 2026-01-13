@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -27,15 +27,14 @@ import (
 )
 
 const (
-	rhioServiceAccountName = "release-service-account"
-	rhioCatalogPathInRepo  = "pipelines/managed/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
-	rhioGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
-	rhioGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
+	rhioCatalogPathInRepo = "pipelines/managed/rh-push-to-registry-redhat-io/rh-push-to-registry-redhat-io.yaml"
+	rhioGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
+	rhioGitSrcSHA         = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
 
 var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-redhat-io"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-registry-redhat-io"), func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
@@ -70,7 +69,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhioApplicationName, devNamespace)
@@ -83,7 +82,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 
 			createRHIOEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
 			GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -108,15 +107,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies the rhio release pipelinerun is running and succeeds", func() {
+			It("verifies if the release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
+			})
 
+			It("verifies the rhio release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
@@ -257,7 +258,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhioRPAName, managedNamespace, "", devNamespace, rhioECPName, rhioServiceAccountName, []string{rhioAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhioRPAName, managedNamespace, "", devNamespace, rhioECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhioAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

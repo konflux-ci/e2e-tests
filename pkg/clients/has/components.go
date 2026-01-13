@@ -62,13 +62,13 @@ func (h *HasController) GetComponentByApplicationName(applicationName string, na
 }
 
 // GetComponentPipeline returns first pipeline run for a given component labels
-func (h *HasController) GetComponentPipelineRun(componentName string, applicationName string, namespace, sha string) (*pipeline.PipelineRun, error) {
-	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha)
+func (h *HasController) GetComponentPipelineRun(componentName, applicationName, namespace, sha string) (*pipeline.PipelineRun, error) {
+	return h.GetComponentPipelineRunWithType(componentName, applicationName, namespace, "", sha, "")
 }
 
 // GetComponentPipelineRunWithType returns first pipeline run for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*pipeline.PipelineRun, error) {
-	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha)
+func (h *HasController) GetComponentPipelineRunWithType(componentName string, applicationName string, namespace, pipelineType string, sha string, eventType string) (*pipeline.PipelineRun, error) {
+	prs, err := h.GetComponentPipelineRunsWithType(componentName, applicationName, namespace, pipelineType, sha, eventType)
 	if err != nil {
 		return nil, err
 	} else {
@@ -78,7 +78,7 @@ func (h *HasController) GetComponentPipelineRunWithType(componentName string, ap
 }
 
 // GetComponentPipelineRunsWithType returns all pipeline runs for a given component labels with pipeline type within label "pipelines.appstudio.openshift.io/type" ("build", "test")
-func (h *HasController) GetComponentPipelineRunsWithType(componentName string, applicationName string, namespace, pipelineType string, sha string) (*[]pipeline.PipelineRun, error) {
+func (h *HasController) GetComponentPipelineRunsWithType(componentName string, applicationName string, namespace, pipelineType string, sha string, eventType string) (*[]pipeline.PipelineRun, error) {
 	pipelineRunLabels := map[string]string{"appstudio.openshift.io/component": componentName, "appstudio.openshift.io/application": applicationName}
 	if pipelineType != "" {
 		pipelineRunLabels["pipelines.appstudio.openshift.io/type"] = pipelineType
@@ -86,6 +86,10 @@ func (h *HasController) GetComponentPipelineRunsWithType(componentName string, a
 
 	if sha != "" {
 		pipelineRunLabels["pipelinesascode.tekton.dev/sha"] = sha
+	}
+
+	if eventType != "" {
+		pipelineRunLabels["pipelinesascode.tekton.dev/event-type"] = eventType
 	}
 
 	list := &pipeline.PipelineRunList{}
@@ -143,6 +147,24 @@ func (h *HasController) GetAllGroupSnapshotsForApplication(applicationName, name
 	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
 }
 
+// GetAllComponentSnapshotsForApplication returns the gcomponentSnapshots for a given application in the namespace
+func (h *HasController) GetAllComponentSnapshotsForApplication(applicationName, namespace string) (*appservice.SnapshotList, error) {
+	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "component"}
+
+	list := &appservice.SnapshotList{}
+	err := h.KubeRest().List(context.Background(), list, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(snapshotLabels), Namespace: namespace})
+
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("error listing snapshots in %s namespace: %v", namespace, err)
+	}
+
+	if len(list.Items) > 0 {
+		return list, nil
+	}
+
+	return nil, fmt.Errorf("no snapshot found for application %s", applicationName)
+}
+
 // GetAllComponentSnapshotsForApplicationAndComponent returns the component Snapshots for a given application and component in the namespace
 func (h *HasController) GetAllComponentSnapshotsForApplicationAndComponent(applicationName, namespace, componentName string) (*[]appservice.Snapshot, error) {
 	snapshotLabels := map[string]string{"appstudio.openshift.io/application": applicationName, "test.appstudio.openshift.io/type": "component", "appstudio.openshift.io/component": componentName}
@@ -179,14 +201,14 @@ type RetryOptions struct {
 // For that case this function gives an option to pass in a pointer to a related PLR object (`prToUpdate`) which will be updated (with a valid PLR object) before the end of this function
 // and the PLR object can be then used for making assertions later in the test.
 // If there's no intention for using the original PLR object later in the test, use `nil` instead of the pointer.
-func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, sha string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
+func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservice.Component, pipelineType, sha, eventType string, t *tekton.TektonController, r *RetryOptions, prToUpdate *pipeline.PipelineRun) error {
 	attempts := 1
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
 
 	for {
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-			pr, err = h.GetComponentPipelineRun(component.GetName(), app, component.GetNamespace(), sha)
+			pr, err = h.GetComponentPipelineRunWithType(component.GetName(), app, component.GetNamespace(), pipelineType, sha, eventType)
 
 			if err != nil {
 				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
@@ -282,9 +304,21 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 		return nil, err
 	}
 
-	if utils.WaitUntil(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Minute*5) != nil {
-		return nil, fmt.Errorf("timed out when waiting for image-controller annotations to be updated on component %s in namespace %s. component: %s", componentSpec.ComponentName, namespace, utils.ToPrettyJSONString(componentObject))
+	return componentObject, nil
+}
+
+// Create a component and check image repository gets created.
+func (h *HasController) CreateComponentCheckImageRepository(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	componentObject, err := h.CreateComponent(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations)
+	if err != nil {
+		return nil, err
 	}
+
+	// Decrease the timeout to 5 mins, when the issue https://issues.redhat.com/browse/STONEBLD-3552 is fixed
+	if err := utils.WaitUntilWithInterval(h.CheckImageRepositoryExists(namespace, componentSpec.ComponentName), time.Second*10, time.Minute*15); err != nil {
+		return nil, fmt.Errorf("timed out waiting for image repository to be ready for component %s in namespace %s: %+v", componentSpec.ComponentName, namespace, err)
+	}
+
 	return componentObject, nil
 }
 
@@ -333,10 +367,6 @@ func (h *HasController) ScaleComponentReplicas(component *appservice.Component, 
 
 // DeleteComponent delete an has component from a given name and namespace
 func (h *HasController) DeleteComponent(name string, namespace string, reportErrorOnNotFound bool) error {
-	// temporary logs
-	start := time.Now()
-	GinkgoWriter.Printf("Start to delete component '%s' at %s\n", name, start.Format(time.RFC3339))
-
 	component := appservice.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -352,19 +382,11 @@ func (h *HasController) DeleteComponent(name string, namespace string, reportErr
 	// RHTAPBUGS-978: temporary timeout to 15min
 	err := utils.WaitUntil(h.ComponentDeleted(&component), 15*time.Minute)
 
-	// temporary logs
-	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete component '%s' at %s. It took '%f' minutes\n", name, time.Now().Format(time.RFC3339), deletionTime)
-
 	return err
 }
 
 // DeleteAllComponentsInASpecificNamespace removes all component CRs from a specific namespace. Useful when creating a lot of resources and want to remove all of them
 func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string, timeout time.Duration) error {
-	// temporary logs
-	start := time.Now()
-	GinkgoWriter.Printf("Start to delete all components in namespace '%s' at %s\n", namespace, start.String())
-
 	if err := h.KubeRest().DeleteAllOf(context.Background(), &appservice.Component{}, rclient.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("error deleting components from the namespace %s: %+v", namespace, err)
 	}
@@ -377,10 +399,6 @@ func (h *HasController) DeleteAllComponentsInASpecificNamespace(namespace string
 		}
 		return len(componentList.Items) == 0, nil
 	}, timeout)
-
-	// temporary logs
-	deletionTime := time.Since(start).Minutes()
-	GinkgoWriter.Printf("Finish to delete all components in namespace '%s' at %s. It took '%f' minutes\n", namespace, time.Now().Format(time.RFC3339), deletionTime)
 
 	return err
 }
@@ -521,8 +539,36 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 		if err != nil {
 			return false, err
 		}
-		return len(imageRepositoryList.Items) == 1 && imageRepositoryList.Items[0].Status.State == "ready", nil
+		if len(imageRepositoryList.Items) == 0 {
+			return false, nil
+		}
+		if len(imageRepositoryList.Items) > 1 {
+			return false, fmt.Errorf("more than one image repositories found for component %s", componentName)
+		}
+		if imageRepositoryList.Items[0].Status.State != "ready" {
+			GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet but it has status %v.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State, imageRepositoryList.Items[0].Status)
+			return false, nil
+		}
+		return true, nil
 	}
+}
+
+// DeleteAllImageRepositoriesInASpecificNamespace removes all image repository CRs from a specific namespace. Useful when cleaning up a namespace and component cleanup did not cleaned it's image repository
+func (h *HasController) DeleteAllImageRepositoriesInASpecificNamespace(namespace string, timeout time.Duration) error {
+	if err := h.KubeRest().DeleteAllOf(context.Background(), &imagecontroller.ImageRepository{}, rclient.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("error deleting image repositories from the namespace %s: %+v", namespace, err)
+	}
+
+	imageRepositoryList := &imagecontroller.ImageRepositoryList{}
+
+	err := utils.WaitUntil(func() (done bool, err error) {
+		if err := h.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{Namespace: namespace}); err != nil {
+			return false, nil
+		}
+		return len(imageRepositoryList.Items) == 0, nil
+	}, timeout)
+
+	return err
 }
 
 // Gets value of a specified annotation in a component

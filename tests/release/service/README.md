@@ -32,14 +32,6 @@ Checkpoints:
   - The Release passes.
   - Copy the application and component to the environment and ensure the process succeeds.
 
-## Ensure ReleasePlan has owner references set (release_plan_owner_ref.go)
-
-This test is designed to ensure that the ReleasePlan controller reconciles ReleasePlans to have an owner reference for its application.
-
-Checkpoints:
-  - The ReleasePlan has an owner reference for the Application.
-  - If the Application is deleted, the ReleasePlan is also deleted.
-
 ## Negative e2e-tests (missing_release_plan_and_admission.go)
 
 This test file includes two negative test cases.

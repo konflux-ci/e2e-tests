@@ -103,7 +103,15 @@ func (ci CI) init() error {
 
 	if konfluxCI == "true" {
 		pr.Organization = konfluxCiSpec.KonfluxGitRefs.GitOrg
+		// Workaround to fix the incompatibility between test-metadata task v0.1 and v0.3
+		if pr.Organization == "" {
+			pr.Organization = konfluxCiSpec.KonfluxGitRefs.Org
+		}
 		pr.RepoName = konfluxCiSpec.KonfluxGitRefs.GitRepo
+		// Workaround to fix the incompatibility between test-metadata task v0.1 and v0.3
+		if pr.RepoName == "" {
+			pr.RepoName = konfluxCiSpec.KonfluxGitRefs.Repo
+		}
 		pr.CommitSHA = konfluxCiSpec.KonfluxGitRefs.CommitSha
 		pr.Number = konfluxCiSpec.KonfluxGitRefs.PullRequestNumber
 	} else {
@@ -117,7 +125,7 @@ func (ci CI) init() error {
 		prUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", pr.Organization, pr.RepoName, pr.Number)
 		pr.RemoteName, pr.BranchName, err = getRemoteAndBranchNameFromPRLink(prUrl)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot get remote name and branch name for PR URL %q: %+v", prUrl, err)
 		}
 	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service-catalog" {
 		pr.RemoteName = "konflux-ci"
@@ -137,6 +145,7 @@ func (ci CI) init() error {
 	rctx.PrRemoteName = pr.RemoteName
 	rctx.PrBranchName = pr.BranchName
 	rctx.PrCommitSha = pr.CommitSHA
+	rctx.PrNum = pr.Number
 
 	if konfluxCI == "true" {
 		rctx.TektonEventType = konfluxCiSpec.KonfluxGitRefs.EventType
@@ -537,6 +546,7 @@ func SetupMultiPlatformTests() error {
 	var err error
 	var defaultBundleRef string
 	var tektonObj runtime.Object
+	var authenticator authn.Authenticator
 
 	for _, platformType := range platforms {
 		tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
@@ -590,8 +600,10 @@ func SetupMultiPlatformTests() error {
 			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		}
 
-		keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-		authOption := remoteimg.WithAuthFromKeychain(keychain)
+		if authenticator, err = utils.GetAuthenticatorForImageRef(newRemotePipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+			return fmt.Errorf("error when getting authenticator: %v", err)
+		}
+		authOption := remoteimg.WithAuth(authenticator)
 
 		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
 			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
@@ -604,36 +616,18 @@ func SetupMultiPlatformTests() error {
 	return nil
 }
 
-func SetupBundleForBuildTasksDockerfilesRepo(source_build, sbom_utility, icm_injection bool) {
+func SetupBundleForBuildTasksDockerfilesRepo() {
 	var err error
 	var defaultBundleRef string
 	var tektonObj runtime.Object
 	var newPipelineYaml []byte
-	var sourceImage, sbomUtilityImage, icmInjectionImage string
+	var sourceImage string
 	klog.Info("creating new tekton bundle for the purpose of testing build-task-dockerfiles group PR")
 
-	if source_build {
-		sourceImage = utils.GetEnv("SOURCE_BUILD_IMAGE", "")
-		if sourceImage == "" {
-			klog.Error("SOURCE_BUILD_IMAGE env is not set")
-			return
-		}
-	}
-
-	if sbom_utility {
-		sbomUtilityImage = utils.GetEnv("SBOM_UTILITY_SCRIPTS_IMAGE", "")
-		if sbomUtilityImage == "" {
-			klog.Error("SBOM_UTILITY_SCRIPTS_IMAGE env is not set")
-			return
-		}
-	}
-
-	if icm_injection {
-		icmInjectionImage = utils.GetEnv("ICM_INJECTION_SCRIPTS_IMAGE", "")
-		if icmInjectionImage == "" {
-			klog.Error("ICM_INJECTION_SCRIPTS_IMAGE env is not set")
-			return
-		}
+	sourceImage = utils.GetEnv("SOURCE_BUILD_IMAGE", "")
+	if sourceImage == "" {
+		klog.Error("SOURCE_BUILD_IMAGE env is not set")
+		return
 	}
 
 	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
@@ -646,98 +640,38 @@ func SetupBundleForBuildTasksDockerfilesRepo(source_build, sbom_utility, icm_inj
 	}
 	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
 
-	if source_build {
-		// Update build-source-image param value to true
-		for i := range dockerPipelineObject.PipelineSpec().Params {
-			if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
-				dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
-			}
-		}
-		// Update the source-build task image reference to SOURCE_BUILD_IMAGE
-		var currentSourceTaskBundle string
-		for i := range dockerPipelineObject.PipelineSpec().Tasks {
-			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-			params := t.TaskRef.Params
-			var lastBundle *tektonapi.Param
-			sourceTask := false
-			for i, param := range params {
-				if param.Name == "bundle" {
-					lastBundle = &t.TaskRef.Params[i]
-				} else if param.Name == "name" && param.Value.StringVal == "source-build" {
-					sourceTask = true
-				}
-			}
-			if sourceTask {
-				currentSourceTaskBundle = lastBundle.Value.StringVal
-				klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
-				newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, "source-build", "build", sourceImage)
-				klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
-				lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
-				break
-			}
-		}
-		if currentSourceTaskBundle == "" {
-			klog.Errorf("failed to extract the Source Build Task from bundle: %+v", err)
-			return
+	// Update build-source-image param value to true
+	for i := range dockerPipelineObject.PipelineSpec().Params {
+		if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
+			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
 		}
 	}
-
-	if sbom_utility {
-		var currentBuildahTaskBundle string
-		for i := range dockerPipelineObject.PipelineSpec().Tasks {
-			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-			params := t.TaskRef.Params
-			var lastBundle *tektonapi.Param
-			buildahTask := false
-			for i, param := range params {
-				if param.Name == "bundle" {
-					lastBundle = &t.TaskRef.Params[i]
-				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
-					buildahTask = true
-				}
-			}
-			if buildahTask {
-				currentBuildahTaskBundle = lastBundle.Value.StringVal
-				klog.Infof("found current buildah task bundle: %s", currentBuildahTaskBundle)
-				newBuildahTaskBundle := createNewTaskBundleAndPush(currentBuildahTaskBundle, "buildah", "prepare-sboms", sbomUtilityImage)
-				klog.Infof("created new buildah task bundle with sbom-utility image: %s", newBuildahTaskBundle)
-				lastBundle.Value = *tektonapi.NewStructuredValues(newBuildahTaskBundle)
-				break
+	// Update the source-build task image reference to SOURCE_BUILD_IMAGE
+	var currentSourceTaskBundle string
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		params := t.TaskRef.Params
+		var lastBundle *tektonapi.Param
+		sourceTask := false
+		for i, param := range params {
+			if param.Name == "bundle" {
+				lastBundle = &t.TaskRef.Params[i]
+			} else if param.Name == "name" && param.Value.StringVal == "source-build" {
+				sourceTask = true
 			}
 		}
-		if currentBuildahTaskBundle == "" {
-			klog.Errorf("failed to extract the Buildah Task from bundle: %+v", err)
-			return
+		if sourceTask {
+			currentSourceTaskBundle = lastBundle.Value.StringVal
+			klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
+			newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, "source-build", "build", sourceImage)
+			klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
+			lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
+			break
 		}
 	}
-
-	if icm_injection {
-		var currentBuildahTaskBundle string
-		for i := range dockerPipelineObject.PipelineSpec().Tasks {
-			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-			params := t.TaskRef.Params
-			var lastBundle *tektonapi.Param
-			buildahTask := false
-			for i, param := range params {
-				if param.Name == "bundle" {
-					lastBundle = &t.TaskRef.Params[i]
-				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
-					buildahTask = true
-				}
-			}
-			if buildahTask {
-				currentBuildahTaskBundle = lastBundle.Value.StringVal
-				klog.Infof("found current buildah task bundle: %s", currentBuildahTaskBundle)
-				newBuildahTaskBundle := createNewTaskBundleAndPush(currentBuildahTaskBundle, "buildah", "icm", icmInjectionImage)
-				klog.Infof("created new buildah task bundle with icm-injection image: %s", newBuildahTaskBundle)
-				lastBundle.Value = *tektonapi.NewStructuredValues(newBuildahTaskBundle)
-				break
-			}
-		}
-		if currentBuildahTaskBundle == "" {
-			klog.Errorf("failed to extract the Buildah Task from bundle: %+v", err)
-			return
-		}
+	if currentSourceTaskBundle == "" {
+		klog.Errorf("failed to extract the Source Build Task from bundle: %+v", err)
+		return
 	}
 
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
@@ -907,29 +841,28 @@ func CleanGitLabWebHooks() error {
 	if gcToken == "" {
 		return fmt.Errorf("empty GITLAB_BOT_TOKEN env variable")
 	}
-	projectID := utils.GetEnv(constants.GITLAB_PROJECT_ID_ENV, "")
-	if projectID == "" {
-		return fmt.Errorf("empty GITLAB_PROJECT_ID env variable. Please provide a valid GitLab Project ID")
-	}
 	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
 	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
 	if err != nil {
 		return err
 	}
-	webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, &gl.ListProjectHooksOptions{PerPage: 100})
-	if err != nil {
-		return fmt.Errorf("failed to list project hooks: %v", err)
-	}
-	// Delete webhooks that are older than 1 day
-	for _, webhook := range webhooks {
-		dayDuration, _ := time.ParseDuration("24h")
-		if time.Since(*webhook.CreatedAt) > dayDuration {
-			klog.Infof("removing webhookURL: %s", webhook.URL)
-			if _, err := gc.GetClient().Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
-				return fmt.Errorf("failed to delete webhook (URL: %s): %v", webhook.URL, err)
+	for projectName, projectID := range constants.GitLabProjectIdsMap {
+		webhooks, _, err := gc.GetClient().Projects.ListProjectHooks(projectID, &gl.ListProjectHooksOptions{PerPage: 100})
+		if err != nil {
+			return fmt.Errorf("failed to list project hooks: %v", err)
+		}
+		// Delete webhooks that are older than 1 day
+		for _, webhook := range webhooks {
+			dayDuration, _ := time.ParseDuration("24h")
+			if time.Since(*webhook.CreatedAt) > dayDuration {
+				klog.Infof("[INFO] from project: %s, removing webhookURL: %s", projectName, webhook.URL)
+				if _, err := gc.GetClient().Projects.DeleteProjectHook(projectID, webhook.ID); err != nil {
+					return fmt.Errorf("failed to delete webhook (URL: %s): %v", webhook.URL, err)
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1211,18 +1144,6 @@ func UpgradeTestsWorkflow() error {
 		return err
 	}
 
-	err = CreateWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = VerifyWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
 	err = UpgradeCluster()
 	if err != nil {
 		klog.Errorf("%s", err)
@@ -1230,18 +1151,6 @@ func UpgradeTestsWorkflow() error {
 	}
 
 	err = CheckClusterAfterUpgrade(ic)
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = VerifyWorkload()
-	if err != nil {
-		klog.Errorf("%s", err)
-		return err
-	}
-
-	err = CleanWorkload()
 	if err != nil {
 		klog.Errorf("%s", err)
 		return err
@@ -1283,7 +1192,7 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
-	ginkgoArgs := []string{"-p", "--output-interceptor-mode=none", "--no-color",
+	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color",
 		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 

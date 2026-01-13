@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -34,7 +34,7 @@ const (
 
 var multiarchComponentName = "multiarch-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with rh-advisories pipeline", Label("release-pipelines", "multiarch-advisories"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with rh-advisories pipeline", Label("release-pipelines", "rh-advisories", "multiarch-advisories"), func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
@@ -75,7 +75,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(multiarchApplicationName, devNamespace)
@@ -87,7 +87,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 
 			createMultiArchEnterpriseContractPolicy(multiarchEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, multiarchComponentName, multiarchApplicationName, devNamespace, sampleImage, multiarchGitSourceURL, multiarchGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -110,15 +110,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 
 		var _ = Describe("Post-release verification", func() {
 
-			It("verifies the multiarch release pipelinerun is running and succeeds", func() {
+			It("verifies the release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
+			})
 
+			It("verifies the multiarch release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
@@ -163,7 +165,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with r
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
-				pattern := `https://access\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
+				pattern := `https://access\.stage\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
 				re, err := regexp.Compile(pattern)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
@@ -249,7 +251,7 @@ func createMultiArchReleasePlanAdmission(multiarchRPAName string, managedFw fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{multiarchAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(multiarchRPAName, managedNamespace, "", devNamespace, multiarchECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{multiarchAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

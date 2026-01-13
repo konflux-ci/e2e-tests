@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,16 +21,16 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 
 	var fw *framework.Framework
 	var err error
-	var devNamespace string
-	var managedNamespace = utils.GetGeneratedNamespace("plan-and-admission-managed")
+	var devNamespace = "rel-plan-admis"
+	var managedNamespace = "plan-and-admission-managed"
 
 	var releasePlanCR, secondReleasePlanCR *releaseApi.ReleasePlan
 	var releasePlanAdmissionCR *releaseApi.ReleasePlanAdmission
+
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("rel-plan-admis"))
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
@@ -47,7 +48,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
 			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
+			Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
 		}
 	})
 
@@ -68,7 +70,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 		})
 
 		It("Creates ReleasePlanAdmission CR in corresponding managed namespace", func() {
-			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, true, &tektonutils.PipelineRef{
+			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, false, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
 					{Name: "url", Value: releasecommon.RelSvcCatalogURL},

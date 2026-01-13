@@ -38,15 +38,16 @@ spec:
     - name: oci-container-repo
       default: 'quay.io/konflux-test-storage/konflux-team/e2e-tests'
       description: The ORAS container used to store all test artifacts.
-    - name: quality-dashboard-api
-      default: 'none'
-      description: 'Contains the url of the backend to send metrics for quality purposes.'
     - name: component-image
       default: 'none'
       description: 'Container image built from any konflux git repo.'
     - name: container-image
       default: 'quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:latest'
       description: 'Konflux e2e tests container. Contain the ginkgo binary to run the e2e tests in any Konflux component.'
+    - name: artifact-browser-url
+      description: "URL to the artifact browser deployment. If provided, a link will be added to PR comments."
+      default: ""
+      type: string
   tasks:
     - name: rosa-hcp-metadata
       taskRef:
@@ -57,7 +58,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/rosa/hosted-cp/rosa-hcp-metadata/rosa-hcp-metadata.yaml
+            value: tasks/rosa/hosted-cp/rosa-hcp-metadata/0.1/rosa-hcp-metadata.yaml
     - name: test-metadata
       taskRef:
         resolver: git
@@ -67,7 +68,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/test-metadata/0.1/test-metadata.yaml
+            value: tasks/test-metadata/0.1/test-metadata.yaml
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
@@ -142,8 +143,31 @@ spec:
         - name: container-image
           value: "$(tasks.test-metadata.results.container-image)"
         - name: e2e-timeout
-          value: "90m"
+          value: "150m"
   finally:
+    - name: store-pipeline-status
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/store-pipeline-status/0.1/store-pipeline-status.yaml
+      params:
+        - name: oci-ref
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: credentials-secret-name
+          value: "$(params.konflux-test-infra-secret)"
+        - name: pipelinerun-name
+          value: $(context.pipelineRun.name)
+        - name: pipeline-aggregate-status
+          value: $(tasks.status)
     - name: deprovision-rosa-collect-artifacts
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
@@ -183,31 +207,6 @@ spec:
           value: "$(params.cloud-credential-key)"
         - name: pipeline-aggregate-status
           value: "$(tasks.status)"
-    - name: quality-dashboard-upload
-      when:
-        - input: "$(tasks.test-metadata.results.test-event-type)"
-          operator: in
-          values: ["pull_request"]
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: common/tasks/quality-dashboard/0.1/quality-dashboard-upload.yaml
-      params:
-        - name: test-name
-          value: "$(context.pipelineRun.name)"
-        - name: oci-container
-          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
-        - name: quality-dashboard-api
-          value: $(params.quality-dashboard-api)
-        - name: pipeline-aggregate-status
-          value: "$(tasks.status)"
-        - name: test-event-type
-          value: "$(tasks.test-metadata.results.test-event-type)"
     - name: pull-request-status-message
       when:
         - input: "$(tasks.test-metadata.results.test-event-type)"
@@ -221,7 +220,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: common/tasks/pull-request-comment/0.1/pull-request-comment.yaml
+            value: tasks/pull-request-comment/0.1/pull-request-comment.yaml
       params:
         - name: test-name
           value: "$(context.pipelineRun.name)"
@@ -247,3 +246,5 @@ spec:
           value: cluster-provision.log
         - name: enable-test-results-analysis
           value: "true"
+        - name: artifact-browser-url
+          value: $(params.artifact-browser-url)

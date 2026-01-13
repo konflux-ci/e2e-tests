@@ -10,6 +10,7 @@ import (
 
 const (
 	COMPONENT_REPO_URLS_ENV string = "COMPONENT_REPO_URLS"
+	PR_CHANGED_FILES_ENV    string = "PR_CHANGED_FILES"
 
 	containerImageSource             = "quay.io/redhat-appstudio-qe/busybox-loop@sha256:f698f1f2cf641fe9176d2a277c9052d872f6b1c39e56248a1dd259b96281dda9"
 	gitRepoContainsSymlinkBranchName = "symlink"
@@ -39,7 +40,7 @@ const (
 
 	componentDependenciesParentRepoName      = "build-nudge-parent"
 	componentDependenciesParentDefaultBranch = "main"
-	componentDependenciesParentGitRevision   = "a8dce08dbdf290e5d616a83672ad3afcb4b455ef"
+	componentDependenciesParentGitRevision   = "cb87720e960c9d1d7f591dc69d75cfa7ef6b3b4a"
 	componentDependenciesChildRepoName       = "build-nudge-child"
 	componentDependenciesChildDefaultBranch  = "main"
 	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
@@ -69,4 +70,7 @@ var (
 
 	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoOneName)
 	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoTwoName)
+
+	basicScenarioUrls    = []string{"https://github.com/konflux-qe-bd/devfile-sample-python-basic", "https://github.com/konflux-qe-bd/devfile-sample-python-basic-clone", "https://github.com/konflux-qe-bd/multiarch-sample-repo", "https://github.com/konflux-qe-bd/multiarch-sample-repo-clone", "https://github.com/konflux-qe-bd/fbc-sample-repo", "https://github.com/konflux-qe-bd/docker-file-from-scratch", "https://github.com/konflux-qe-bd/oci-archive-test"}
+	hermeticScenarioUrls = []string{"https://github.com/konflux-qe-bd/retrodep", "https://github.com/konflux-qe-bd/pip-e2e-test", "https://github.com/konflux-qe-bd/ruby-bundler-sample-app", "https://github.com/konflux-qe-bd/rust-cargo-sample-app", "https://github.com/konflux-qe-bd/nodejs-npm-sample-repo", "https://github.com/konflux-qe-bd/nodejs-yarn-sample-app", "https://github.com/konflux-qe-bd/nodejs-yarn-modern-sample-app", "https://github.com/konflux-qe-bd/rpm-sample-app", "https://github.com/konflux-qe-bd/generic-fetcher-sample-app"}
 )

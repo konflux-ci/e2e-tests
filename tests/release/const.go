@@ -8,6 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Test environments
+const (
+	DownstreamTestEnvironment string = "downstream"
+	UpstreamTestEnvironment   string = "upstream"
+)
+
 const (
 	ApplicationNameDefault       string = "appstudio"
 	ReleaseStrategyPolicyDefault string = "mvp-policy"
@@ -15,6 +21,7 @@ const (
 
 	QuayTokenSecret                      string = "test-quay-token-secret"
 	RedhatAppstudioUserSecret            string = "hacbs-release-tests-token"
+	ReleaseCatalogTAQuaySecret           string = "release-catalog-trusted-artifacts-quay-secret"
 	RedhatAppstudioQESecret              string = "redhat-appstudio-qe-bot-token"
 	HacbsReleaseTestsTokenSecret         string = "redhat-appstudio-registry-pull-secret"
 	PublicSecretNameAuth                 string = "cosign-public-key"
@@ -55,18 +62,19 @@ const (
 	EcPolicyDataPath    = "github.com/release-engineering/rhtap-ec-policy//data"
 
 	// Service constants
-	ApplicationName string = "application"
+	ApplicationName      string = "application"
 	ReferenceDoesntExist string = "Reference does not exist"
 )
 
 var ManagednamespaceSecret = []corev1.ObjectReference{
 	{Name: RedhatAppstudioUserSecret},
+	{Name: ReleaseCatalogTAQuaySecret},
 }
 
 // Pipelines variables
 var (
-	RelSvcCatalogURL      string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/konflux-ci/release-service-catalog")
-	RelSvcCatalogRevision string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "development")
-	ReleasedImagePushRepo string = "quay.io/" + utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") + "/dcmetromap"
+	RelSvcCatalogURL                string = utils.GetEnv("RELEASE_SERVICE_CATALOG_URL", "https://github.com/konflux-ci/release-service-catalog")
+	RelSvcCatalogRevision           string = utils.GetEnv("RELEASE_SERVICE_CATALOG_REVISION", "development")
+	ReleasedImagePushRepo           string = "quay.io/" + utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") + "/dcmetromap"
 	AdditionalReleasedImagePushRepo string = "quay.io/" + utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") + "/simplepython"
 )

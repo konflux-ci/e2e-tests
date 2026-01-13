@@ -60,6 +60,8 @@ if [ -n "$KUBE_SCHEDULER_LOG_LEVEL" ]; then
 fi
 
 ## Run the actual load test
+options=""
+[[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && for s in $PIPELINE_IMAGE_PULL_SECRETS; do options="$options --pipeline-image-pull-secrets $s"; done
 date -Ins --utc >started
 go run loadtest.go \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
@@ -70,19 +72,23 @@ go run loadtest.go \
     --component-repo-revision "${COMPONENT_REPO_REVISION:-main}" \
     --components-count "${COMPONENTS_COUNT:-1}" \
     --concurrency "${CONCURRENCY:-1}" \
+    --fork-target "${FORK_TARGET:-}" \
     --journey-duration "${JOURNEY_DURATION:-1h}" \
     --journey-repeats "${JOURNEY_REPEATS:-1}" \
-    --log-info \
+    --log-"${LOGGING_LEVEL:-info}" \
     --pipeline-repo-templating="${PIPELINE_REPO_TEMPLATING:-false}" \
+    --pipeline-repo-templating-source="${PIPELINE_REPO_TEMPLATING_SOURCE:-}" \
+    --pipeline-repo-templating-source-dir="${PIPELINE_REPO_TEMPLATING_SOURCE_DIR:-}" \
     --output-dir "${OUTPUT_DIR:-.}" \
     --purge="${PURGE:-true}" \
     --quay-repo "${QUAY_REPO:-stonesoup_perfscale}" \
-    --test-scenario-git-url "${TEST_SCENARIO_GIT_URL:-https://github.com/konflux-ci/integration-examples.git}" \
-    --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO:-pipelines/integration_resolver_pipeline_pass.yaml}" \
-    --test-scenario-revision "${TEST_SCENARIO_REVISION:-main}" \
+    --test-scenario-git-url "${TEST_SCENARIO_GIT_URL-https://github.com/konflux-ci/integration-examples.git}" \
+    --test-scenario-path-in-repo "${TEST_SCENARIO_PATH_IN_REPO-pipelines/integration_resolver_pipeline_pass.yaml}" \
+    --test-scenario-revision "${TEST_SCENARIO_REVISION-main}" \
     --username "$USER_PREFIX" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \
     --waitpipelines="${WAIT_PIPELINES:-true}" \
+    $options \
     2>&1 | tee load-test.log
 
 # Capture and exit if there are unexpected errors in loadtest.go

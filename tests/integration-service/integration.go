@@ -2,8 +2,13 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 
+	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/konflux-ci/operator-toolkit/metadata"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -53,10 +58,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"application"})
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{"application"})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{"push"})
+			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{"push"})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -95,14 +100,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 			It("waits for build PipelineRun to succeed", Label("integration-service"), func() {
 				Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
-				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "",
+				Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 			})
 
 			It("should have a related PaC init PR created", func() {
-				timeout = time.Second * 300
-				interval = time.Second * 1
-
 				Eventually(func() bool {
 					prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -114,7 +116,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
@@ -154,8 +156,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			})
 
 			It("checks if the passed status of integration test is reported in the Snapshot", func() {
-				timeout = time.Second * 240
-				interval = time.Second * 5
 				Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -167,7 +167,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 						return fmt.Errorf("test status for scenario: %s, doesn't have expected value %s, within the snapshot: %s", integrationTestScenario.Name, intgteststat.IntegrationTestStatusTestPassed, snapshot.Name)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed())
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 			})
 
 			It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
@@ -203,8 +203,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 
 		When("An snapshot of push event is created", func() {
 			It("checks if the global candidate is updated after push event", func() {
-				timeout = time.Second * 600
-				interval = time.Second * 10
 				Eventually(func() error {
 					snapshotPush, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshotPush.Name, "", "", testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -214,7 +212,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					Expect(component.Spec.ContainerImage).ToNot(Equal(originalComponent.Spec.ContainerImage))
 					return nil
 
-				}, timeout, interval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for updating the global candidate in %s namespace", testNamespace))
 			})
 
 			It("checks if all of the integrationPipelineRuns created by push event passed", Label("slow"), func() {
@@ -242,10 +240,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 			applicationName = createApp(*f, testNamespace)
 			originalComponent, componentName, pacBranchName, componentBaseBranchName = createComponent(*f, testNamespace, applicationName, componentRepoNameForGeneralIntegration, componentGitSourceURLForGeneralIntegration)
 
-			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{"pull_request"})
+			integrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{"pull_request"})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its-fail", applicationName, testNamespace, gitURL, revision, pathInRepoFail, []string{"group"})
+			skippedIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("skipped-its-fail", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{"group"})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -268,14 +266,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		It("triggers a build PipelineRun", Label("integration-service"), func() {
 			pipelineRun, err = f.AsKubeDeveloper.IntegrationController.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 			Expect(pipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
-			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", f.AsKubeAdmin.TektonController,
+			Expect(f.AsKubeDeveloper.HasController.WaitForComponentPipelineToBeFinished(originalComponent, "", "", "", f.AsKubeAdmin.TektonController,
 				&has.RetryOptions{Retries: 2, Always: true}, pipelineRun)).To(Succeed())
 		})
 
 		It("should have a related PaC init PR created", func() {
-			timeout = time.Second * 300
-			interval = time.Second * 1
-
 			Eventually(func() bool {
 				prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(componentRepoNameForGeneralIntegration)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -287,7 +282,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					}
 				}
 				return false
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+			}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 			// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 			pipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, prHeadSha)
@@ -323,7 +318,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 					return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestFail)
 				}
 				return nil
-			}, timeout, interval).Should(Succeed())
+			}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed())
 		})
 
 		It("checks if the skipped integration test is absent from the Snapshot's status annotation", func() {
@@ -347,7 +342,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Integration Service E2E tests
 		})
 
 		It("creates a new IntegrationTestScenario", func() {
-			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, []string{})
+			newIntegrationTestScenario, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -457,7 +452,7 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent, componentName, pacBranchName, componentBaseBranchName
@@ -485,7 +480,7 @@ func createComponentWithCustomBranch(f framework.Framework, testNamespace, appli
 		},
 	}
 
-	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	originalComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return originalComponent
@@ -502,6 +497,49 @@ func cleanup(f framework.Framework, testNamespace, applicationName, componentNam
 		}
 		Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
 		Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-		Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+		err = deleteQuayRepo(componentName, testNamespace)
+		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+func deleteQuayRepo(componentName string, testNamespace string) error {
+	quayOrgToken := os.Getenv("DEFAULT_QUAY_ORG_TOKEN")
+	if quayOrgToken == "" {
+		return fmt.Errorf("%s", "DEFAULT_QUAY_ORG_TOKEN env var was not found")
+	}
+	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
+
+	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+
+	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, testNamespace))
+	if err != nil {
+		return err
+	}
+
+	repos, err := quayClient.GetAllRepositories(quayOrg)
+	if err != nil {
+		return err
+	}
+	// Key is the repo name without slashes which is the same as robot name
+	// Value is the repo name with slashes
+	reposMap := make(map[string]string)
+
+	for _, repo := range repos {
+		if r.MatchString(repo.Name) {
+			sanitizedRepoName := strings.ReplaceAll(repo.Name, "/", "") // repo name without slashes
+			reposMap[sanitizedRepoName] = repo.Name
+		}
+	}
+
+	sanitizedName := testNamespace + componentName
+	if repo, exists := reposMap[sanitizedName]; exists {
+		deleted, err := quayClient.DeleteRepository(quayOrg, repo)
+		if err != nil {
+			return fmt.Errorf("failed to delete repository %s, error: %s", repo, err)
+		}
+		if !deleted {
+			fmt.Printf("repository %s has already been deleted, skipping\n", repo)
+		}
+	}
+	return nil
 }

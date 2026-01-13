@@ -149,25 +149,20 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 
 	// Handle the result.
 	if e != nil {
-		GinkgoWriter.Printf("Sandbox proxy error: %v", e)
+		GinkgoWriter.Printf("Sandbox proxy error: %v\n", e)
 	}
 	return res, e
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
-func (s *SandboxController) ReconcileUserCreationStage(userName, toolchainApiUrl, keycloakUrl, offlineToken string) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) ReconcileUserCreationStage(userName, apiUrl, token string) (*SandboxUserAuthInfo, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	kubeconfigPath := utils.GetEnv(constants.USER_KUBE_CONFIG_PATH_ENV, fmt.Sprintf("%s/tmp/%s.kubeconfig", wd, userName))
 
-	userToken, err := s.GetKeycloakTokenStage(userName, keycloakUrl, offlineToken)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.GetKubeconfigPathForSpecificUser(true, toolchainApiUrl, userName, kubeconfigPath, userToken)
+	return s.GetKubeconfigPathForSpecificUser(true, apiUrl, userName, kubeconfigPath, token)
 }
 
 // ReconcileUserCreation create a user in sandbox and return a valid kubeconfig for user to be used for the tests
@@ -206,8 +201,8 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 		return nil, err
 	}
 
-	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken.AccessToken, userName) {
-		registerUser, err := s.RegisterKeycloakUser(userName, adminToken.AccessToken, DEFAULT_KEYCLOAK_TESTING_REALM)
+	if !s.KeycloakUserExists(DEFAULT_KEYCLOAK_TESTING_REALM, adminToken, userName) {
+		registerUser, err := s.RegisterKeycloakUser(userName, adminToken, DEFAULT_KEYCLOAK_TESTING_REALM)
 		if err != nil && registerUser.Username == "" {
 			return nil, fmt.Errorf("%s", "failed to register user in keycloak: "+err.Error())
 		}
@@ -221,7 +216,7 @@ func (s *SandboxController) ReconcileUserCreation(userName string) (*SandboxUser
 	return s.GetKubeconfigPathForSpecificUser(false, toolchainApiUrl, compliantUsername, kubeconfigPath, userToken)
 }
 
-func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolchainApiUrl string, userName string, kubeconfigPath string, keycloakAuth *KeycloakAuth) (*SandboxUserAuthInfo, error) {
+func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolchainApiUrl string, userName string, kubeconfigPath string, accessToken string) (*SandboxUserAuthInfo, error) {
 	kubeconfig := api.NewConfig()
 	kubeconfig.Clusters[toolchainApiUrl] = &api.Cluster{
 		Server:                toolchainApiUrl,
@@ -233,7 +228,7 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 		AuthInfo:  fmt.Sprintf("%s/%s", userName, toolchainApiUrl),
 	}
 	kubeconfig.AuthInfos[fmt.Sprintf("%s/%s", userName, toolchainApiUrl)] = &api.AuthInfo{
-		Token: keycloakAuth.AccessToken,
+		Token: accessToken,
 	}
 	kubeconfig.CurrentContext = fmt.Sprintf("%s/%s/%s", userName, toolchainApiUrl, userName)
 
@@ -256,7 +251,7 @@ func (s *SandboxController) GetKubeconfigPathForSpecificUser(isStage bool, toolc
 		UserNamespace:  ns,
 		KubeconfigPath: kubeconfigPath,
 		ProxyUrl:       toolchainApiUrl,
-		UserToken:      keycloakAuth.AccessToken,
+		UserToken:      accessToken,
 	}, nil
 }
 
@@ -293,7 +288,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 
 		modifyUserSignup(freshUserSignup)
 		if err := s.KubeRest.Update(context.Background(), freshUserSignup); err != nil {
-			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...", userSignupName, err.Error())
+			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...\n", userSignupName, err.Error())
 			return false, nil
 		}
 		userSignup = freshUserSignup
@@ -311,12 +306,8 @@ func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, u
 		}
 	}
 
-	compliantUsername, err = s.CheckUserCreatedWithSignUp(userName, userSignup)
+	return s.CheckUserCreatedWithSignUp(userName, userSignup)
 
-	if err != nil {
-		return "", err
-	}
-	return compliantUsername, nil
 }
 
 func (s *SandboxController) CheckUserCreated(userName string) (compliantUsername string, err error) {

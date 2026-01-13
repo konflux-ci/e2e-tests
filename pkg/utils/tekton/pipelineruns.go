@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
 
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -67,7 +68,7 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 				},
 				{
 					Name:  "git-url",
-					Value: *pipeline.NewStructuredValues("https://github.com/enterprise-contract/golden-container.git"),
+					Value: *pipeline.NewStructuredValues("https://github.com/conforma/golden-container.git"),
 				},
 				{
 					Name:  "skip-checks",
@@ -82,6 +83,9 @@ func (b BuildahDemo) Generate() (*pipeline.PipelineRun, error) {
 						ClaimName: "app-studio-default-workspace",
 					},
 				},
+			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
 			},
 		},
 	}, nil
@@ -170,6 +174,9 @@ func (p VerifyEnterpriseContract) Generate() (*pipeline.PipelineRun, error) {
 					},
 				},
 			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
+			},
 		},
 	}, nil
 }
@@ -201,6 +208,9 @@ func (p ECIntegrationTestScenario) Generate() (*pipeline.PipelineRun, error) {
 			Params: []pipeline.Param{
 				{Name: "SNAPSHOT", Value: *pipeline.NewStructuredValues(snapshot)},
 				{Name: "POLICY_CONFIGURATION", Value: *pipeline.NewStructuredValues(p.PipelinePolicyConfiguration)},
+			},
+			TaskRunTemplate: pipeline.PipelineTaskRunTemplate{
+				ServiceAccountName: constants.DefaultPipelineServiceAccount,
 			},
 		},
 	}, nil
@@ -263,7 +273,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.Pipeli
 				d.FailedTaskRunName = taskRun.Name
 				d.PodName = taskRun.Status.PodName
 				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
-					if s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed") {
+					if s.Terminated != nil && (s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed")) {
 						d.FailedContainerName = s.Container
 						return d, nil
 					}

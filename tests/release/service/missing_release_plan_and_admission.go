@@ -8,7 +8,6 @@ import (
 
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 
-	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -22,7 +21,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 	var fw *framework.Framework
 	var err error
 
-	var devNamespace, managedNamespace string
+	var devNamespace = "neg-rp-dev"
+	var managedNamespace = "neg-rp-managed"
 
 	var releaseCR *releaseApi.Release
 	var snapshotName = "snapshot"
@@ -32,20 +32,17 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 	AfterEach(framework.ReportFailure(&fw))
 
 	BeforeAll(func() {
-		// Initialize the tests controllers
-		fw, err = framework.NewFramework(utils.GetGeneratedNamespace("neg-rp-dev"))
+		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		devNamespace = fw.UserNamespace
 
-		// Create the managed namespace
-		managedNamespace = utils.GetGeneratedNamespace("neg-rp-managed")
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
 		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
 		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, constants.DefaultPipelineServiceAccount, []string{releasecommon.ApplicationName}, true, &tektonutils.PipelineRef{
+		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationName}, false, &tektonutils.PipelineRef{
 			Resolver: "git",
 			Params: []tektonutils.Param{
 				{Name: "url", Value: releasecommon.RelSvcCatalogURL},
@@ -60,8 +57,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 
 	AfterAll(func() {
 		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
+			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
 		}
 	})
 

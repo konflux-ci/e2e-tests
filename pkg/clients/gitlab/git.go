@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,6 +9,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
+
+	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 // CreateBranch creates a new branch in a GitLab project with the given projectID and newBranchName
@@ -66,7 +69,7 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 
 	// If sha is not provided, get the latest commit from the base branch
 	if sha == "" {
-		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch)
+		commit, _, err := gc.client.Commits.GetCommit(projectID, baseBranch, &gitlab.GetCommitOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to get latest commit from base branch: %v", err)
 		}
@@ -133,7 +136,7 @@ func (gc *GitlabClient) DeleteWebhooks(projectID, clusterAppDomain string) error
 	// List project hooks
 	webhooks, _, err := gc.client.Projects.ListProjectHooks(projectID, nil)
 	if err != nil {
-		return fmt.Errorf("failed to list project hooks: %v", err)
+		return fmt.Errorf("failed to list project hooks for project id: %s with error: %v", projectID, err)
 	}
 
 	// Delete matching webhooks
@@ -164,9 +167,45 @@ func (gc *GitlabClient) CreateFile(projectId, pathToFile, fileContent, branchNam
 	return file, nil
 }
 
+func (gc *GitlabClient) GetFile(projectId, pathToFile, branchName string) (string, error) {
+	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file: %v", err)
+	}
+
+	decodedContent, err := base64.StdEncoding.DecodeString(file.Content)
+	if err != nil {
+		return "", fmt.Errorf("Failed to decode file content: %v", err)
+	}
+	fileContentString := string(decodedContent)
+
+	return fileContentString, nil
+}
+
 func (gc *GitlabClient) GetFileMetaData(projectID, pathToFile, branchName string) (*gitlab.File, error) {
 	metadata, _, err := gc.client.RepositoryFiles.GetFileMetaData(projectID, pathToFile, gitlab.Ptr(gitlab.GetFileMetaDataOptions{Ref: gitlab.Ptr(branchName)}))
 	return metadata, err
+}
+
+func (gc *GitlabClient) UpdateFile(projectId, pathToFile, fileContent, branchName string) (string, error) {
+	updateOptions := &gitlab.UpdateFileOptions{
+		Branch:        gitlab.Ptr(branchName),
+		Content:       gitlab.Ptr(fileContent),
+		CommitMessage: gitlab.Ptr("e2e test commit message"),
+	}
+
+	_, _, err := gc.client.RepositoryFiles.UpdateFile(projectId, pathToFile, updateOptions)
+	if err != nil {
+		return "", fmt.Errorf("Failed to update/create file: %v", err)
+	}
+
+	// Well, this is not atomic, but best I figured.
+	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get file: %v", err)
+	}
+
+	return file.CommitID, nil
 }
 
 func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.MergeRequest, error) {
@@ -174,23 +213,177 @@ func (gc *GitlabClient) AcceptMergeRequest(projectID string, mrID int) (*gitlab.
 	return mr, err
 }
 
-// ValidateNoteInMergeRequestComment verify expected note is commented in MR comment
-func (gc *GitlabClient) ValidateNoteInMergeRequestComment(projectID, expectedNote string, mergeRequestID int) {
-
-	var timeout, interval time.Duration
-
-	timeout = time.Minute * 10
-	interval = time.Second * 2
+func (gc *GitlabClient) GetCommitStatusConclusion(statusName, projectID, commitSHA string, mergeRequestID int) string {
+	var matchingStatus *gitlab.CommitStatus
+	timeout := time.Minute * 10
 
 	Eventually(func() bool {
-		// Continue here, get as argument MR ID so use in ListMergeRequestNotes
-		allNotes, _, err := gc.client.Notes.ListMergeRequestNotes(projectID, mergeRequestID, nil)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, note := range allNotes {
-			if strings.Contains(note.Body, expectedNote) {
+		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
+		if err != nil {
+			fmt.Printf("got error when listing commit statuses: %+v\n", err)
+			return false
+		}
+		for _, status := range statuses {
+			if strings.Contains(status.Name, statusName) {
+				matchingStatus = status
 				return true
 			}
 		}
 		return false
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out waiting to validate merge request note ('%s') be reported in mergerequest %d's notes", expectedNote, mergeRequestID))
+	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to appear for %s", commitSHA))
+
+	Eventually(func() bool {
+		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
+		if err != nil {
+			fmt.Printf("got error when checking commit status: %+v\n", err)
+			return false
+		}
+		for _, status := range statuses {
+			if strings.Contains(status.Name, statusName) {
+				currentState := status.Status
+				if currentState != "pending" && currentState != "running" {
+					matchingStatus = status
+					return true
+				}
+				fmt.Printf("expecting commit status to be completed, got: %s\n", currentState)
+				return false
+			}
+		}
+		return false
+	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to be completed for %s", commitSHA))
+
+	return matchingStatus.Status
+}
+
+// DeleteRepositoryIfExists deletes a GitLab repository if it exists.
+// Returns an error if the deletion fails except for project not being found (404).
+func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
+	getProj, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+	if getErr != nil {
+		if getResp != nil && getResp.StatusCode == http.StatusNotFound {
+			return nil
+		} else {
+			return fmt.Errorf("Error getting project %s: %v", projectID, getErr)
+		}
+	}
+	if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+		// We asked for repo like "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale"
+		// and got "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale-deleted-138805"
+		// and that means repo was moved by being deleted for a first
+		// time, entering a grace period.
+
+		// Now we need to delete the repository for a second time to limit
+		// number of repos we keep behind as per request in INC3755661
+		err := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
+		return err
+	}
+
+	resp, err := gc.client.Projects.DeleteProject(projectID, &gitlab.DeleteProjectOptions{})
+
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil
+		}
+		return fmt.Errorf("Error deleting project %s: %w", projectID, err)
+	}
+
+	if resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("Unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
+	}
+
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		getProj, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+
+		if getErr != nil {
+			if getResp != nil && getResp.StatusCode == http.StatusNotFound {
+				return true, nil
+			} else {
+				return false, getErr
+			}
+		}
+
+		if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+			errDel := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
+			if errDel != nil {
+				return false, errDel
+			}
+			return true, nil
+		}
+
+		fmt.Printf("Repo %s still exists: %v\n", projectID, getResp)
+		return false, nil
+	}, time.Second * 10, time.Minute * 5)
+
+	return err
+}
+
+// GitLab have a concept of two deletes. First one just renames the repo,
+// and only second one really deletes it. DeleteRepositoryReally is meant for
+// the second deletition.
+func (gc *GitlabClient) DeleteRepositoryReally(projectID string) error {
+	opts := &gitlab.DeleteProjectOptions{
+		FullPath: gitlab.Ptr(projectID),
+		PermanentlyRemove: gitlab.Ptr(true),
+	}
+	_, err := gc.client.Projects.DeleteProject(projectID, opts)
+	if err != nil {
+		return fmt.Errorf("Error on permanently deleting project %s: %w", projectID, err)
+	}
+	return nil
+}
+
+// ForkRepository forks a source GitLab repository to a target repository.
+// Returns the newly forked repository and an error if the operation fails.
+func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName, targetName string) (*gitlab.Project, error) {
+	var forkedProject *gitlab.Project
+	var resp *gitlab.Response
+	var err error
+
+	sourceProjectID := sourceOrgName + "/" + sourceName
+	targetProjectID := targetOrgName + "/" + targetName
+
+	opts := &gitlab.ForkProjectOptions{
+		Name: gitlab.Ptr(targetName),
+		NamespacePath: gitlab.Ptr(targetOrgName),
+		Path: gitlab.Ptr(targetName),
+	}
+
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		forkedProject, resp, err = gc.client.Projects.ForkProject(sourceProjectID, opts)
+		if err != nil {
+			fmt.Printf("Failed to fork %s, trying again: %v\n", sourceProjectID, err)
+			return false, nil
+		}
+		return true, nil
+	}, time.Second * 10, time.Minute * 5)
+	if err != nil {
+		return nil, fmt.Errorf("Error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
+		return nil, fmt.Errorf("Unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
+	}
+
+	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+		var getErr error
+
+		forkedProject, _, getErr = gc.client.Projects.GetProject(forkedProject.ID, nil)
+		if getErr != nil {
+			return false, fmt.Errorf("Error getting forked project status for %s (ID: %d): %w", forkedProject.Name, forkedProject.ID, getErr)
+		}
+
+		if forkedProject.ImportStatus == "finished" {
+			return true, nil
+		} else if forkedProject.ImportStatus == "failed" || forkedProject.ImportStatus == "timeout" {
+			return false, fmt.Errorf("Forking of project %s (ID: %d) failed with import status: %s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
+		}
+
+		return false, nil
+	}, time.Second * 10, time.Minute * 10)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
+	}
+
+	return forkedProject, nil
 }

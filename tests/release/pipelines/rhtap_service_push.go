@@ -8,31 +8,30 @@ import (
 	"strings"
 	"time"
 
-	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/conforma/crds/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	rhtapServiceAccountName  = "release-service-account"
 	rhtapCatalogPathInRepo   = "pipelines/managed/rhtap-service-push/rhtap-service-push.yaml"
 	rhtapGitSourceURL        = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-test2"
 	rhtapGitSrcSHA           = "f8ce9d92bfe65df108ac51c3d7429e5df08fe24d"
@@ -126,12 +125,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 
 			createRHTAPEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, rhtapComponentName, rhtapApplicationName, devNamespace, sampleImage, rhtapGitSourceURL, rhtapGitSrcSHA, "", "", "", "")
+			snapshot, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, rhtapComponentName, rhtapApplicationName, devNamespace, sampleImage, rhtapGitSourceURL, rhtapGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
-			// store pipelineRun if there pipelineRun failed 
+			// store pipelineRun if there pipelineRun failed
 			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
 				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
@@ -148,15 +147,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 		})
 
 		var _ = Describe("Post-release verification", func() {
-			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
+			It("verifies if the release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
+			})
 
+			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
@@ -283,7 +284,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, rhtapServiceAccountName, []string{rhtapAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhtapAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

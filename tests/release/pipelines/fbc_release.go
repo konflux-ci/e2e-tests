@@ -5,87 +5,84 @@ import (
 	"fmt"
 	"time"
 
-	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
+	ecp "github.com/conforma/crds/api/v1alpha1"
+	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	fbcServiceAccountName      = "release-service-account"
-	fbcSourceGitURL            = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-test"
-	fbcCompRepoName            = "fbc-sample-repo-test"
-	fbcCompRevision            = "94d5b8ccbcdf4d5a8251657bc3266b848c9ec331"
-	fbcCompDefaultBranchName   = "main"
-	fbcDockerFilePath          = "catalog.Dockerfile"
-	targetPort                 = 50051
-	relSvcCatalogPathInRepo    = "pipelines/managed/fbc-release/fbc-release.yaml"
+	fbcSourceGitURL          = "https://github.com/redhat-appstudio-qe/fbc-sample-repo-test"
+	fbcCompRepoName          = "fbc-sample-repo-test"
+	fbcCompRevision          = "94d5b8ccbcdf4d5a8251657bc3266b848c9ec331"
+	fbcCompDefaultBranchName = "main"
+	fbcDockerFilePath        = "catalog.Dockerfile"
+	targetPort               = 50051
+	relSvcCatalogPathInRepo  = "pipelines/managed/fbc-release/fbc-release.yaml"
 )
 
 var (
-	devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
-	managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
-	devFw *framework.Framework
-	managedFw *framework.Framework
-	snapshot *appservice.Snapshot
-	releaseCR *releaseapi.Release
+	devWorkspace       = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
+	managedWorkspace   = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
+	devFw              *framework.Framework
+	managedFw          *framework.Framework
+	snapshot           *appservice.Snapshot
+	releaseCR          *releaseapi.Release
 	managedPipelineRun *pipeline.PipelineRun
-	buildPipelineRun *pipeline.PipelineRun
-	preGAPipelineRun *pipeline.PipelineRun
-	hotfixPipelineRun *pipeline.PipelineRun
-	stagedPipelineRun *pipeline.PipelineRun
-	fbcComponent *appservice.Component
-	err error
+	buildPipelineRun   *pipeline.PipelineRun
+	preGAPipelineRun   *pipeline.PipelineRun
+	hotfixPipelineRun  *pipeline.PipelineRun
+	stagedPipelineRun  *pipeline.PipelineRun
+	fbcComponent       *appservice.Component
+	err                error
 
 	// PaC related variables
-	fbcPacBranchName string
+	fbcPacBranchName      string
 	fbcCompBaseBranchName string
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-tests"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-release"), func() {
 	defer GinkgoRecover()
 
-
 	var (
-		devNamespace = devWorkspace + "-tenant"
+		devNamespace     = devWorkspace + "-tenant"
 		managedNamespace = managedWorkspace + "-tenant"
 
-		issueId = "bz12345"
-		productName = "preGA-product"
+		issueId        = "bz12345"
+		productName    = "preGA-product"
 		productVersion = "v2"
 
 		fbcApplicationName = "fbc-pipelines-app-" + util.GenerateRandomString(4)
-		fbcStagedAppName = "fbc-staged-app-" + util.GenerateRandomString(4)
-		fbcHotfixAppName = "fbc-hotfix-app-" + util.GenerateRandomString(4)
-		fbcPreGAAppName = "fbc-prega-app-" + util.GenerateRandomString(4)
+		fbcStagedAppName   = "fbc-staged-app-" + util.GenerateRandomString(4)
+		fbcHotfixAppName   = "fbc-hotfix-app-" + util.GenerateRandomString(4)
+		fbcPreGAAppName    = "fbc-prega-app-" + util.GenerateRandomString(4)
 
 		fbcReleasePlanName = "fbc-pipelines-rp-" + util.GenerateRandomString(4)
-		fbcStagedRPName = "fbc-staged-rp-" + util.GenerateRandomString(4)
-		fbcHotfixRPName = "fbc-hotfix-rp-" + util.GenerateRandomString(4)
-		fbcPreGARPName = "fbc-prega-rp-" + util.GenerateRandomString(4)
+		fbcStagedRPName    = "fbc-staged-rp-" + util.GenerateRandomString(4)
+		fbcHotfixRPName    = "fbc-hotfix-rp-" + util.GenerateRandomString(4)
+		fbcPreGARPName     = "fbc-prega-rp-" + util.GenerateRandomString(4)
 
 		fbcReleasePlanAdmissionName = "fbc-pipelines-rpa-" + util.GenerateRandomString(4)
-		fbcStagedRPAName = "fbc-staged-rpa-" + util.GenerateRandomString(4)
-		fbcHotfixRPAName = "fbc-hotfix-rpa-" + util.GenerateRandomString(4)
-		fbcPreGARPAName = "fbc-prega-rpa-" + util.GenerateRandomString(4)
+		fbcStagedRPAName            = "fbc-staged-rpa-" + util.GenerateRandomString(4)
+		fbcHotfixRPAName            = "fbc-hotfix-rpa-" + util.GenerateRandomString(4)
+		fbcPreGARPAName             = "fbc-prega-rpa-" + util.GenerateRandomString(4)
 
 		fbcEnterpriseContractPolicyName = "fbc-pipelines-policy-" + util.GenerateRandomString(4)
-		fbcStagedECPolicyName = "fbc-staged-policy-" + util.GenerateRandomString(4)
-		fbcHotfixECPolicyName = "fbc-hotfix-policy-" + util.GenerateRandomString(4)
-		fbcPreGAECPolicyName = "fbc-prega-policy-" + util.GenerateRandomString(4)
+		fbcStagedECPolicyName           = "fbc-staged-policy-" + util.GenerateRandomString(4)
+		fbcHotfixECPolicyName           = "fbc-hotfix-policy-" + util.GenerateRandomString(4)
+		fbcPreGAECPolicyName            = "fbc-prega-policy-" + util.GenerateRandomString(4)
 	)
 
 	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
@@ -94,23 +91,18 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
+
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			GinkgoWriter.Println("created application :", fbcApplicationName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
-
-			sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
-			Expect(sourceAuthJson).ToNot(BeEmpty())
-
-			secret, err := devFw.AsKubeAdmin.CommonController.GetSecret(devNamespace, releasecommon.QuayTokenSecret)
-			if secret == nil || errors.IsNotFound(err) {
-				_, err = devFw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.QuayTokenSecret, devNamespace, sourceAuthJson)
-				Expect(err).ToNot(HaveOccurred())
-				err = devFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(devNamespace, releasecommon.QuayTokenSecret, constants.DefaultPipelineServiceAccount, true)
-				Expect(err).ToNot(HaveOccurred())
-			}
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", false)
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
@@ -120,7 +112,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
 				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
-			// delete CRs			
+			// delete CRs
 			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
 			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
@@ -153,6 +145,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 
 			managedNamespace = managedFw.UserNamespace
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcStagedAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -202,6 +200,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
+
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcHotfixAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			GinkgoWriter.Printf("Application %s is created", fbcHotfixAppName)
@@ -250,6 +254,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-
 		BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
 			Expect(err).NotTo(HaveOccurred())
@@ -305,7 +315,7 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 		}
 		GinkgoWriter.Println("Release CR: ", releaseCR.Name)
 		return nil
-	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created")
+	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created for snapshot %s/%s", devNamespace, snapshot.Name)
 
 	Eventually(func() error {
 		managedPipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
@@ -401,10 +411,14 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 		"sign": map[string]interface{}{
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},
+		"pyxis": map[string]interface{}{
+			"server": "stage",
+			"secret": "pyxis",
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, fbcServiceAccountName, []string{fbcAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{fbcAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

@@ -30,9 +30,8 @@ func NewFramework(workspace string) *framework.Framework {
 	var fw *framework.Framework
 	var err error
 	stageOptions := utils.Options{
-		ToolchainApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
-		KeycloakUrl:     os.Getenv(constants.KEYLOAK_URL_ENV),
-		OfflineToken:    os.Getenv(constants.OFFLINE_TOKEN_ENV),
+		ApiUrl: os.Getenv(constants.TOOLCHAIN_API_URL_ENV),
+		Token:  os.Getenv(constants.OFFLINE_TOKEN_ENV),
 	}
 
 	fw, err = framework.NewFrameworkWithTimeout(
@@ -78,7 +77,7 @@ func CreateComponent(devFw framework.Framework, devNamespace, appName, compName,
 			},
 		},
 	}
-	component, err := devFw.AsKubeAdmin.HasController.CreateComponent(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
+	component, err := devFw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, devNamespace, "", "", appName, true, buildPipelineBundle)
 	Expect(err).NotTo(HaveOccurred())
 	return component
 }
@@ -116,7 +115,7 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 		},
 	}
 
-	testComponent, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+	testComponent, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 	Expect(err).NotTo(HaveOccurred())
 
 	return testComponent, testPacBranchName, componentBaseBranchName
@@ -124,11 +123,11 @@ func CreateComponentWithNewBranch(f framework.Framework, testNamespace, applicat
 
 func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBranchName string, pipelineRun *pipeline.PipelineRun, component *appservice.Component) *appservice.Snapshot {
 	var (
-		prSHA       string
-		mergeResult *ghub.PullRequestMergeResult
-		prNumber    int
-		err         error
-		snapshot    *appservice.Snapshot
+		prSHA          string
+		mergeResult    *ghub.PullRequestMergeResult
+		prNumber       int
+		err            error
+		snapshot       *appservice.Snapshot
 		pacPipelineRun *pipeline.PipelineRun
 	)
 
@@ -164,7 +163,7 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 	Eventually(func() error {
 		mergeResult, err = devFw.AsKubeAdmin.CommonController.Github.MergePullRequest(compRepoName, prNumber)
 		return err
-	}, MergePRTimeout).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
+	}, MergePRTimeout).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request: %+v\n", err))
 
 	headSHA := mergeResult.GetSHA()
 
@@ -222,7 +221,7 @@ func CreatePushSnapshot(devWorkspace, devNamespace, appName, compRepoName, pacBr
 }
 
 // CreateSnapshotWithImageSource creates a snapshot having two images and sources.
-func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision, componentName2, containerImage2, gitSourceURL2, gitSourceRevision2 string) (*appstudioApi.Snapshot, error) {
+func CreateSnapshotWithImageSource(fw *framework.ControllerHub, componentName, applicationName, namespace, containerImage, gitSourceURL, gitSourceRevision, componentName2, containerImage2, gitSourceURL2, gitSourceRevision2 string) (*appstudioApi.Snapshot, error) {
 	snapshotComponents := []appstudioApi.SnapshotComponent{
 		{
 			Name:           componentName,
@@ -256,7 +255,7 @@ func CreateSnapshotWithImageSource(fw framework.Framework, componentName, applic
 
 	snapshotName := "snapshot-sample-" + util.GenerateRandomString(4)
 
-	return fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
+	return fw.IntegrationController.CreateSnapshotWithComponents(snapshotName, componentName, applicationName, namespace, snapshotComponents)
 }
 
 func CheckReleaseStatus(releaseCR *releaseApi.Release) error {

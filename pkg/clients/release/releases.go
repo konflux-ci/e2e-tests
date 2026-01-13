@@ -106,22 +106,25 @@ func (r *ReleaseController) GetReleases(namespace string) (*releaseApi.ReleaseLi
 
 // StoreRelease stores a given Release as an artifact.
 func (r *ReleaseController) StoreRelease(release *releaseApi.Release) error {
-	artifacts := make(map[string][]byte)
+	if release == nil {
+		return fmt.Errorf("release CR is nil")
+	}
 
+	artifacts := make(map[string][]byte)
 	releaseConditionStatus, err := r.GetReleaseConditionStatusMessages(release.Name, release.Namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get release condition status: %w", err)
 	}
 	artifacts["release-condition-status-"+release.Name+".log"] = []byte(strings.Join(releaseConditionStatus, "\n"))
 
 	releaseYaml, err := yaml.Marshal(release)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal release YAML: %w", err)
 	}
 	artifacts["release-"+release.Name+".yaml"] = releaseYaml
 
 	if err := logs.StoreArtifacts(artifacts); err != nil {
-		return err
+		return fmt.Errorf("failed to store artifacts: %w", err)
 	}
 
 	return nil
@@ -163,8 +166,16 @@ func (r *ReleaseController) GetPipelineRunInNamespace(namespace, releaseName, re
 
 	err := r.KubeRest().List(context.Background(), pipelineRuns, opts...)
 
-	if err == nil && len(pipelineRuns.Items) > 0 {
+	if err == nil && len(pipelineRuns.Items) > 1 {
+		return &pipelineRuns.Items[0], fmt.Errorf("found multiple PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace", namespace, releaseName, releaseNamespace)
+	}
+
+	if err == nil && len(pipelineRuns.Items) == 1 {
 		return &pipelineRuns.Items[0], nil
+	}
+
+	if err == nil && len(pipelineRuns.Items) == 0 {
+		return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace", namespace, releaseName, releaseNamespace)
 	}
 
 	return nil, fmt.Errorf("couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace because of err:'%w'", namespace, releaseName, releaseNamespace, err)

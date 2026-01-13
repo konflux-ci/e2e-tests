@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,7 +43,12 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 		rctx.Parallel = false
 	} else {
 		// Set the number of parallel test processes
-		rctx.CLIConfig.Procs = 20
+		procs := utils.GetEnv("GINKGO_PROCS", "20")
+		procsInt, err := strconv.Atoi(procs)
+		if err != nil {
+			return fmt.Errorf("can't convert %q to an int to configure the amount of ginkgo procs", procs)
+		}
+		rctx.CLIConfig.Procs = procsInt
 		rctx.NoColor = true
 	}
 
@@ -84,7 +90,6 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 	if err != nil {
 		klog.Error(err)
 	}
-	argsToRun = append(argsToRun, "-vv")
 	argsToRun = append(argsToRun, "./cmd", "--")
 	return sh.RunV("ginkgo", argsToRun...)
 
@@ -471,6 +476,7 @@ func SetupMultiPlatformTests() error {
 	var err error
 	var defaultBundleRef string
 	var tektonObj runtime.Object
+	var authenticator authn.Authenticator
 
 	for _, platformType := range platforms {
 		tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
@@ -524,8 +530,10 @@ func SetupMultiPlatformTests() error {
 			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 		}
 
-		keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-		authOption := remoteimg.WithAuthFromKeychain(keychain)
+		if authenticator, err = utils.GetAuthenticatorForImageRef(newRemotePipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+			return fmt.Errorf("error when getting authenticator: %v", err)
+		}
+		authOption := remoteimg.WithAuth(authenticator)
 
 		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
 			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
@@ -551,8 +559,8 @@ func SetEnvVarsForComponentImageDeployment(rctx *rulesengine.RuleCtx) error {
 
 	// From Konflux the e2e tests will receive 2 kind of images:
 	// 1. quay.io/test/test@sha:1234: This images ussually comes from the Konflux snapshots
-	// 2. quay.io/test/test:on-pr-1234.sealights@sha:1234 This images ussually comes from a build
-	// that includes the Sealights instrumented code:
+	// 2. quay.io/test/test:on-pr-1234@sha:1234 This images ussually comes from a build
+	// that includes the instrumented code:
 	if tag == "" {
 		if repoParts := strings.SplitN(repository, ":", 2); len(repoParts) == 2 {
 			repository, tag = repoParts[0], repoParts[1]

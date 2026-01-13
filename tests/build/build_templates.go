@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	"github.com/devfile/library/v2/pkg/util"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
-	kubeapi "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/ociregistry"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/oras"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -35,6 +36,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
 )
 
@@ -53,7 +55,7 @@ type TestBranches struct {
 
 var pacAndBaseBranches []TestBranches
 
-func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) {
+func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController, applicationName, componentName, namespace string, scenario ComponentScenarioSpec) error {
 	var err error
 	var buildPipelineAnnotation map[string]string
 	var baseBranchName, pacBranchName string
@@ -66,8 +68,14 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the docker-build pipeline bundle with param hermetic=true
 		customBuildBundle, err = enableHermeticBuildInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.PrefetchInput)
 		if err != nil {
-			GinkgoWriter.Printf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
+		}
+	}
+	if scenario.OverrideMediaType != "" {
+		// Update the pipeline bundle with updating BUILDAH_FORMAT value
+		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.OverrideMediaType)
+		if err != nil {
+			return fmt.Errorf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
 		}
 	}
 
@@ -75,8 +83,16 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply additional tags
 		customBuildBundle, err = applyAdditionalTagsInPipelineBundle(customBuildBundle, pipelineBundleName, additionalTags)
 		if err != nil {
-			GinkgoWriter.Printf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
-			return
+			return fmt.Errorf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
+		}
+	}
+
+	if scenario.WorkingDirMount != "" {
+		//Update the pipeline bundle to apply WORKINGDIR_MOUNT
+		customBuildBundle, err = addWorkingDirMountInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.WorkingDirMount)
+		if err != nil {
+			return fmt.Errorf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
+
 		}
 	}
 
@@ -134,21 +150,25 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customBuildBundle),
 		}
 	}
-	c, err := ctrl.CreateComponent(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
+	c, err := ctrl.CreateComponentCheckImageRepository(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(c.Name).Should(Equal(componentName))
+
+	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
+		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
+	return nil
 }
 
 func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
 	switch pipelineBundleName {
 	case "docker-build":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build:devel")
 	case "docker-build-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta:devel")
 	case "docker-build-multi-platform-oci-ta":
-		return os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-multi-platform-oci-ta:devel")
 	case "fbc-builder":
-		return os.Getenv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV)
+		return utils.GetEnv(constants.CUSTOM_FBC_BUILDER_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-fbc-builder:devel")
 	default:
 		return ""
 	}
@@ -179,7 +199,7 @@ func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, com
 	return prName
 }
 
-var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS"), func() {
+var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS", "pipeline-service"), func() {
 	var f *framework.Framework
 	var err error
 	AfterEach(framework.ReportFailure(&f))
@@ -189,10 +209,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		var applicationName, symlinkPRunName, testNamespace string
 		components := make(map[string]ComponentScenarioSpec)
-		var kubeadminClient *framework.ControllerHub
 		var pipelineRunsWithE2eFinalizer []string
 
-		for _, gitUrl := range componentUrls {
+		for _, gitUrl := range GetScenarios() {
 			scenario := GetComponentScenarioDetailsFromGitUrl(gitUrl)
 			Expect(scenario.PipelineBundleNames).ShouldNot(BeEmpty())
 			for _, pipelineBundleName := range scenario.PipelineBundleNames {
@@ -211,6 +230,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		// Use the other value defined in componentScenarios in build_templates_scenario.go except revision and pipelineBundle
 		symlinkScenario.Revision = gitRepoContainsSymlinkBranchName
 		symlinkScenario.PipelineBundleNames = []constants.BuildPipelineType{constants.DockerBuild}
+		symlinkScenario.OverrideMediaType = ""
 
 		BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
@@ -218,54 +238,45 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			} else {
 				applicationName = fmt.Sprintf("test-app-%s", util.GenerateRandomString(4))
 			}
-			testNamespace = os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV)
-			if len(testNamespace) > 0 {
-				asAdminClient, err := kubeapi.NewAdminKubernetesClient()
-				Expect(err).ShouldNot(HaveOccurred())
-				kubeadminClient, err = framework.InitControllerHub(asAdminClient)
-				Expect(err).ShouldNot(HaveOccurred())
-				_, err = kubeadminClient.CommonController.CreateTestNamespace(testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-			} else {
-				f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-				Expect(err).NotTo(HaveOccurred())
-				testNamespace = f.UserNamespace
-				Expect(f.UserNamespace).NotTo(BeNil())
-				kubeadminClient = f.AsKubeAdmin
-			}
 
-			_, err = kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
+			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.UserNamespace).NotTo(BeNil())
+			testNamespace = f.UserNamespace
+
+			_, err = f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(kubeadminClient.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
 				Eventually(func() bool {
-					_, err := kubeadminClient.HasController.GetApplication(applicationName, testNamespace)
+					_, err := f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
 				}, time.Minute*5, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace))
 			}
-			_, err = kubeadminClient.HasController.CreateApplication(applicationName, testNamespace)
+			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
 			for componentName, scenario := range components {
-				CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, componentName, testNamespace, scenario)
+				err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
+				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for scenario: %s", scenario.Name))
 			}
-
 			// Create the symlink component
-			CreateComponent(kubeadminClient.CommonController, kubeadminClient.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
+			Expect(err).ShouldNot(HaveOccurred(), "failed to create component for symlink scenario")
 
 		})
 
 		AfterAll(func() {
 			//Remove finalizers from pipelineruns
 			Eventually(func() error {
-				pipelineRuns, err := kubeadminClient.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
+				pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 				if err != nil {
 					GinkgoWriter.Printf("error while getting pipelineruns: %v\n", err)
 					return err
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
-						err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
+						err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
 						if err != nil {
 							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
@@ -279,20 +290,20 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(kubeadminClient.HasController.DeleteApplication, applicationName, testNamespace, false)
+					DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
-					Expect(kubeadminClient.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-					Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				}
 			}
 			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
 			//Cleanup pac and base branches
 			// for _, branches := range pacAndBaseBranches {
-			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
+			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
 			// 	if err != nil {
 			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			// 	}
-			// 	err = kubeadminClient.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
+			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
 			// 	if err != nil {
 			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
 			// 	}
@@ -308,7 +319,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 			timeout := time.Minute * 20
-			symlinkPRunName = WaitForPipelineRunStarts(kubeadminClient, applicationName, symlinkComponentName, testNamespace, timeout)
+			symlinkPRunName = WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, symlinkComponentName, testNamespace, timeout)
 			Expect(symlinkPRunName).ShouldNot(BeEmpty())
 			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
 		})
@@ -318,10 +329,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			scenario := scenario
 			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
 			pipelineBundleName := scenario.PipelineBundleNames[0]
-			It(fmt.Sprintf("triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+			It(fmt.Sprintf("scenario %s triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.Name, scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 				timeout := time.Minute * 20
-				prName := WaitForPipelineRunStarts(kubeadminClient, applicationName, componentName, testNamespace, timeout)
+				prName := WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, componentName, testNamespace, timeout)
 				Expect(prName).ShouldNot(BeEmpty())
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
 			})
@@ -334,398 +345,445 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			pipelineBundleName := scenario.PipelineBundleNames[0]
 			var pr *tektonpipeline.PipelineRun
 
-			It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-					kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
-			})
+			Context(fmt.Sprintf("scenario %s", scenario.Name), func() {
 
-			It(fmt.Sprintf("should ensure SBOM is shown for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
-
-				logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.GetName(), "show-sbom", testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(logs).To(HaveLen(1))
-				var sbomTaskLog string
-				for _, log := range logs {
-					sbomTaskLog = log
-				}
-
-				sbom, err := build.UnmarshalSbom([]byte(sbomTaskLog))
-				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to parse SBOM from show-sbom task output from %s/%s PipelineRun", pr.GetNamespace(), pr.GetName()))
-
-				switch s := sbom.(type) {
-				case *build.SbomCyclonedx:
-					Expect(s.BomFormat).ToNot(BeEmpty())
-					Expect(s.SpecVersion).ToNot(BeEmpty())
-				case *build.SbomSpdx:
-					Expect(s.SPDXID).ToNot(BeEmpty())
-					Expect(s.SpdxVersion).ToNot(BeEmpty())
-				default:
-					Fail(fmt.Sprintf("unknown SBOM type: %T", s))
-				}
-
-				if !strings.Contains(scenario.GitURL, "from-scratch") {
-					packages := sbom.GetPackages()
-					Expect(packages).ToNot(BeEmpty())
-					for i := range packages {
-						Expect(packages[i].GetName()).ToNot(BeEmpty(), "expecting package name to be non empty, but got empty value")
-						Expect(packages[i].GetPurl()).ToNot(BeEmpty(), fmt.Sprintf("expecting purl to be non empty, but got empty value for pkg: %s", packages[i].GetName()))
-					}
-				}
-			})
-
-			It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
-				if pipelineBundleName != constants.FbcBuilder {
-					ensureOriginalDockerfileIsPushed(kubeadminClient, pr)
-				}
-			})
-
-			It("floating tags are created successfully", func() {
-				if !scenario.CheckAdditionalTags {
-					Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
-				}
-				builtImage := build.GetBinaryImage(pr)
-				Expect(builtImage).ToNot(BeEmpty(), "built image url is empty")
-				builtImageRef, err := reference.Parse(builtImage)
-				Expect(err).ShouldNot(HaveOccurred(),
-					fmt.Sprintf("cannot parse image pullspec: %s", builtImage))
-				for _, tagName := range additionalTags {
-					_, err := build.GetImageTag(builtImageRef.Namespace, builtImageRef.Name, tagName)
-					Expect(err).ShouldNot(HaveOccurred(),
-						fmt.Sprintf("failed to get tag %s from image repo", tagName),
-					)
-				}
-			})
-
-			It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-				pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
-
-				if pipelineBundleName == constants.FbcBuilder {
-					GinkgoWriter.Println("This is FBC build, which does not require source container build.")
-					Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
-					return
-				}
-
-				isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
-				GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
-				if !isSourceBuildEnabled {
-					Skip("Skipping source image check since it is not enabled in the pipeline")
-				}
-
-				binaryImage := build.GetBinaryImage(pr)
-				if binaryImage == "" {
-					Fail("Failed to get the binary image url from pipelinerun")
-				}
-
-				binaryImageRef, err := reference.Parse(binaryImage)
-				Expect(err).ShouldNot(HaveOccurred(),
-					fmt.Sprintf("cannot parse binary image pullspec %s", binaryImage))
-
-				tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
-				Expect(err).ShouldNot(HaveOccurred(),
-					fmt.Sprintf("failed to get tag %s info for constructing source container image", binaryImageRef.Tag),
-				)
-
-				srcImageRef := reference.DockerImageReference{
-					Registry:  binaryImageRef.Registry,
-					Namespace: binaryImageRef.Namespace,
-					Name:      binaryImageRef.Name,
-					Tag:       fmt.Sprintf("%s.src", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1)),
-				}
-				srcImage := srcImageRef.String()
-				tagExists, err := build.DoesTagExistsInQuay(srcImage)
-				Expect(err).ShouldNot(HaveOccurred(),
-					fmt.Sprintf("failed to check existence of source container image %s", srcImage))
-				Expect(tagExists).To(BeTrue(),
-					fmt.Sprintf("cannot find source container image %s", srcImage))
-
-				CheckSourceImage(srcImage, scenario.GitURL, kubeadminClient, pr)
-			})
-
-			When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
-				var resultClient *pipeline.ResultClient
-				var pr *tektonpipeline.PipelineRun
-
-				BeforeAll(func() {
-					// create the proxyplugin for tekton-results
-					_, err = kubeadminClient.CommonController.CreateProxyPlugin("tekton-results", "toolchain-host-operator", "tekton-results", "tekton-results")
-					Expect(err).NotTo(HaveOccurred())
-
-					regProxyUrl := fmt.Sprintf("%s/plugins/tekton-results", f.ProxyUrl)
-					resultClient = pipeline.NewClient(regProxyUrl, f.UserToken)
-
-					pr, err = kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+				It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
 					Expect(err).ShouldNot(HaveOccurred())
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
 				})
+				It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
+					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
-				AfterAll(func() {
-					Expect(kubeadminClient.CommonController.DeleteProxyPlugin("tekton-results", "toolchain-host-operator")).To(BeTrue())
-				})
-
-				It("should have Pipeline Records", func() {
-					records, err := resultClient.GetRecords(testNamespace, string(pr.GetUID()))
-					// temporary logs due to RHTAPBUGS-213
-					GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pr.Name, records)
-					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting records for PipelineRun %s: %v", pr.Name, err))
-					Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
-				})
-
-				// Temporarily disabled until https://issues.redhat.com/browse/SRVKP-4348 is resolved
-				It("should have Pipeline Logs", Pending, func() {
-					// Verify if result is stored in Database
-					// temporary logs due to RHTAPBUGS-213
-					logs, err := resultClient.GetLogs(testNamespace, string(pr.GetUID()))
-					GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.GetName(), logs)
-					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting logs for PipelineRun %s: %v", pr.Name, err))
-
-					timeout := time.Minute * 2
-					interval := time.Second * 10
-					// temporary timeout  due to RHTAPBUGS-213
-					Eventually(func() error {
-						// temporary logs due to RHTAPBUGS-213
-						logs, err = resultClient.GetLogs(testNamespace, string(pr.GetUID()))
-						if err != nil {
-							return fmt.Errorf("failed to get logs for PipelineRun %s: %v", pr.Name, err)
-						}
-						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.Name, logs)
-
-						if len(logs.Record) == 0 {
-							return fmt.Errorf("logs for PipelineRun %s/%s are empty", pr.GetNamespace(), pr.GetName())
-						}
-						return nil
-					}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when getting logs for PipelineRun %s/%s", pr.GetNamespace(), pr.GetName()))
-
-					// Verify if result is stored in S3
-					// temporary logs due to RHTAPBUGS-213
-					log, err := resultClient.GetLogByName(logs.Record[0].Name)
-					GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
-					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pr.GetName(), err))
-					Expect(log).NotTo(BeEmpty(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
-				})
-			})
-
-			It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
-				pr, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(build.ValidateBuildPipelineTestResults(pr, kubeadminClient.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
-			})
-
-			When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
-				var imageWithDigest string
-				var pr *tektonpipeline.PipelineRun
-
-				BeforeAll(func() {
-					var err error
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
-					Expect(err).NotTo(HaveOccurred())
-				})
-				AfterAll(func() {
-					if !CurrentSpecReport().Failed() {
-						Expect(kubeadminClient.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())).To(Succeed())
+					if pipelineBundleName != constants.FbcBuilder {
+						ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
 					}
 				})
 
-				It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
-					// If the Tekton Chains controller is busy, it may take longer than usual for it
-					// to sign and attest the image built in BeforeAll.
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
-					Expect(err).ToNot(HaveOccurred())
+				It("floating tags are created successfully", Label(buildTemplatesTestLabel), func() {
+					if !scenario.CheckAdditionalTags {
+						Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
+					}
+					builtImage := build.GetBinaryImage(pr)
+					Expect(builtImage).ToNot(BeEmpty(), "built image url is empty")
+					builtImageRef, err := reference.Parse(builtImage)
+					Expect(err).ShouldNot(HaveOccurred(),
+						fmt.Sprintf("cannot parse image pullspec: %s", builtImage))
+					for _, tagName := range additionalTags {
+						_, err := build.GetImageTag(builtImageRef.Namespace, builtImageRef.Name, tagName)
+						Expect(err).ShouldNot(HaveOccurred(),
+							fmt.Sprintf("failed to get tag %s from image repo", tagName),
+						)
+					}
+				})
 
-					cm, err := kubeadminClient.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-					Expect(err).ToNot(HaveOccurred())
+				It("image manifest mediaType is correct", Label(buildTemplatesTestLabel), func() {
+					builtImage := build.GetBinaryImage(pr)
+					switch scenario.ManifestMediaType {
+					case "docker":
+						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
+							// Check for docker.manifest.list mediaType
+							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifestList), "mediaType of the image manifest is not of type docker.manifest.list")
+						} else {
+							// Check for docker.manifest mediaType
+							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifest), "mediaType of the image manifest is not of type docker.manifest")
+						}
+					case "oci":
+						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
+							// Check for oci image index mediaType
+							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciImageIndex), "mediaType of the image manifest is not of type oci.image.index")
+						} else {
+							// Check for oci image manifest mediaType
+							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciManifest), "mediaType of the image is not of type oci.image.manifest")
+						}
+					default:
+						Fail(fmt.Sprintf("Unknown ManifestMediaType value %s in scenario \n", scenario.ManifestMediaType))
+					}
 
-					verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
-					Expect(verifyECTaskBundle).ToNot(BeEmpty())
+				})
 
-					publicSecretName := "cosign-public-key"
-					publicKey, err := kubeadminClient.TektonController.GetTektonChainsPublicKey()
-					Expect(err).ToNot(HaveOccurred())
+				It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
-					Expect(kubeadminClient.TektonController.CreateOrUpdateSigningSecret(
-						publicKey, publicSecretName, testNamespace)).To(Succeed())
+					if pipelineBundleName == constants.FbcBuilder {
+						GinkgoWriter.Println("This is FBC build, which does not require source container build.")
+						Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
+						return
+					}
 
-					defaultECP, err := kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-					Expect(err).NotTo(HaveOccurred())
+					isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
+					GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
+					if !isSourceBuildEnabled {
+						Skip("Skipping source image check since it is not enabled in the pipeline")
+					}
 
-					policy := contract.PolicySpecWithSourceConfig(
-						defaultECP.Spec,
-						ecp.SourceConfig{
-							Include: []string{"@slsa3"},
-							Exclude: []string{"cve"},
-						},
+					binaryImage := build.GetBinaryImage(pr)
+					if binaryImage == "" {
+						Fail("Failed to get the binary image url from pipelinerun")
+					}
+
+					binaryImageRef, err := reference.Parse(binaryImage)
+					Expect(err).ShouldNot(HaveOccurred(),
+						fmt.Sprintf("cannot parse binary image pullspec %s", binaryImage))
+
+					tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
+					Expect(err).ShouldNot(HaveOccurred(),
+						fmt.Sprintf("failed to get tag %s info for constructing source container image", binaryImageRef.Tag),
 					)
-					Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
 
-					pipelineRun, err := kubeadminClient.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ToNot(HaveOccurred())
+					srcImageRef := reference.DockerImageReference{
+						Registry:  binaryImageRef.Registry,
+						Namespace: binaryImageRef.Namespace,
+						Name:      binaryImageRef.Name,
+						Tag:       fmt.Sprintf("%s.src", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1)),
+					}
+					srcImage := srcImageRef.String()
+					tagExists, err := build.DoesTagExistsInQuay(srcImage)
+					Expect(err).ShouldNot(HaveOccurred(),
+						fmt.Sprintf("failed to check existence of source container image %s", srcImage))
+					Expect(tagExists).To(BeTrue(),
+						fmt.Sprintf("cannot find source container image %s", srcImage))
 
-					revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
-					Expect(revision).ToNot(BeEmpty())
+					CheckSourceImage(srcImage, scenario.GitURL, f.AsKubeAdmin, pr)
+				})
 
-					generator := tekton.VerifyEnterpriseContract{
-						Snapshot: appservice.SnapshotSpec{
-							Application: applicationName,
-							Components: []appservice.SnapshotComponent{
-								{
-									Name:           componentName,
-									ContainerImage: imageWithDigest,
-									Source: appservice.ComponentSource{
-										ComponentSourceUnion: appservice.ComponentSourceUnion{
-											GitSource: &appservice.GitSource{
-												URL:      scenario.GitURL,
-												Revision: revision,
+				When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
+					var resultClient *pipeline.ResultClient
+					var pr *tektonpipeline.PipelineRun
+
+					BeforeAll(func() {
+						if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
+							Skip("upstream test environment detected, skipping the test")
+						}
+						trRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
+						Expect(err).NotTo(HaveOccurred())
+
+						tektonResultsUrl := fmt.Sprintf("https://%s", trRoute.Spec.Host)
+						restConfig, err := config.GetConfig()
+						Expect(err).NotTo(HaveOccurred())
+
+						bearerToken := restConfig.BearerToken
+						if bearerToken == "" {
+							Skip("the bearer token is empty, skipping the test")
+						}
+						resultClient = pipeline.NewClient(tektonResultsUrl, bearerToken)
+
+						pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						Expect(err).ShouldNot(HaveOccurred())
+					})
+
+					It("should have Pipeline Records", func() {
+						records, err := resultClient.GetRecords(testNamespace, string(pr.GetUID()))
+						// temporary logs due to RHTAPBUGS-213
+						GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pr.Name, records)
+						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting records for PipelineRun %s: %v", pr.Name, err))
+						Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
+					})
+
+					// This test is disabled since logs are being stored in s3 which is not available in dev env
+					It("should have Pipeline Logs", Pending, func() {
+						// Verify if result is stored in Database
+						// temporary logs due to RHTAPBUGS-213
+						logs, err := resultClient.GetLogs(testNamespace, string(pr.GetUID()))
+						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.GetName(), logs)
+						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting logs for PipelineRun %s: %v", pr.Name, err))
+
+						timeout := time.Minute * 2
+						interval := time.Second * 10
+						// temporary timeout  due to RHTAPBUGS-213
+						Eventually(func() error {
+							// temporary logs due to RHTAPBUGS-213
+							logs, err = resultClient.GetLogs(testNamespace, string(pr.GetUID()))
+							if err != nil {
+								return fmt.Errorf("failed to get logs for PipelineRun %s: %v", pr.Name, err)
+							}
+							GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.Name, logs)
+
+							if len(logs.Record) == 0 {
+								return fmt.Errorf("logs for PipelineRun %s/%s are empty", pr.GetNamespace(), pr.GetName())
+							}
+							return nil
+						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when getting logs for PipelineRun %s/%s", pr.GetNamespace(), pr.GetName()))
+
+						// Verify if result is stored in S3
+						// temporary logs due to RHTAPBUGS-213
+						log, err := resultClient.GetLogByName(logs.Record[0].Name)
+						GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
+						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pr.GetName(), err))
+						Expect(log).NotTo(BeEmpty(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
+					})
+				})
+
+				It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
+					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
+				})
+
+				When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
+					var imageWithDigest string
+					var pr *tektonpipeline.PipelineRun
+
+					BeforeAll(func() {
+						var err error
+						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
+						Expect(err).NotTo(HaveOccurred())
+					})
+					AfterAll(func() {
+						if !CurrentSpecReport().Failed() {
+							err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+							if err != nil {
+								Expect(err.Error()).To(ContainSubstring("not found"))
+							}
+						}
+					})
+
+					It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
+						// If the Tekton Chains controller is busy, it may take longer than usual for it
+						// to sign and attest the image built in BeforeAll.
+						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
+						Expect(err).ToNot(HaveOccurred())
+
+						cm, err := f.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
+						Expect(err).ToNot(HaveOccurred())
+
+						verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
+						Expect(verifyECTaskBundle).ToNot(BeEmpty())
+
+						publicSecretName := "cosign-public-key"
+						publicKey, err := f.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
+						Expect(err).ToNot(HaveOccurred())
+
+						Expect(f.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+							publicKey, publicSecretName, testNamespace)).To(Succeed())
+
+						defaultECP, err := f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+						Expect(err).NotTo(HaveOccurred())
+
+						ecpSource := ecp.Source{
+							Config: &ecp.SourceConfig{
+								Include: []string{"@redhat"},
+								Exclude: []string{"cve", "hermetic_task", "labels", "trusted_task", "test", "base_image_registries.base_image_permitted:docker.io/library/ibmjava", "base_image_registries.base_image_permitted:docker.io/library/node",
+									"tasks.pinned_task_refs", "tasks.required_tasks_found", "tasks.required_untrusted_task_found", "slsa_build_scripted_build.image_built_by_trusted_task", "source_image.exists",
+									"sbom_spdx.allowed_package_sources:pkg:pypi/dockerfile-parse?checksum=sha256:36e4469abb0d96b0e3cd656284d5016e8a674cd57b8ebe5af64786fe63b8184d&download_url=https://github.com/containerbuildsystem/dockerfile-parse/archive/refs/tags/2.0.0.tar.gz",
+									"sbom_spdx.allowed_package_sources:pkg:generic/dependency-check.zip?checksum=sha256:c5b5b9e592682b700e17c28f489fe50644ef54370edeb2c53d18b70824de1e22&download_url=https://github.com/jeremylong/DependencyCheck/releases/download/v11.1.0/dependency-check-11.1.0-release.zip"},
+							},
+							RuleData: &v1.JSON{Raw: []byte(`{"allowed_registry_prefixes": ["quay.io", "registry.access.redhat.com", "registry.redhat.io"], "allowed_olm_image_registry_prefixes": ["gcr.io/kubebuilder/", "quay.io"]}`)},
+						}
+						policy := contract.PolicySpecWithSource(defaultECP.Spec, ecpSource)
+
+						Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+
+						pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						Expect(err).ToNot(HaveOccurred())
+
+						revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
+						Expect(revision).ToNot(BeEmpty())
+
+						generator := tekton.VerifyEnterpriseContract{
+							Snapshot: appservice.SnapshotSpec{
+								Application: applicationName,
+								Components: []appservice.SnapshotComponent{
+									{
+										Name:           componentName,
+										ContainerImage: imageWithDigest,
+										Source: appservice.ComponentSource{
+											ComponentSourceUnion: appservice.ComponentSourceUnion{
+												GitSource: &appservice.GitSource{
+													URL:      scenario.GitURL,
+													Revision: revision,
+												},
 											},
 										},
 									},
 								},
 							},
-						},
-						TaskBundle:          verifyECTaskBundle,
-						Name:                "verify-enterprise-contract",
-						Namespace:           testNamespace,
-						PolicyConfiguration: "ec-policy",
-						PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
-						Strict:              true,
-						EffectiveTime:       "now",
-						IgnoreRekor:         true,
+							TaskBundle:          verifyECTaskBundle,
+							Name:                "verify-enterprise-contract",
+							Namespace:           testNamespace,
+							PolicyConfiguration: "ec-policy",
+							PublicKey:           fmt.Sprintf("k8s://%s/%s", testNamespace, publicSecretName),
+							Strict:              true,
+							EffectiveTime:       "now",
+							IgnoreRekor:         true,
+						}
+
+						pr, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+
+						pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+						Expect(err).NotTo(HaveOccurred())
+
+						tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue(), fmt.Sprintf("%q pipeline failed", pr.Name))
+						Expect(tr.Status.TaskRunStatusFields.Results).Should(
+							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						)
+					})
+
+					It("should have Hermeto content in the SBOM in case the build was hermetic", Label(buildTemplatesTestLabel), func() {
+						if !scenario.EnableHermetic {
+							Skip("Hermetic build is not enabled, skipping the test")
+						}
+
+						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
+						Expect(err).ShouldNot(HaveOccurred())
+						taskRun, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container")
+						Expect(err).NotTo(HaveOccurred())
+
+						var sbomBlobUrl string
+
+						for _, r := range taskRun.Status.TaskRunStatusFields.Results {
+							if r.Name == "SBOM_BLOB_URL" {
+								sbomBlobUrl = r.Value.StringVal
+							}
+						}
+						Expect(sbomBlobUrl).NotTo(BeEmpty())
+
+						imageRef, err := reference.Parse(sbomBlobUrl)
+						Expect(err).NotTo(HaveOccurred())
+
+						c := ociregistry.NewOciRegistryV2Client(imageRef.Registry)
+
+						sbom, err := build.FetchSbomFromRegistry(c, imageRef.Namespace, imageRef.Name, imageRef.ID)
+						Expect(err).NotTo(HaveOccurred())
+
+						hasHermetoPackages := false
+						for _, pkg := range sbom.GetPackages() {
+							if pkg.GetCreatedBy() == build.SbomPackageCreatedByHermeto {
+								hasHermetoPackages = true
+								break
+							}
+						}
+						Expect(hasHermetoPackages).To(BeTrue(), "no hermeto packages found")
+					})
+				})
+
+				Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
+					ecPipelines := []string{
+						"pipelines/enterprise-contract.yaml",
 					}
 
-					pr, err = kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
-					Expect(err).NotTo(HaveOccurred())
+					var gitRevision, gitURL, imageWithDigest string
+					var defaultECP *ecp.EnterpriseContractPolicy
 
-					Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
-
-					pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-					Expect(err).NotTo(HaveOccurred())
-
-					tr, err := kubeadminClient.TektonController.GetTaskRunStatus(kubeadminClient.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue())
-					Expect(tr.Status.TaskRunStatusFields.Results).Should(
-						ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
-					)
-				})
-			})
-
-			Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
-				ecPipelines := []string{
-					"pipelines/enterprise-contract.yaml",
-				}
-
-				var gitRevision, gitURL, imageWithDigest string
-				var defaultECP *ecp.EnterpriseContractPolicy
-
-				BeforeAll(func() {
-					// resolve the gitURL and gitRevision
-					var err error
-					gitURL, gitRevision, err = build.ResolveGitDetails(constants.EC_PIPELINES_REPO_URL_ENV, constants.EC_PIPELINES_REPO_REVISION_ENV)
-					Expect(err).NotTo(HaveOccurred())
-
-					// Double check that the component has finished. There's an earlier test that
-					// verifies this so this should be a no-op. It is added here in order to avoid
-					// unnecessary coupling of unrelated tests.
-					component, err := kubeadminClient.HasController.GetComponent(componentName, testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(
-						component, "", kubeadminClient.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
-
-					imageWithDigest, err = getImageWithDigest(kubeadminClient, componentName, applicationName, testNamespace)
-					Expect(err).NotTo(HaveOccurred())
-
-					err = kubeadminClient.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				for _, pathInRepo := range ecPipelines {
-					pathInRepo := pathInRepo
-					It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
-						generator := tekton.ECIntegrationTestScenario{
-							Image:                       imageWithDigest,
-							Namespace:                   testNamespace,
-							PipelineGitURL:              gitURL,
-							PipelineGitRevision:         gitRevision,
-							PipelineGitPathInRepo:       pathInRepo,
-							PipelinePolicyConfiguration: "ec-policy",
-						}
-						defaultECP, err = kubeadminClient.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-						Expect(err).NotTo(HaveOccurred())
-						//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
-						policy := contract.PolicySpecWithSourceConfig(
-							defaultECP.Spec,
-							ecp.SourceConfig{
-								Include: []string{"@slsa3"},
-								Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
-							},
-						)
-						Expect(kubeadminClient.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
-
-						pr, err := kubeadminClient.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
-						Expect(err).NotTo(HaveOccurred())
-						defer func(pr *tektonpipeline.PipelineRun) {
-							err = kubeadminClient.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
-							if err != nil {
-								GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
-							}
-							// Avoid blowing up PipelineRun usage
-							err := kubeadminClient.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
-							Expect(err).NotTo(HaveOccurred())
-						}(pr)
-
-						err = kubeadminClient.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
-						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
-
-						Expect(kubeadminClient.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
-
-						// Refresh our copy of the PipelineRun for latest results
-						pr, err = kubeadminClient.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-						Expect(err).NotTo(HaveOccurred())
-						GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
-
-						// The UI uses this label to display additional information.
-						Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
-
-						// The UI uses this label to display additional information.
-						tr, err := kubeadminClient.TektonController.GetTaskRunFromPipelineRun(kubeadminClient.CommonController.KubeRest(), pr, "verify")
-						Expect(err).NotTo(HaveOccurred())
-						GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-						Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
-
-						logs, err := kubeadminClient.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
+					BeforeAll(func() {
+						// resolve the gitURL and gitRevision
+						var err error
+						gitURL, gitRevision, err = build.ResolveGitDetails(constants.EC_PIPELINES_REPO_URL_ENV, constants.EC_PIPELINES_REPO_REVISION_ENV)
 						Expect(err).NotTo(HaveOccurred())
 
-						// The logs from the report step are used by the UI to display validation
-						// details. Let's make sure it has valid JSON.
-						reportLogs := logs["step-report-json"]
-						Expect(reportLogs).NotTo(BeEmpty())
-						var report any
-						err = json.Unmarshal([]byte(reportLogs), &report)
+						// Double check that the component has finished. There's an earlier test that
+						// verifies this so this should be a no-op. It is added here in order to avoid
+						// unnecessary coupling of unrelated tests.
+						component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
+						Expect(err).ShouldNot(HaveOccurred())
+						Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
+							component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+
+						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 						Expect(err).NotTo(HaveOccurred())
 
-						// The logs from the summary step are used by the UI to display an overview of
-						// the validation.
-						summaryLogs := logs["step-summary"]
-						GinkgoWriter.Printf("got step-summary log: %s\n", summaryLogs)
-						Expect(summaryLogs).NotTo(BeEmpty())
-						var summary build.TestOutput
-						err = json.Unmarshal([]byte(summaryLogs), &summary)
+						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(summary).NotTo(Equal(build.TestOutput{}))
 					})
-				}
+
+					for _, pathInRepo := range ecPipelines {
+						pathInRepo := pathInRepo
+						It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
+							generator := tekton.ECIntegrationTestScenario{
+								Image:                       imageWithDigest,
+								Namespace:                   testNamespace,
+								PipelineGitURL:              gitURL,
+								PipelineGitRevision:         gitRevision,
+								PipelineGitPathInRepo:       pathInRepo,
+								PipelinePolicyConfiguration: "ec-policy",
+							}
+							defaultECP, err = f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
+							Expect(err).NotTo(HaveOccurred())
+							//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
+							policy := contract.PolicySpecWithSourceConfig(
+								defaultECP.Spec,
+								ecp.SourceConfig{
+									Include: []string{"@slsa3"},
+									Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
+								},
+							)
+							Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+
+							pr, err := f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+							Expect(err).NotTo(HaveOccurred())
+							defer func(pr *tektonpipeline.PipelineRun) {
+								err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+								if err != nil {
+									GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+								}
+								// Avoid blowing up PipelineRun usage
+								err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
+								if err != nil {
+									Expect(err.Error()).To(ContainSubstring("not found"))
+								}
+							}(pr)
+
+							err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+							Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+
+							Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+
+							// Refresh our copy of the PipelineRun for latest results
+							pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
+							Expect(err).NotTo(HaveOccurred())
+							GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
+
+							// The UI uses this label to display additional information.
+							Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+
+							// The UI uses this label to display additional information.
+							tr, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify")
+							Expect(err).NotTo(HaveOccurred())
+							GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
+							Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+
+							logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
+							Expect(err).NotTo(HaveOccurred())
+
+							// The logs from the report step are used by the UI to display validation
+							// details. Let's make sure it has valid JSON.
+							reportLogs := logs["step-report-json"]
+							Expect(reportLogs).NotTo(BeEmpty())
+							var report any
+							err = json.Unmarshal([]byte(reportLogs), &report)
+							Expect(err).NotTo(HaveOccurred())
+
+							// The logs from the summary step are used by the UI to display an overview of
+							// the validation.
+							summaryLogs := logs["step-summary"]
+							GinkgoWriter.Printf("got step-summary log: %s\n", summaryLogs)
+							Expect(summaryLogs).NotTo(BeEmpty())
+							var summary build.TestOutput
+							err = json.Unmarshal([]byte(summaryLogs), &summary)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(summary).NotTo(Equal(build.TestOutput{}))
+						})
+					}
+				})
+
 			})
 		}
 
 		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
-			component, err := kubeadminClient.HasController.GetComponent(symlinkComponentName, testNamespace)
+			component, err := f.AsKubeAdmin.HasController.GetComponent(symlinkComponentName, testNamespace)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(kubeadminClient.HasController.WaitForComponentPipelineToBeFinished(component, "",
-				kubeadminClient.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 
 	})
@@ -765,6 +823,7 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle string, pipelin
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -782,17 +841,71 @@ func enableHermeticBuildInPipelineBundle(customDockerBuildBundle string, pipelin
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
 	return newDockerBuildPipeline.String(), nil
+}
+
+// this function takes a bundle and mediaType value as inputs and creates a bundle with param BUILDAH_FORMAT=<mediaType>
+// and then push the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
+func enableDockerMediaTypeInPipelineBundle(customDockerBuildBundle string, pipelineBundleName constants.BuildPipelineType, mediaType string) (string, error) {
+	var tektonObj runtime.Object
+	var err error
+	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
+	// Extract docker-build pipeline as tekton object from the bundle
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
+	// Update BUILDAH_FORMAT params value to <mediaType> (received as a function input) only for the required tasks
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		if t.Name == "build-container" || t.Name == "build-image-index" || t.Name == "sast-coverity-check" || t.Name == "build-images" {
+			exist := false
+			for param_idx := range t.Params {
+				param := &t.Params[param_idx]
+				if param.Name == "BUILDAH_FORMAT" {
+					param.Value = *tektonpipeline.NewStructuredValues(mediaType)
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				// param wasn't updated, add it as new param
+				t.Params = append(t.Params, tektonpipeline.Param{Name: "BUILDAH_FORMAT", Value: *tektonpipeline.NewStructuredValues(mediaType)})
+			}
+		}
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
+	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
+	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	return newDockerBuildPipeline.String(), nil
+
 }
 
 // this function takes a bundle and additonalTags string slice as inputs
@@ -802,6 +915,7 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelin
 	var tektonObj runtime.Object
 	var err error
 	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
 	// Extract docker-build pipeline as tekton object from the bundle
 	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
 		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
@@ -818,17 +932,63 @@ func applyAdditionalTagsInPipelineBundle(customDockerBuildBundle string, pipelin
 	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
 		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
 	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
+
 	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
 	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
 	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
 	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
 	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
 	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
 		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
 	}
 	return newDockerBuildPipeline.String(), nil
+}
+
+// this function takes a bundle and workindDirMount string as inputs
+// and creates a bundle with added WORKINDDIR_MOUNT param in the buildah task
+// and then pushes the bundle to quay using format: quay.io/<QUAY_E2E_ORGANIZATION>/test-images:<generated_tag>
+func addWorkingDirMountInPipelineBundle(customDockerBuildBundle string, pipelineBundleName constants.BuildPipelineType, workingDirMount string) (string, error) {
+	var tektonObj runtime.Object
+	var err error
+	var newPipelineYaml []byte
+	var authenticator authn.Authenticator
+	// Extract docker-build pipeline as tekton object from the bundle
+	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(customDockerBuildBundle, "pipeline", pipelineBundleName); err != nil {
+		return "", fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
+	}
+	dockerPipelineObject := tektonObj.(*tektonpipeline.Pipeline)
+	// Update WORKINGDIR_MOUNT param value for build-container task
+	for i := range dockerPipelineObject.PipelineSpec().Tasks {
+		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
+		if t.Name == "build-container" {
+			t.Params = append(t.Params, tektonpipeline.Param{Name: "WORKINGDIR_MOUNT", Value: tektonpipeline.ParamValue{
+				Type:      tektonpipeline.ParamTypeString,
+				StringVal: workingDirMount,
+			}})
+		}
+	}
+	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
+		return "", fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
+	}
+
+	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
+	quayOrg := utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, constants.DefaultQuayOrg)
+	newDockerBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
+	var newDockerBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newDockerBuildPipelineImg, tag))
+	// Build and Push the tekton bundle
+	if authenticator, err = utils.GetAuthenticatorForImageRef(newDockerBuildPipeline, os.Getenv("QUAY_TOKEN")); err != nil {
+		return "", fmt.Errorf("error when getting authenticator: %v", err)
+	}
+	authOption := remoteimg.WithAuth(authenticator)
+	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newDockerBuildPipeline, authOption); err != nil {
+		return "", fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
+	}
+	return newDockerBuildPipeline.String(), nil
+
 }
 
 func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpipeline.PipelineRun) {

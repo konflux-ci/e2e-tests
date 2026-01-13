@@ -15,7 +15,7 @@ var ImageControllerCIRule = rulesengine.Rule{Name: "image-controller repo CI Wor
 		&ImageControllerRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&BootstrapClusterWithSprayProxyRuleChain,
+		rulesengine.Any{rulesengine.None{&BootstrapClusterWithSprayProxyRuleChain}, &BootstrapClusterWithSprayProxyRuleChain},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteTestAction)},
 }

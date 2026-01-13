@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -27,10 +27,9 @@ import (
 )
 
 const (
-	advsServiceAccountName = "release-service-account"
-	advsCatalogPathInRepo  = "pipelines/managed/rh-advisories/rh-advisories.yaml"
-	advsGitSourceURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
-	advsGitSrcSHA          = "33ff89edf85fb01a37d3d652d317080223069fc7"
+	advsCatalogPathInRepo = "pipelines/managed/rh-advisories/rh-advisories.yaml"
+	advsGitSourceURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-python-basic-release"
+	advsGitSrcSHA         = "33ff89edf85fb01a37d3d652d317080223069fc7"
 )
 
 var advsComponentName = "advs-comp-" + util.GenerateRandomString(4)
@@ -81,7 +80,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-retry-s3-staging-secret", atlasAWSFieldEnvMap)
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(advsApplicationName, devNamespace)
@@ -93,7 +92,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 
 			createADVSEnterpriseContractPolicy(advsEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(*devFw, advsComponentName, advsApplicationName, devNamespace, sampleImage, advsGitSourceURL, advsGitSrcSHA, "", "", "", "")
+			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, advsComponentName, advsApplicationName, devNamespace, sampleImage, advsGitSourceURL, advsGitSrcSHA, "", "", "", "")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
@@ -116,15 +115,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 
 		var _ = Describe("Post-release verification", func() {
 
-			It("verifies the advs release pipelinerun is running and succeeds", func() {
+			It("verifies if release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
+			})
 
+			It("verifies the advs release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
@@ -169,7 +170,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 				Expect(err).NotTo(HaveOccurred())
 				advisoryURL := releasePR.Status.PipelineRunStatusFields.Results[0].Value.StringVal
-				pattern := `https://access\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
+				pattern := `https://access\.stage\.redhat\.com/errata/(RHBA|RHSA|RHEA)-\d{4}:\d+`
 				re, err := regexp.Compile(pattern)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(re.MatchString(advisoryURL)).To(BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
@@ -269,7 +270,7 @@ func createADVSReleasePlanAdmission(advsRPAName string, managedFw framework.Fram
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, advsServiceAccountName, []string{advsAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(advsRPAName, managedNamespace, "", devNamespace, advsECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{advsAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

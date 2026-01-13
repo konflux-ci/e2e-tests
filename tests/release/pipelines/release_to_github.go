@@ -6,37 +6,36 @@ import (
 	"strings"
 	"time"
 
+	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	ecp "github.com/enterprise-contract/enterprise-contract-controller/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	"github.com/devfile/library/v2/pkg/util"
-	"knative.dev/pkg/apis"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	sampServiceAccountName = "release-service-account"
-	sampSourceGitURL       = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
-	sampGitSrcSHA          = "6b56d05ac8abb4c24d153e9689209a1018402aad"
-	sampRepoOwner          = "redhat-appstudio-qe"
-	sampRepo               = "devfile-sample-go-basic"
-	sampCatalogPathInRepo  = "pipelines/managed/release-to-github/release-to-github.yaml"
+	sampSourceGitURL      = "https://github.com/redhat-appstudio-qe/devfile-sample-go-basic"
+	sampGitSrcSHA         = "6b56d05ac8abb4c24d153e9689209a1018402aad"
+	sampRepoOwner         = "redhat-appstudio-qe"
+	sampRepo              = "devfile-sample-go-basic"
+	sampCatalogPathInRepo = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
 var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
@@ -94,10 +93,10 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, constants.DefaultPipelineServiceAccount, true)
+			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
@@ -110,8 +109,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
-			snapshot, err = releasecommon.CreateSnapshotWithImageSource(*devFw, sampComponentName, sampApplicationName, devNamespace, sampleImage, sampSourceGitURL, sampGitSrcSHA, "", "", "", "")
-                        Expect(err).ShouldNot(HaveOccurred())
+			snapshot, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, sampComponentName, sampApplicationName, devNamespace, sampleImage, sampSourceGitURL, sampGitSrcSHA, "", "", "", "")
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		AfterAll(func() {
@@ -137,15 +136,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 		var _ = Describe("Post-release verification", func() {
 
-			It("verifies release pipelinerun is running and succeeds", func() {
+			It("verifies if release CR is created", func() {
 				Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
+			})
 
+			It("verifies the release pipelinerun is running and succeeds", func() {
 				Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
@@ -237,7 +238,7 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, sampServiceAccountName, []string{sampAppName}, true, &tektonutils.PipelineRef{
+	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{sampAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
 		Params: []tektonutils.Param{
 			{Name: "url", Value: releasecommon.RelSvcCatalogURL},

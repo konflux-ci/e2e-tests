@@ -97,8 +97,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			err = gitClient.DeleteBranch(helloWorldRepository, pacBranchName)
@@ -115,7 +115,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 			}
 
-			Expect(gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)).To(Succeed())
+			if gitProvider == git.GitLabProvider {
+				err = gitClient.CleanupWebhooks(strings.Split(helloWorldRepository, "/")[1], f.ClusterAppDomain)
+			} else {
+				err = gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)
+			}
+			if err != nil {
+				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+			}
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
@@ -136,7 +143,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -262,10 +269,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("PR branch should not exist in the repo", func() {
 				timeout = time.Second * 60
 				interval = time.Second * 1
-				Eventually(func() bool {
+				Eventually(func() (bool, error) {
 					exists, err := gitClient.BranchExists(helloWorldRepository, customDefaultComponentBranch)
-					Expect(err).ShouldNot(HaveOccurred())
-					return exists
+					if err != nil {
+						Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+						return false, nil
+					}
+					return exists, nil
 				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", customDefaultComponentBranch, helloWorldComponentGitSourceRepoName))
 			})
 
@@ -312,7 +322,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -350,7 +360,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
 				prHeadSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
@@ -392,9 +402,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is public", imageRepoName))
 				Expect(isPublic).To(BeTrue(), fmt.Sprintf("Expected image repo '%s' to be changed to public, but it is private", imageRepoName))
 			})
+
 			It("image tag is updated successfully", func() {
 				// check if the image tag exists in quay
-				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
+				// ✅ CORRECT: Use the prHeadSha to get the specific successful PipelineRun
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, prHeadSha)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for _, p := range plr.Spec.Params {
@@ -403,9 +415,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					}
 				}
 				Expect(outputImage).ToNot(BeEmpty(), "output image %s of the component could not be found", outputImage)
-				isExists, err := build.DoesTagExistsInQuay(outputImage)
-				Expect(err).ShouldNot(HaveOccurred(), "error while checking if the output image %s exists in quay", outputImage)
-				Expect(isExists).To(BeTrue(), "image tag does not exists in quay")
+
+				// Wait for image to be pushed to Quay - there can be a delay after PipelineRun completion
+				Eventually(func() bool {
+					isExists, err := build.DoesTagExistsInQuay(outputImage)
+					if err != nil {
+						GinkgoWriter.Printf("Error checking if image tag exists in Quay: %v\n", err)
+						return false
+					}
+					if !isExists {
+						GinkgoWriter.Printf("Image tag %s not yet available in Quay, retrying...\n", outputImage)
+					} else {
+						GinkgoWriter.Printf("Image tag %s successfully found in Quay\n", outputImage)
+					}
+					return isExists
+				}, time.Minute*3, time.Second*10).Should(BeTrue(), fmt.Sprintf("image tag %s does not exist in quay after timeout", outputImage))
 			})
 
 			It("should ensure pruning labels are set", func() {
@@ -428,8 +452,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
-					expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -482,7 +506,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
 			})
 			It("PipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, createdFileSHA,
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", createdFileSHA, "",
 					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the git branch head ref
 				createdFileSHA = plr.Labels["pipelinesascode.tekton.dev/sha"]
@@ -493,8 +517,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
-					expectedNote := fmt.Sprintf("**Pipelines as Code CI/%s-on-pull-request** has successfully validated your commit", customBranchComponentName)
-					f.AsKubeAdmin.HasController.GitLab.ValidateNoteInMergeRequestComment(helloWorldComponentGitLabProjectID, expectedNote, prNumber)
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -507,7 +531,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(helloWorldRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Println("merged result sha:", mergeResultSha)
@@ -530,8 +554,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("pipelineRun should eventually finish", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component,
-					mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					mergeResultSha, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 				mergeResultSha = plr.Labels["pipelinesascode.tekton.dev/sha"]
 			})
 
@@ -549,6 +573,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
 				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				// Wait for one minute so that all the pipelineruns deleted successfully
+				Eventually(func() bool {
+					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
+					if componentPipelineRun != nil {
+						GinkgoWriter.Printf("found pipelinerun: %s\n", componentPipelineRun.GetName())
+					}
+					return componentPipelineRun == nil
+				}, time.Minute*3, time.Second*5).Should(BeTrue(), "all the pipelineruns are not deleted, still some pipelineruns exists")
+
 				Eventually(func() error {
 					_, err := f.AsKubeAdmin.ImageController.ChangeVisibilityToPrivate(testNamespace, applicationName, customBranchComponentName)
 					if err != nil {
@@ -571,6 +604,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				isPublic, err := build.IsImageRepoPublic(imageRepoName)
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
+			})
+			It("retrigger the pipeline manually", func() {
+				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(customBranchComponentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, testNamespace)).To(Succeed())
+				// Check the pipelinerun is triggered
+				Eventually(func() error {
+					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(customBranchComponentName, applicationName, testNamespace, "build", "", "incoming")
+					if err != nil {
+						GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", testNamespace, customBranchComponentName)
+						return err
+					}
+					if !plr.HasStarted() {
+						return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", plr.GetNamespace(), plr.GetName())
+					}
+					return nil
+				}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", testNamespace, customBranchComponentName))
+			})
+			It("retriggered pipelineRun should eventually finish", func() {
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 			})
 		})
 
@@ -618,7 +669,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -635,7 +686,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return nil
-				}, timeout, interval).Should(BeNil())
+				}, timeout, interval).ShouldNot(HaveOccurred())
 			})
 		})
 	},
@@ -681,8 +732,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -728,7 +779,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 							},
 						},
 					}
-					component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 
@@ -766,7 +817,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				})
 
 				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "",
+					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
 				})
 
@@ -774,7 +825,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Eventually(func() error {
 						mergeResult, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(multiComponentGitSourceRepoName, prNumber)
 						return err
-					}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentGitSourceRepoName))
+					}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, multiComponentGitSourceRepoName))
 
 					mergeResultSha = mergeResult.GetSHA()
 					GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -852,15 +903,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err = fw.AsKubeAdmin.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = fw.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, namespace, "", "", appName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 
 			})
 
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeAdmin.HasController.DeleteApplication(appName, namespace, false)).To(Succeed())
-					Expect(fw.SandboxController.DeleteUserSignup(fw.UserName)).To(BeTrue())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				}
 			})
 
@@ -928,8 +979,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 			// Delete new branches created by PaC
@@ -998,7 +1049,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj1, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("creates second component", func() {
@@ -1015,7 +1066,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					},
 				}
-				_, err := f.AsKubeAdmin.HasController.CreateComponent(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err := f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj2, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -1104,8 +1155,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 
 		})
@@ -1131,7 +1182,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(invalidBuildAnnotation, buildPipelineAnnotation))
 				Expect(component).ToNot(BeNil())
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -1193,7 +1244,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				ComponentName:  fmt.Sprintf("build-suite-test-component-image-source-%s", util.GenerateRandomString(6)),
 				ContainerImage: containerImageSource,
 			}
-			_, err = f.AsKubeAdmin.HasController.CreateComponent(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
+			_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// get the build pipeline bundle annotation
@@ -1202,10 +1253,8 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 			}
 		})
 
@@ -1313,10 +1362,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Repository string
 			}{Name: ParentComponentDef.componentName, Repository: distributionRepository})
 			rawData, err := json.Marshal(&data)
+			Expect(err).NotTo(HaveOccurred())
 
 			GinkgoWriter.Printf("ReleaseAdmissionPlan data: %s", string(rawData))
+			managedServiceAccount, err := f.AsKubeAdmin.CommonController.CreateServiceAccount("release-service-account", managedNamespace, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", constants.DefaultPipelineServiceAccount, []string{applicationName}, false, &tektonutils.PipelineRef{
+
+			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = f.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission("demo", managedNamespace, "", f.UserNamespace, "demo", "release-service-account", []string{applicationName}, true, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
 					{Name: "url", Value: constants.RELEASE_CATALOG_DEFAULT_URL},
@@ -1341,8 +1396,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ParentComponentDef.componentName, testNamespace, true)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ChildComponentDef.componentName, testNamespace, true)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.SandboxController.DeleteUserSignup(f.UserName)).To(BeTrue())
 			}
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
 
@@ -1352,11 +1408,23 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				println("deleting branch " + c.componentBranch)
 				err = gitClient.DeleteBranch(repositories[i], c.componentBranch)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
 				}
 				err = gitClient.DeleteBranch(repositories[i], c.pacBranchName)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("Branch Not Found")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
+				}
+
+				// Cleanup parent repo webhooks
+				err = gitClient.CleanupWebhooks(componentDependenciesParentRepoName, f.ClusterAppDomain)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
+
+				// Cleanup child repo webhooks
+				err = gitClient.CleanupWebhooks(componentDependenciesChildRepoName, f.ClusterAppDomain)
+				if err != nil {
+					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
 				}
 			}
 		})
@@ -1382,7 +1450,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					if comp.repoName == componentDependenciesParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
 					}
-					comp.component, err = f.AsKubeAdmin.HasController.CreateComponent(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})
@@ -1403,7 +1471,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", ParentComponentDef.componentName, testNamespace))
 			})
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
 				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), "")
 				Expect(err).ShouldNot(HaveOccurred())
 				for _, result := range pr.Status.PipelineRunStatusFields.Results {
@@ -1411,11 +1479,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						parentFirstDigest = result.Value.StringVal
 					}
 				}
-				Expect(parentFirstDigest).ShouldNot(BeEmpty())
+				Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun status results: %v", pr.Status.PipelineRunStatusFields.Results))
 			})
 
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for child component %s", ChildComponentDef.componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
 			})
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for child component %s", ChildComponentDef.componentName), func() {
@@ -1440,7 +1508,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(childRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1503,7 +1571,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(parentRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1527,7 +1595,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// Wait for this PR to be done and store the digest, we will need it to verify that the nudge was correct
 			It(fmt.Sprintf("PAC PipelineRun for parent component %s is successful", ParentComponentDef.componentName), func() {
 				pr := &pipeline.PipelineRun{}
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, mergeResultSha, f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, pr)).To(Succeed())
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", mergeResultSha, "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, pr)).To(Succeed())
 
 				for _, result := range pr.Status.PipelineRunStatusFields.Results {
 					if result.Name == "IMAGE_DIGEST" {
@@ -1557,7 +1625,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
 					return err
-				}, time.Minute).Should(BeNil(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)

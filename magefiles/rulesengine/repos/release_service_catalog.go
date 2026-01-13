@@ -3,6 +3,7 @@ package repos
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -22,7 +23,7 @@ var ReleaseServiceCatalogCIPairedRule = rulesengine.Rule{Name: "Release-service-
 		&ReleaseServiceCatalogRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&InstallKonfluxRule,
+		rulesengine.Any{rulesengine.None{&InstallKonfluxRule}, &InstallKonfluxRule},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteReleaseCatalogPairedAction)},
 }
@@ -37,7 +38,7 @@ var ReleaseServiceCatalogCIRule = rulesengine.Rule{Name: "Release-service-catalo
 		&ReleaseServiceCatalogRepoSetDefaultSettingsRule,
 		rulesengine.Any{&InfraDeploymentsPRPairingRule, rulesengine.None{&InfraDeploymentsPRPairingRule}},
 		&PreflightInstallGinkgoRule,
-		&InstallKonfluxRule,
+		rulesengine.Any{rulesengine.None{&InstallKonfluxRule}, &InstallKonfluxRule},
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteReleaseCatalogAction)},
 }
@@ -48,8 +49,25 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 		IsReleaseServiceCatalogRepoPR,
 	},
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		rctx.LabelFilter = "release-service-catalog"
-		klog.Info("setting 'release-service-catalog' test label")
+		// The job may come from different ITS
+		if strings.Contains(rctx.JobName, "konflux-e2e-tests-catalog") {
+			testcases, err := selectReleasePipelinesTestCases(rctx.PrNum)
+			if err != nil {
+				rctx.LabelFilter = "release-pipelines"
+				klog.Errorf("an error occurred in selectReleasePipelinesTestCases: %s", err)
+			} else {
+				rctx.LabelFilter = strings.ReplaceAll(testcases, " ", "||")
+			}
+		} else {
+			parts := strings.Split(rctx.JobName, "-e2e-test")
+			if len(parts) > 0 {
+				rctx.LabelFilter = parts[0]
+			} else {
+				rctx.LabelFilter = "no-test-case"
+				klog.Errorf("the JobName %s is not in the format of <its-name>-e2e-test-xxx", rctx.JobName)
+			}
+		}
+		klog.Info("setting test label for release-pipelines: ", rctx.LabelFilter)
 
 		if rctx.DryRun {
 			klog.Info("setting up env vars for deploying component image")
@@ -64,7 +82,9 @@ var ReleaseServiceCatalogRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "Ge
 		} else {
 			os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", rctx.ComponentEnvVarPrefix), rctx.PrCommitSha)
 		}
-		os.Setenv("DEPLOY_ONLY", "application-api dev-sso enterprise-contract has pipeline-service integration internal-services release")
+
+		// Failed at https://github.com/redhat-appstudio/infra-deployments/blob/2228e063a7fd8af4a95b24bb13ce7360cdc229f0/hack/preview.sh#L293C16-L293C38
+		//os.Setenv("DEPLOY_ONLY", "application-api dev-sso enterprise-contract has pipeline-service integration internal-services release")
 
 		if rctx.IsPaired && !strings.Contains(rctx.JobName, "rehearse") {
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", rctx.ComponentEnvVarPrefix),
@@ -96,12 +116,23 @@ var isPaired = func(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 func ExecuteReleaseCatalogPairedAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "release-pipelines && !fbc-tests && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-redhat-io && !rhtap-service-push"
+	rctx.LabelFilter += " && !fbc-release && !multiarch-advisories && !rh-advisories && !release-to-github && !rh-push-to-registry-redhat-io && !rhtap-service-push"
 	return ExecuteTestAction(rctx)
 }
 
 func ExecuteReleaseCatalogAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "release-pipelines"
 	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
+}
+
+func selectReleasePipelinesTestCases(prNum int) (string, error) {
+	command := fmt.Sprintf("%s %s %d", "magefiles/rulesengine/scripts/find_release_pipelines_from_pr.sh", "konflux-ci/release-service-catalog", prNum)
+	cmd := exec.Command("bash", "-c", command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Errorf("failed in selectReleasePipelinesTestCases function for PR: %d", prNum)
+		klog.Infof("the output from find_release_pipelines_from_pr: %s", string(output))
+		return "", err
+	}
+	return string(output), nil
 }

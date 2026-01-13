@@ -1,11 +1,13 @@
 package journey
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"time"
 
-import logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
+	logging "github.com/konflux-ci/e2e-tests/tests/load-tests/pkg/logging"
 
-import framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+	framework "github.com/konflux-ci/e2e-tests/pkg/framework"
+)
 
 func purgeStage(f *framework.Framework, namespace string) error {
 	var err error
@@ -18,6 +20,11 @@ func purgeStage(f *framework.Framework, namespace string) error {
 	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
 		return fmt.Errorf("Error when deleting components in namespace %s: %v", namespace, err)
+	}
+
+	err = f.AsKubeDeveloper.HasController.DeleteAllImageRepositoriesInASpecificNamespace(namespace, time.Minute*5)
+	if err != nil {
+		return fmt.Errorf("Error when deleting image repositories in namespace %s: %v", namespace, err)
 	}
 
 	err = f.AsKubeDeveloper.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)
@@ -35,25 +42,23 @@ func purgeStage(f *framework.Framework, namespace string) error {
 }
 
 func purgeCi(f *framework.Framework, username string) error {
-	var err error
-
-	_, err = f.SandboxController.DeleteUserSignup(username)
+	err := f.AsKubeAdmin.CommonController.DeleteNamespace(f.UserNamespace)
 	if err != nil {
-		return fmt.Errorf("Error when deleting user signup %s: %v", username, err)
+		return fmt.Errorf("error when deleting namespace %s for user %s: %v", f.UserNamespace, username, err)
 	}
 
-	logging.Logger.Debug("Finished purging user %s", username)
+	logging.Logger.Debug("Finished purging namespace %s for user %s", f.UserNamespace, username)
 	return nil
 }
 
 func Purge() error {
-	if !MainContexts[0].Opts.Purge {
+	if !PerUserContexts[0].Opts.Purge {
 		return nil
 	}
 
 	errCounter := 0
 
-	for _, ctx := range MainContexts {
+	for _, ctx := range PerUserContexts {
 		if ctx.Opts.Stage {
 			err := purgeStage(ctx.Framework, ctx.Namespace)
 			if err != nil {

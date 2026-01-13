@@ -142,9 +142,25 @@ const (
 	RELEASE_CATALOG_DEFAULT_URL      = "https://github.com/konflux-ci/release-service-catalog.git"
 	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
 
+	// We are running tests against 2 types of test environments:
+	//
+	// * downstream - Konflux deployed from infra-deployments repo, typically on OCP or ROSA
+	//
+	// * upstream - Konflux deployed from konflux-ci repo, typically running on Kind cluster
+	//
+	// This env var is meant to be used in the framework to apply a different framework init
+	// or a test configuration based on the provided value
+	// By default it should use "downstream"
+	TEST_ENVIRONMENT_ENV = "TEST_ENVIRONMENT"
+
 	// Test namespace's required labels
 	ArgoCDLabelKey   string = "argocd.argoproj.io/managed-by"
 	ArgoCDLabelValue string = "gitops-service-argocd"
+	// Label for marking a namespace as a tenant namespace
+	TenantLabelKey   string = "konflux-ci.dev/type"
+	TenantLabelValue string = "tenant"
+	// Label for marking a namespace with the workspace label
+	WorkspaceLabelKey string = "appstudio.redhat.com/workspace_name"
 
 	BuildPipelinesConfigMapDefaultNamespace = "build-templates"
 
@@ -190,9 +206,7 @@ const (
 
 	TektonTaskTestOutputName = "TEST_OUTPUT"
 
-	DefaultPipelineServiceAccount            = "appstudio-pipeline"
-	DefaultPipelineServiceAccountRoleBinding = "appstudio-pipelines-runner-rolebinding"
-	DefaultPipelineServiceAccountClusterRole = "appstudio-pipelines-runner"
+	DefaultPipelineServiceAccount = "konflux-integration-runner"
 
 	PaCPullRequestBranchPrefix = "konflux-"
 
@@ -238,11 +252,24 @@ const (
 	CheckrunConclusionSuccess = "success"
 	CheckrunConclusionFailure = "failure"
 	CheckrunStatusCompleted   = "completed"
+	CheckrunConclusionNeutral = "neutral"
 
 	DockerBuild                   BuildPipelineType = "docker-build"
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
 	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
 	FbcBuilder                    BuildPipelineType = "fbc-builder"
+
+	// Test environments
+	DownstreamTestEnvironment string = "downstream"
+	UpstreamTestEnvironment   string = "upstream"
+
+	// A cluster role used to be bound to a user that has admin access to all Konflux resources in a specific namespace
+	// https://github.com/konflux-ci/konflux-ci/blob/2772e3b648ce1c1ae05f31e77732063c4103de09/konflux-ci/rbac/core/konflux-admin-user-actions.yaml
+	KonfluxAdminUserActionsClusterRoleName = "konflux-admin-user-actions"
+	// Default role binding name
+	DefaultKonfluxAdminRoleBindingName = "user2-konflux-admin"
+	// Default user name available after deploying upstream version of konflux-ci
+	DefaultKonfluxCIUserName = "user2@konflux.dev"
 )
 
 var (
@@ -254,4 +281,14 @@ var (
 	DefaultDockerBuildPipelineBundleAnnotation  = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "docker-build", "bundle": "latest"}`}
 	DefaultFbcBuilderPipelineBundle             = map[string]string{"build.appstudio.openshift.io/pipeline": `{"name": "fbc-builder", "bundle": "latest"}`}
 	ComponentMintmakerDisabledAnnotation        = map[string]string{"mintmaker.appstudio.redhat.com/disabled": "true"}
+	GitLabProjectIdsMap                         = map[string]string{"hacbs-test-project-integration": "56586709", "devfile-sample-hello-world": "60038001", "build-nudge-parent": "62134305", "build-nudge-child": "62134341"}
 )
+
+func GetGitLabProjectId(repoName string) string {
+	for name, id := range GitLabProjectIdsMap {
+		if name == repoName {
+			return id
+		}
+	}
+	return ""
+}

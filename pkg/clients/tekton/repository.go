@@ -15,5 +15,11 @@ func (t *TektonController) GetRepositoryParams(name, namespace string) ([]pacv1a
 	if err != nil {
 		return nil, err
 	}
+
+	// Check if Params is nil to avoid panic
+	if repositoryObj.Spec.Params == nil {
+		return []pacv1alpha1.Params{}, nil
+	}
+
 	return *repositoryObj.Spec.Params, nil
 }

@@ -24,7 +24,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	dockerconfig "github.com/docker/cli/cli/config"
+	dockerconfigfile "github.com/docker/cli/cli/config/configfile"
+	dockerconfigtypes "github.com/docker/cli/cli/config/types"
+
 	"github.com/devfile/library/v2/pkg/util"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/magefile/mage/sh"
@@ -35,9 +41,8 @@ import (
 )
 
 type Options struct {
-	ToolchainApiUrl string
-	KeycloakUrl     string
-	OfflineToken    string
+	ApiUrl string
+	Token  string
 }
 
 // check options are valid or not
@@ -52,16 +57,12 @@ func CheckOptions(optionsArr []Options) (bool, error) {
 
 	options := optionsArr[0]
 
-	if options.ToolchainApiUrl == "" {
-		return true, fmt.Errorf("ToolchainApiUrl field is empty")
+	if options.ApiUrl == "" {
+		return true, fmt.Errorf("ApiUrl field is empty")
 	}
 
-	if options.KeycloakUrl == "" {
-		return true, fmt.Errorf("KeycloakUrl field is empty")
-	}
-
-	if options.OfflineToken == "" {
-		return true, fmt.Errorf("OfflineToken field is empty")
+	if options.Token == "" {
+		return true, fmt.Errorf("Token field is empty")
 	}
 
 	return true, nil
@@ -450,4 +451,69 @@ func GetChangedFiles(repo string) (rulesengine.Files, error) {
 	klog.Infof("The following files, %s, were changed!", changes.String())
 
 	return changes, nil
+}
+
+// getAuthForImageRef searches a given Docker configuration file for authentication credentials
+// that match the provided image reference. It attempts to find the most specific match first
+// (e.g., full repository name), then falls back to less specific matches (e.g., namespace,
+// or just the registry host). It returns the first suitable AuthConfig found.
+func getAuthForImageRef(cfg *dockerconfigfile.ConfigFile, imageRef name.Reference) (dockerconfigtypes.AuthConfig, error) {
+	// Extract namespace from image reference repository
+	// i.e. namespace/repository -> namespace
+	var namespace string
+	parts := strings.Split(imageRef.Context().RepositoryStr(), "/")
+	if len(parts) > 1 {
+		namespace = parts[0]
+	}
+
+	matchingEntries := []string{
+		// quay.io/namespace/repo
+		imageRef.Context().Name(),
+		// quay.io/namespace
+		fmt.Sprintf("%s/%s", imageRef.Context().RegistryStr(), namespace),
+		// quay.io
+		imageRef.Context().RegistryStr(),
+	}
+
+	for _, entry := range matchingEntries {
+		authConfig, err := cfg.GetAuthConfig(entry)
+		if err != nil {
+			return authConfig, fmt.Errorf("failed to get auth config for %s: %+v", entry, err)
+		}
+		if authConfig.ServerAddress == entry && authConfig.Username != "" {
+			return authConfig, nil
+		}
+	}
+
+	return dockerconfigtypes.AuthConfig{}, fmt.Errorf("no suitable auth config matches image ref %s", imageRef.String())
+}
+
+// GetAuthenticatorForImageRef decodes a base64-encoded Docker configuration JSON string,
+// loads it into a Docker config object, and then uses it to find appropriate
+// authentication credentials for the given image reference. If suitable credentials
+// (with a username) are found, it returns an `authn.Authenticator` instance
+// that can be used for authenticating with container registries.
+func GetAuthenticatorForImageRef(imageRef name.Reference, encodedDockerconfigjson string) (authenticator authn.Authenticator, err error) {
+	var rawRegistryCreds []byte
+	if rawRegistryCreds, err = base64.StdEncoding.DecodeString(encodedDockerconfigjson); err != nil {
+		return authenticator, fmt.Errorf("unable to decode container registry credentials: %v", err)
+	}
+	dockerConfig, err := dockerconfig.LoadFromReader(strings.NewReader(string(rawRegistryCreds)))
+	if err != nil {
+		return authenticator, fmt.Errorf("failed to load docker config from supplied dockerconfigjson: %+v", err)
+	}
+	// Resolve credentials for a specified image reference
+	authConfig, err := getAuthForImageRef(dockerConfig, imageRef)
+	if err != nil {
+		return authenticator, fmt.Errorf("failed to get auth for image ref: %+v", err)
+	}
+
+	if authConfig.Username != "" {
+		klog.Infof("found credentials for image ref %s -> user: %s\n", imageRef.String(), authConfig.Username)
+		return authn.FromConfig(authn.AuthConfig{
+			Username: authConfig.Username,
+			Password: authConfig.Password,
+		}), nil
+	}
+	return authenticator, fmt.Errorf("did not find any suitable credentials for image ref %s", imageRef.String())
 }
