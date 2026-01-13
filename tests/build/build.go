@@ -149,7 +149,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It("correctly targets the default branch (that is not named 'main') with PaC", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -343,7 +343,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It("should lead to a PaC init PR creation", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
@@ -488,7 +488,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It("should lead to a PaC init PR update", func() {
 				timeout = time.Second * 300
-				interval = time.Second * 1
+				interval = time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(helloWorldRepository)
@@ -800,7 +800,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 				It(fmt.Sprintf("should lead to a PaC PR creation for component %s", componentName), func() {
 					timeout = time.Second * 300
-					interval := time.Second * 1
+					interval := time.Second * 5
 
 					Eventually(func() bool {
 						prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentGitSourceRepoName)
@@ -1488,7 +1488,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			It(fmt.Sprintf("should lead to a PaC PR creation for child component %s", ChildComponentDef.componentName), func() {
 				timeout = time.Second * 300
-				interval := time.Second * 1
+				interval := time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(childRepository)
@@ -1552,7 +1552,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// This actually happens immediately, but we only need the PR number now
 			It(fmt.Sprintf("should lead to a PaC PR creation for parent component %s", ParentComponentDef.componentName), func() {
 				timeout = time.Second * 300
-				interval := time.Second * 1
+				interval := time.Second * 5
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(parentRepository)
@@ -1606,7 +1606,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), func() {
 				timeout = time.Minute * 20
-				interval := time.Second * 1
+				interval := time.Second * 10
 
 				Eventually(func() bool {
 					prs, err := gitClient.ListPullRequests(componentDependenciesChildRepository)
