@@ -130,3 +130,9 @@
   regexp: 'init container failed, ..prepare.. exited with code 137: ContainerStatusUnknown'
   test_dir:
   - run-stone-stg-rh01-2026_01_11T19_09_19_153000000_00_00
+- id: pod_creation_failed_because_quay_io_502_bad_gateway
+  note: Pod creation failed due to Quay 502
+  reason: Pod creation failed because quay.io 502 Bad Gateway
+  regexp: 'failed to create task run pod .*: translating TaskSpec to Pod: GET https://quay.io/v2/: unexpected status code 502 Bad Gateway. Maybe missing or invalid Task'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_12T18_45_41_298000000_00_00

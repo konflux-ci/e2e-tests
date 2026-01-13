@@ -523,3 +523,9 @@
   regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .*: error requesting remote resource: error updating resource request .* with data: etcdserver: request timed out'
   test_dir:
   - run-stone-stg-rh01-2026_01_12T05_39_19_860000000_00_00
+- id: repo_templating_failed_when_merging_pr_on_api_github_com_because_500_error
+  note: Merging failed on GitHub side with 500
+  reason: Repo templating failed when merging PR on api.github.com because 500 error
+  regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 500'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_12T12_24_17_497000000_00_00
