@@ -176,7 +176,8 @@
   note: ''
   reason: Timeout forking the repo before the actual test
   regexp: 'Repo forking failed: Error forking project .*: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-kflux-rhel-p01-2026_01_08T08_39_19_264000000_00_00
 - id: test_pipeline_failed
   note: ''
   reason: Test Pipeline failed
