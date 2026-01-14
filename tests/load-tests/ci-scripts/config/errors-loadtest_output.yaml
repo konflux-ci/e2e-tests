@@ -141,8 +141,9 @@
 - id: couldnt_get_pipeline_via_git_resolver_from_gitlab_cee_due_to_429
   note: ''
   reason: Couldnt get pipeline via git resolver from gitlab.cee due to 429
-  regexp: 'Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* status code: 429'
-  test_dir: []
+  regexp: 'Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* (status code: 429|The requested URL returned error: 429)'
+  test_dir:
+  - run-kflux-rhel-p01-2026_01_14T01_06_32_545000000_00_00
 - id: timeout_listing_pipeline_runs
   note: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs
@@ -475,6 +476,7 @@
   regexp: 'Repo-templating workflow component cleanup failed: Merging \d+ failed: PUT https://gitlab.cee.redhat.com/api/v4/projects/[^/]+/[^/]+/merge_requests/\d+/merge: 422 {message: Branch cannot be merged}'
   test_dir:
   - run-kflux-ocp-p01-2026_01_12T05_15_19_169000000_00_00
+  - run-stone-prod-p02-2026_01_13T14_54_37_317000000_00_00
 - id: repo_templating_failed_when_merging_pr_on_github_com_because_502
   note: ''
   reason: Repo templating failed when merging PR on github.com because 502
@@ -529,3 +531,9 @@
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 500'
   test_dir:
   - run-stone-prd-rh01-2026_01_12T12_24_17_497000000_00_00
+- id: release_pipeline_run_failed_because_git_clone_authentication_required
+  note: ''
+  reason: Release pipeline run failed because git clone authentication required
+  regexp: 'Release pipeline run failed: PipelineRun .* failed: .* Reason:CouldntGetPipeline Message:Error retrieving pipeline for pipelinerun .*: resolver failed to get Pipeline : error requesting remote resource: error getting "Git" ".*": error resolving repository: clone error: authentication required'
+  test_dir:
+  - run-stone-prod-p02-2026_01_13T17_05_43_269000000_00_00
