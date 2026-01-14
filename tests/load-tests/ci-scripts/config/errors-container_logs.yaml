@@ -117,7 +117,8 @@
   note: ''
   reason: Error allocating host because of provisioning error
   regexp: 'Error allocating host: failed to provision host'
-  test_dir: []
+  test_dir:
+  - run-stone-prd-rh01-2026_01_14T06_09_30_026000000_00_00
 - id: script_rpm_verifier_was_probbaly_oomkilled_had_no_output
   note: This tool should detect OOMKills from TaskRun/Pod manifests
   reason: Script rpm_verifier was probbaly OOMKilled (had no output)
@@ -127,7 +128,8 @@
   note: ''
   reason: Error allocating host because all available hosts failed
   regexp: 'Error allocating host: all available hosts for the platform have failed'
-  test_dir: []
+  test_dir:
+  - run-kflux-prd-rh03-2026_01_13T23_45_19_660000000_00_00
 - id: script_merge_catalogs_sh_due_to_permission_error
   note: ''
   reason: Script merge_catalogs.sh due to permission error
@@ -484,7 +486,7 @@
 - id: image_pull_failed_due_to_gateway_time_out
   note: ''
   reason: Image pull failed due to Gateway Time-out
-  regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out)'
+  regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|Error: setting up to read manifest|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out|504 \(Gateway Timeout\))'
   test_dir:
   - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00
   - run-kflux-ocp-p01-2026_01_13T05_50_19_354000000_00_00
@@ -505,3 +507,9 @@
   regexp: 'Error response from registry: recognizable error message not found: PUT "https://quay.io/v2/[^"]+": response status code 502: Bad Gateway'
   test_dir:
   - run-kflux-rhel-p01-2026_01_13T03_39_18_768000000_00_00
+- id: failed_to_read_image_from_quay_io_due_to_network_unreachable
+  note: ''
+  reason: Failed to read image from quay.io due to network unreachable
+  regexp: 'error: unable to read image quay.io/.*: Get "https://quay.io/v2/": dial tcp .*: connect: network is unreachable'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_14T05_03_44_722000000_00_00

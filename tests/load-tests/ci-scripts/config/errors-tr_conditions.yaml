@@ -21,7 +21,7 @@
 - id: skip
   note: Another special error to avoid printing 'Unknown error:' message
   reason: SKIP
-  regexp: '\"message\": ?\"\\\"[a-zA-Z0-9-]+\\\" exited with code 1\"'
+  regexp: '"message": ?\"..[a-zA-Z0-9-]+.. exited with code 1(: Error)?\"'
   test_dir: []
 - id: back_off_pulling_task_run_image_from_quay_io
   note: ''
