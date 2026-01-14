@@ -142,8 +142,7 @@
   note: ''
   reason: Couldnt get pipeline via git resolver from gitlab.cee due to 429
   regexp: 'Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* (status code: 429|The requested URL returned error: 429)'
-  test_dir:
-  - run-kflux-rhel-p01-2026_01_14T01_06_32_545000000_00_00
+  test_dir: []
 - id: timeout_listing_pipeline_runs
   note: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs

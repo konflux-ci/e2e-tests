@@ -488,7 +488,6 @@
   reason: Image pull failed due to Gateway Time-out
   regexp: '(Back-off pulling image|Error parsing image name|Error: initializing source docker|Error: setting up to read manifest|failed to pull the image).* (504 Gateway Time-out|received unexpected HTTP status: 504 Gateway Time-out|504 \(Gateway Timeout\))'
   test_dir:
-  - run-stone-prd-rh01-2025_12_22T01_02_27_684000000_00_00
   - run-kflux-ocp-p01-2026_01_13T05_50_19_354000000_00_00
 - id: taskrun_failed_because_aws_ec2_insufficientinstancecapacity
   note: AWS capacity issue for specific instance types
