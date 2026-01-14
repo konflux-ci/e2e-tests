@@ -37,7 +37,8 @@
   note: ''
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git fetch error: error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429'
-  test_dir: []
+  test_dir:
+  - run-stone-prod-p02-2026_01_07T14_23_41_190000000_00_00
 - id: failed_application_creation_when_calling_mapplication_kb_io_webhook
   note: ''
   reason: Failed application creation when calling mapplication.kb.io webhook
@@ -147,7 +148,8 @@
   note: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-stage-p01-2026_01_07T12_33_19_547000000_00_00
 - id: repo_forking_failed_because_github_token_expired
   note: ''
   reason: Repo forking failed because GitHub token expired
@@ -158,7 +160,8 @@
   note: ''
   reason: Failed to merge MR on CEE GitLab due to 405
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: [Pp][Uu][Tt] .*https://gitlab.cee.redhat.com/api/.*/merge_requests/[0-9]+/merge.*message: 405 Method Not Allowed'
-  test_dir: []
+  test_dir:
+  - run-stone-stage-p01-2026_01_07T20_33_20_357000000_00_00
 - id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_manifest_unknown
   note: ''
   reason: Couldnt get task via buldles resolver from quay.io due to manifest unknown
@@ -404,7 +407,8 @@
   note: ''
   reason: Timeout waiting for test pipeline to finish
   regexp: 'Test Pipeline Run failed run: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-stg-rh01-2026_01_07T21_09_17_455000000_00_00
 - id: timeout_waiting_for_release_to_succeed
   note: ''
   reason: Timeout waiting for release to succeed

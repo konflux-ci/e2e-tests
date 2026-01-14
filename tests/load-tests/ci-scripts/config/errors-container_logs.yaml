@@ -334,7 +334,8 @@
   note: ''
   reason: Failed downloading rpms for hermetic builds due to 504 errors
   regexp: 'mock-hermetic-repo.*urllib3.exceptions.MaxRetryError: HTTPSConnectionPool.*: Max retries exceeded with url: .*.rpm .Caused by ResponseError..too many 504 error responses...'
-  test_dir: []
+  test_dir:
+  - run-stone-prd-rh01-2026_01_07T19_44_19_165000000_00_00
 - id: error_from_github_api_when_getting_release_service_catalog_last_commit_sha
   note: ''
   reason: Error from GitHub API when getting release-service-catalog last commit SHA
