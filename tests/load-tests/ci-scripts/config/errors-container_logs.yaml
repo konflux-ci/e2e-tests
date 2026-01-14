@@ -22,7 +22,8 @@
   note: ''
   reason: Error allocating host because ETCD timeouted
   regexp: 'Error allocating host: etcdserver: request timed out'
-  test_dir: []
+  test_dir:
+  - run-stone-prod-p02-2026_01_08T02_13_52_792000000_00_00
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
@@ -209,7 +210,8 @@
   note: ''
   reason: Can not find Dockerfile
   regexp: Cannot find Dockerfile [^ ]+
-  test_dir: []
+  test_dir:
+  - run-stone-stg-rh01-2026_01_12T01_09_18_556000000_00_00
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_500_internal_server_error
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of 500 Internal Server Error
@@ -513,3 +515,15 @@
   regexp: 'error: unable to read image quay.io/.*: Get "https://quay.io/v2/": dial tcp .*: connect: network is unreachable'
   test_dir:
   - run-stone-prd-rh01-2026_01_14T05_03_44_722000000_00_00
+- id: pipeline_failed_because_quay_io_returned_context_deadline_exceeded
+  note: ''
+  reason: Pipeline failed because quay.io returned context deadline exceeded
+  regexp: 'error: unable to read image quay\.io/.*: Get "https://quay\.io/v2/": context deadline exceeded'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_14T12_03_47_595000000_00_00
+- id: pipeline_failed_because_quay_io_was_unreachable_over_network
+  note: ''
+  reason: Pipeline failed because quay.io was unreachable over network
+  regexp: 'Error: Get "https://quay\.io/v2/.*": dial tcp \[.*\]:443: connect: network is unreachable'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_14T12_44_28_581000000_00_00
