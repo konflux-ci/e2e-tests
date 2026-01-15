@@ -3,6 +3,7 @@
 FROM registry.access.redhat.com/ubi10/go-toolset:latest AS builder_go
 # Download dependencies based on just these two files to be able to cache the layer
 COPY go.mod go.sum .
+RUN whoami && ls -l /opt/app-root/src/go.*
 RUN go mod download -x
 # Copy rest of the source code and build it
 COPY ../../ e2e-tests
