@@ -2,7 +2,8 @@
   note: ''
   reason: Timeout forking the repo before the actual test
   regexp: 'Repo forking failed: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-kflux-prd-rh03-2026_01_11T07_45_19_281000000_00_00
 - id: application_creation_timed_out_waiting_for_quota_evaluation
   note: ''
   reason: Application creation timed out waiting for quota evaluation
@@ -48,7 +49,8 @@
   note: ''
   reason: Couldnt get task via bundles resolver because control characters in yaml
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .* invalid runtime object: yaml: control characters are not allowed'
-  test_dir: []
+  test_dir:
+  - run-kflux-prd-rh03-2026_01_08T15_14_23_613000000_00_00
 - id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_429
   note: ''
   reason: Couldnt get task via buldles resolver from quay.io due to 429
@@ -171,7 +173,8 @@
   note: ''
   reason: Timeout getting PaC pull number when validating component
   regexp: 'Component failed validation: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-prod-p02-2026_01_08T17_44_57_997000000_00_00
 - id: timeout_forking_the_repo_before_the_actual_test_1
   note: ''
   reason: Timeout forking the repo before the actual test
@@ -247,7 +250,8 @@
   note: ''
   reason: Timeout waiting for release pipeline to be created
   regexp: 'Release pipeline run failed creation: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-prod-p02-2026_01_08T17_01_20_554000000_00_00
 - id: failed_component_creation_because_resource_quota_evaluation_timed_out
   note: ''
   reason: Failed component creation because resource quota evaluation timed out
@@ -299,11 +303,6 @@
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to get file [^ ]+/COMPONENT-pull-request.yaml from repo konflux-probe-test-templates revision main: error when listing file contents: GET https://api.github.com/repos/rhtap-perf-test/konflux-probe-test-templates/contents/[^ ]+/COMPONENT-pull-request.yaml.*: 401 Bad credentials'
   test_dir:
   - run-kflux-ocp-p01-2026_01_09T15_50_15_335000000_00_00
-- id: timeout_listing_pipeline_runs_0
-  note: ''
-  reason: Timeout listing pipeline runs
-  regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
-  test_dir: []
 - id: failed_creating_integration_test_scenario_because_of_timeout
   note: ''
   reason: Failed creating integration test scenario because of timeout
@@ -383,12 +382,14 @@
   note: ''
   reason: Error deleting on-pull-request default PipelineRun
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-prd-rh01-2026_01_08T17_44_36_778000000_00_00
 - id: timeout_waiting_for_test_pipeline_to_create
   note: ''
   reason: Timeout waiting for test pipeline to create
   regexp: 'Test Pipeline Run failed creation: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-kflux-prd-rh03-2026_01_12T19_45_20_055000000_00_00
 - id: couldnt_get_pipeline_via_bundles_resolver_from_quay_io_due_to_429
   note: ''
   reason: Couldnt get pipeline via bundles resolver from quay.io due to 429

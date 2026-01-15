@@ -527,3 +527,9 @@
   regexp: 'Error: Get "https://quay\.io/v2/.*": dial tcp \[.*\]:443: connect: network is unreachable'
   test_dir:
   - run-stone-prd-rh01-2026_01_14T12_44_28_581000000_00_00
+- id: release_pipeline_failed_because_failed_to_get_commit_sha_from_api_github_com
+  note: ''
+  reason: Release pipeline failed because failed to get commit SHA from api.github.com
+  regexp: \+ curl -s https://api\.github\.com/repos/.* \+\+ jq -r '\.sha // ""' \+ sha= *$
+  test_dir:
+  - run-stone-prd-rh01-2026_01_14T09_03_00_254000000_00_00
