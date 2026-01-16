@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/xanzy/go-gitlab"
 
 	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
@@ -28,12 +28,12 @@ func (gc *GitlabClient) CreateBranch(projectID, newBranchName, defaultBranch str
 	}
 
 	// Wait for the branch to actually exist
-	Eventually(func(gomega Gomega) {
+	gomega.Eventually(func(gm gomega.Gomega) {
 		exist, err := gc.ExistsBranch(projectID, newBranchName)
-		gomega.Expect(err).NotTo(HaveOccurred())
-		gomega.Expect(exist).To(BeTrue())
+		gm.Expect(err).NotTo(gomega.HaveOccurred())
+		gm.Expect(exist).To(gomega.BeTrue())
 
-	}, 2*time.Minute, 2*time.Second).Should(Succeed())
+	}, 2*time.Minute, 2*time.Second).Should(gomega.Succeed())
 
 	return nil
 }
@@ -170,12 +170,12 @@ func (gc *GitlabClient) CreateFile(projectId, pathToFile, fileContent, branchNam
 func (gc *GitlabClient) GetFile(projectId, pathToFile, branchName string) (string, error) {
 	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
 	if err != nil {
-		return "", fmt.Errorf("Failed to get file: %v", err)
+		return "", fmt.Errorf("failed to get file: %v", err)
 	}
 
 	decodedContent, err := base64.StdEncoding.DecodeString(file.Content)
 	if err != nil {
-		return "", fmt.Errorf("Failed to decode file content: %v", err)
+		return "", fmt.Errorf("failed to decode file content: %v", err)
 	}
 	fileContentString := string(decodedContent)
 
@@ -196,13 +196,13 @@ func (gc *GitlabClient) UpdateFile(projectId, pathToFile, fileContent, branchNam
 
 	_, _, err := gc.client.RepositoryFiles.UpdateFile(projectId, pathToFile, updateOptions)
 	if err != nil {
-		return "", fmt.Errorf("Failed to update/create file: %v", err)
+		return "", fmt.Errorf("failed to update/create file: %v", err)
 	}
 
 	// Well, this is not atomic, but best I figured.
 	file, _, err := gc.client.RepositoryFiles.GetFile(projectId, pathToFile, gitlab.Ptr(gitlab.GetFileOptions{Ref: gitlab.Ptr(branchName)}))
 	if err != nil {
-		return "", fmt.Errorf("Failed to get file: %v", err)
+		return "", fmt.Errorf("failed to get file: %v", err)
 	}
 
 	return file.CommitID, nil
@@ -217,7 +217,7 @@ func (gc *GitlabClient) GetCommitStatusConclusion(statusName, projectID, commitS
 	var matchingStatus *gitlab.CommitStatus
 	timeout := time.Minute * 10
 
-	Eventually(func() bool {
+	gomega.Eventually(func() bool {
 		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
 		if err != nil {
 			fmt.Printf("got error when listing commit statuses: %+v\n", err)
@@ -230,9 +230,9 @@ func (gc *GitlabClient) GetCommitStatusConclusion(statusName, projectID, commitS
 			}
 		}
 		return false
-	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to appear for %s", commitSHA))
+	}, timeout, time.Second*2).Should(gomega.BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to appear for %s", commitSHA))
 
-	Eventually(func() bool {
+	gomega.Eventually(func() bool {
 		statuses, _, err := gc.client.Commits.GetCommitStatuses(projectID, commitSHA, &gitlab.GetCommitStatusesOptions{})
 		if err != nil {
 			fmt.Printf("got error when checking commit status: %+v\n", err)
@@ -250,7 +250,7 @@ func (gc *GitlabClient) GetCommitStatusConclusion(statusName, projectID, commitS
 			}
 		}
 		return false
-	}, timeout, time.Second*2).Should(BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to be completed for %s", commitSHA))
+	}, timeout, time.Second*2).Should(gomega.BeTrue(), fmt.Sprintf("timed out waiting for the PaC commit status to be completed for %s", commitSHA))
 
 	return matchingStatus.Status
 }
@@ -263,10 +263,10 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 		if getResp != nil && getResp.StatusCode == http.StatusNotFound {
 			return nil
 		} else {
-			return fmt.Errorf("Error getting project %s: %v", projectID, getErr)
+			return fmt.Errorf("error getting project %s: %v", projectID, getErr)
 		}
 	}
-	if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+	if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID + "-deletion_scheduled-")) {
 		// We asked for repo like "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale"
 		// and got "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale-deleted-138805"
 		// and that means repo was moved by being deleted for a first
@@ -284,11 +284,11 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil
 		}
-		return fmt.Errorf("Error deleting project %s: %w", projectID, err)
+		return fmt.Errorf("error deleting project %s: %w", projectID, err)
 	}
 
 	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("Unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
+		return fmt.Errorf("unexpected status code when deleting project %s: %d", projectID, resp.StatusCode)
 	}
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -302,7 +302,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 			}
 		}
 
-		if getProj.PathWithNamespace != projectID && strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") {
+		if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID + "-deletion_scheduled-")) {
 			errDel := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
 			if errDel != nil {
 				return false, errDel
@@ -310,7 +310,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 			return true, nil
 		}
 
-		fmt.Printf("Repo %s still exists: %v\n", projectID, getResp)
+		fmt.Printf("Repo %s still exists: %+v\n", projectID, getResp)
 		return false, nil
 	}, time.Second * 10, time.Minute * 5)
 
@@ -327,7 +327,7 @@ func (gc *GitlabClient) DeleteRepositoryReally(projectID string) error {
 	}
 	_, err := gc.client.Projects.DeleteProject(projectID, opts)
 	if err != nil {
-		return fmt.Errorf("Error on permanently deleting project %s: %w", projectID, err)
+		return fmt.Errorf("error on permanently deleting project %s: %w", projectID, err)
 	}
 	return nil
 }
@@ -357,11 +357,11 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 		return true, nil
 	}, time.Second * 10, time.Minute * 5)
 	if err != nil {
-		return nil, fmt.Errorf("Error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
+		return nil, fmt.Errorf("error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
 	}
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
-		return nil, fmt.Errorf("Unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
 	}
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -369,20 +369,21 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 
 		forkedProject, _, getErr = gc.client.Projects.GetProject(forkedProject.ID, nil)
 		if getErr != nil {
-			return false, fmt.Errorf("Error getting forked project status for %s (ID: %d): %w", forkedProject.Name, forkedProject.ID, getErr)
+			return false, fmt.Errorf("error getting forked project status for %s (ID: %d): %w", forkedProject.Name, forkedProject.ID, getErr)
 		}
 
-		if forkedProject.ImportStatus == "finished" {
+		switch forkedProject.ImportStatus {
+		case "finished":
 			return true, nil
-		} else if forkedProject.ImportStatus == "failed" || forkedProject.ImportStatus == "timeout" {
-			return false, fmt.Errorf("Forking of project %s (ID: %d) failed with import status: %s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
+		case "failed", "timeout":
+			return false, fmt.Errorf("forking of project %s (ID: %d) failed with import status: %s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
 		}
 
 		return false, nil
 	}, time.Second * 10, time.Minute * 10)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
+		return nil, fmt.Errorf("error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
 	}
 
 	return forkedProject, nil

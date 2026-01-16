@@ -54,7 +54,7 @@ func (c CosignResult) IsPresent() bool {
 
 // Missing checks if CosignResult is missing.
 func (c CosignResult) Missing(prefix string) string {
-	var ret []string = make([]string, 0, 2)
+	ret := make([]string, 0, 2)
 	if c.SignatureImageRef == "" {
 		ret = append(ret, prefix+".sig")
 	}

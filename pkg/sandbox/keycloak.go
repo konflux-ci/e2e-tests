@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
@@ -209,7 +209,7 @@ func (s *SandboxController) KeycloakUserExists(realm string, token string, usern
 	///admin/realms/{my-realm}/users?search={username}
 	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/admin/realms/%s/users?username=%s", s.KeycloakUrl, realm, username), strings.NewReader(""))
 	if err != nil {
-		GinkgoWriter.Printf("failed to create an HTTP request in order to get a keycloak user: %+v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed to create an HTTP request in order to get a keycloak user: %+v\n", err)
 		return false
 	}
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -218,14 +218,14 @@ func (s *SandboxController) KeycloakUserExists(realm string, token string, usern
 	response, err := s.HttpClient.Do(request)
 
 	if err != nil {
-		GinkgoWriter.Printf("failed when searching for a keycloak user: %+v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed when searching for a keycloak user: %+v\n", err)
 		return false
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		GinkgoWriter.Printf("failed to read a response body from keycloak server: %+v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed to read a response body from keycloak server: %+v\n", err)
 		return false
 	}
 	// Keycloak API server returns status code 200 even if no user is found, thus we need to parse the response body
@@ -233,7 +233,7 @@ func (s *SandboxController) KeycloakUserExists(realm string, token string, usern
 	var users []any
 	err = json.Unmarshal(body, &users)
 	if err != nil {
-		GinkgoWriter.Printf("failed when unmarshalling response body: %+v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed when unmarshalling response body: %+v\n", err)
 	}
 
 	return len(users) > 0

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
@@ -69,7 +69,7 @@ func CleanupWebhooks(f *framework.Framework, repoName string) error {
 	for _, h := range hooks {
 		hookUrl := h.Config["url"].(string)
 		if strings.Contains(hookUrl, f.ClusterAppDomain) {
-			GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
+			ginkgo.GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
 			err = f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())
 			if err != nil {
 				return err

@@ -11,12 +11,12 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails when missing ReleasePlan and ReleasePlanAdmission.", Label("release-service", "release-neg", "negMissingReleasePlan"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails when missing ReleasePlan and ReleasePlanAdmission.", ginkgo.Label("release-service", "release-neg", "negMissingReleasePlan"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
@@ -29,18 +29,18 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 	var destinationReleasePlanAdmissionName = "sre-production"
 	var releaseName = "release"
 
-	AfterEach(framework.ReportFailure(&fw))
+	ginkgo.AfterEach(framework.ReportFailure(&fw))
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		devNamespace = fw.UserNamespace
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Error when creating namespace '%s': %v", managedNamespace, err)
 
 		_, err = fw.AsKubeAdmin.IntegrationController.CreateSnapshotWithComponents(snapshotName, "", releasecommon.ApplicationName, devNamespace, []v1alpha1.SnapshotComponent{})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicy, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationName}, false, &tektonutils.PipelineRef{
 			Resolver: "git",
@@ -50,39 +50,39 @@ var _ = framework.ReleaseServiceSuiteDescribe("[HACBS-2360] Release CR fails whe
 				{Name: "pathInRepo", Value: "pipelines/managed/e2e/e2e.yaml"},
 			},
 		}, nil)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateRelease(releaseName, devNamespace, snapshotName, releasecommon.SourceReleasePlanName)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 
-	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(Succeed())
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
+	ginkgo.AfterAll(func() {
+		if !ginkgo.CurrentSpecReport().Failed() {
+			gomega.Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).To(gomega.Succeed())
+			gomega.Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(gomega.Succeed())
 		}
 	})
 
-	var _ = Describe("post-release verification.", func() {
-		It("missing ReleasePlan makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
-			Eventually(func() bool {
+	var _ = ginkgo.Describe("post-release verification.", func() {
+		ginkgo.It("missing ReleasePlan makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
+			gomega.Eventually(func() bool {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if releaseCR.HasReleaseFinished() {
-					return !(releaseCR.IsValid() && releaseCR.IsReleased()) &&
+					return (!releaseCR.IsValid() || !releaseCR.IsReleased()) &&
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(BeTrue())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.BeTrue())
 		})
-		It("missing ReleasePlanAdmission makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
-			Eventually(func() bool {
+		ginkgo.It("missing ReleasePlanAdmission makes a Release CR set as failed in both IsReleased and IsValid with a proper message to user.", func() {
+			gomega.Expect(fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(destinationReleasePlanAdmissionName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Eventually(func() bool {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetRelease(releaseName, "", devNamespace)
 				if releaseCR.HasReleaseFinished() {
-					return !(releaseCR.IsValid() && releaseCR.IsReleased()) &&
+					return (!releaseCR.IsValid() || !releaseCR.IsReleased()) &&
 						strings.Contains(releaseCR.Status.Conditions[0].Message, "Release validation failed")
 				}
 				return false
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(BeTrue())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.BeTrue())
 		})
 	})
 })

@@ -11,7 +11,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,7 +82,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 		err = i.KubeRest().List(context.Background(), list, &client.ListOptions{LabelSelector: labels.SelectorFromSet(pipelineRunLabels), Namespace: namespace})
 
 		if err != nil && !k8sErrors.IsNotFound(err) {
-			GinkgoWriter.Printf("error listing pipelineruns in %s namespace: %v", namespace, err)
+			ginkgo.GinkgoWriter.Printf("error listing pipelineruns in %s namespace: %v", namespace, err)
 			return false, nil
 		}
 
@@ -97,7 +97,7 @@ func (i *IntegrationController) GetBuildPipelineRun(componentName, applicationNa
 		}
 
 		pipelineRun = &tektonv1.PipelineRun{}
-		GinkgoWriter.Printf("no pipelinerun found for component %s %s", componentName, utils.GetAdditionalInfo(applicationName, namespace))
+		ginkgo.GinkgoWriter.Printf("no pipelinerun found for component %s %s", componentName, utils.GetAdditionalInfo(applicationName, namespace))
 		return false, nil
 	})
 
@@ -138,11 +138,11 @@ func (i *IntegrationController) WaitForIntegrationPipelineToGetStarted(testScena
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, shortTimeout, true, func(ctx context.Context) (done bool, err error) {
 		testPipelinerun, err = i.GetIntegrationPipelineRun(testScenarioName, snapshotName, appNamespace)
 		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenarioName, appNamespace, snapshotName)
+			ginkgo.GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenarioName, appNamespace, snapshotName)
 			return false, nil
 		}
 		if !testPipelinerun.HasStarted() {
-			GinkgoWriter.Println("pipelinerun %s/%s hasn't started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
+			ginkgo.GinkgoWriter.Println("pipelinerun %s/%s hasn't started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
 			return false, nil
 		}
 		return true, nil
@@ -157,10 +157,10 @@ func (i *IntegrationController) WaitForIntegrationPipelineToBeFinished(testScena
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, superLongTimeout, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
+			ginkgo.GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
 			return false, nil
 		}
-		GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
+		ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
 		if !pipelineRun.IsDone() {
 			return false, nil
@@ -197,7 +197,7 @@ func (i *IntegrationController) WaitForAllIntegrationPipelinesToBeFinished(testN
 	for _, testScenario := range *integrationTestScenarios {
 		testScenario := testScenario
 		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
-			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			ginkgo.GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
 			err = i.WaitForIntegrationPipelineToBeFinished(&testScenario, snapshot, testNamespace)
 			if err != nil {
 				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to get finished in %s namespace. Error: %v", testScenario.Name, testNamespace, err)
@@ -220,7 +220,7 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromAllIntegrationPi
 	for _, testScenario := range *integrationTestScenarios {
 		testScenario := testScenario
 		if len(expectedTestScenarios) == 0 || i.isScenarioInExpectedScenarios(&testScenario, expectedTestScenarios) {
-			GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
+			ginkgo.GinkgoWriter.Printf("Integration test scenario %s is found\n", testScenario.Name)
 			err = i.WaitForFinalizerToGetRemovedFromIntegrationPipeline(&testScenario, snapshot, testNamespace)
 			if err != nil {
 				return fmt.Errorf("error occurred while waiting for Integration PLR (associated with IntegrationTestScenario: %s) to NOT have the finalizer. Error: %v", testScenario.Name, err)
@@ -236,11 +236,11 @@ func (i *IntegrationController) WaitForFinalizerToGetRemovedFromIntegrationPipel
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, shortTimeout, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetIntegrationPipelineRun(testScenario.Name, snapshot.Name, appNamespace)
 		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
+			ginkgo.GinkgoWriter.Println("PipelineRun has not been created yet for test scenario %s and snapshot %s/%s", testScenario.GetName(), snapshot.GetNamespace(), snapshot.GetName())
 			return false, nil
 		}
 		if controllerutil.ContainsFinalizer(pipelineRun, "test.appstudio.openshift.io/pipelinerun") {
-			GinkgoWriter.Printf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
+			ginkgo.GinkgoWriter.Printf("build pipelineRun %s/%s still contains the finalizer: %s", pipelineRun.GetNamespace(), pipelineRun.GetName(), "test.appstudio.openshift.io/pipelinerun")
 			return false, nil
 		}
 
@@ -263,13 +263,13 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 5*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, "")
 		if err != nil {
-			GinkgoWriter.Printf("pipelinerun for Component %s/%s can't be gotten successfully. Error: %v", testNamespace, componentName, err)
+			ginkgo.GinkgoWriter.Printf("pipelinerun for Component %s/%s can't be gotten successfully. Error: %v", testNamespace, componentName, err)
 			return false, nil
 		}
 
 		annotationValue, _ := i.GetAnnotationIfExists(testNamespace, applicationName, componentName, annotationKey)
 		if annotationValue == "" {
-			GinkgoWriter.Printf("build pipelinerun %s/%s doesn't contain annotation %s yet", testNamespace, pipelineRun.Name, annotationKey)
+			ginkgo.GinkgoWriter.Printf("build pipelinerun %s/%s doesn't contain annotation %s yet", testNamespace, pipelineRun.Name, annotationKey)
 			return false, nil
 		}
 		return true, nil
@@ -278,18 +278,18 @@ func (i *IntegrationController) WaitForBuildPipelineRunToGetAnnotated(testNamesp
 
 // WaitForBuildPipelineToBeFinished wait for given build pipeline to finish.
 // It exposes the error message from the failed task to the end user when the pipelineRun failed.
-func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) (error, string) {
+func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, applicationName, componentName, sha string) (string, error) {
 	var logs string
 	// sllep 5 mins before starting to get build PLR's final state since one build PLR need at 6 mins to reduce the useless calls
 	time.Sleep(5 * time.Minute)
-	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	return logs, wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := i.GetBuildPipelineRun(componentName, applicationName, testNamespace, false, sha)
 		if err != nil {
-			GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s, and component %s", testNamespace, applicationName, componentName)
+			ginkgo.GinkgoWriter.Println("Build pipelineRun has not been created yet for app %s/%s, and component %s", testNamespace, applicationName, componentName)
 			return false, nil
 		}
 		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if !pipelineRun.IsDone() {
 				return false, nil
@@ -303,7 +303,7 @@ func (i *IntegrationController) WaitForBuildPipelineToBeFinished(testNamespace, 
 			}
 		}
 		return false, nil
-	}), logs
+	})
 }
 
 func (i *IntegrationController) IsIntegrationPipelinerunCancelled(integrationTestScenarioName string, snapshot *appstudioApi.Snapshot) (bool, error) {

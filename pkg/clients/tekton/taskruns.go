@@ -189,14 +189,14 @@ func (t *TektonController) GetTaskRunResult(c crclient.Client, pr *pipeline.Pipe
 		return "", err
 	}
 
-	for _, trResult := range taskRun.Status.TaskRunStatusFields.Results {
+	for _, trResult := range taskRun.Status.Results {
 		if trResult.Name == result {
 			// for some reason the result might contain \n suffix
 			return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 		}
 	}
 	return "", fmt.Errorf(
-		"result %q not found in TaskRuns of PipelineRun %s/%s", result, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
+		"result %q not found in TaskRuns of PipelineRun %s/%s", result, pr.Namespace, pr.Name)
 }
 
 // GetTaskRunStatus returns the status of a specified taskRun.
@@ -212,7 +212,7 @@ func (t *TektonController) GetTaskRunStatus(c crclient.Client, pr *pipeline.Pipe
 		}
 	}
 	return nil, fmt.Errorf(
-		"TaskRun status for pipeline task name %q not found in the status of PipelineRun %s/%s", pipelineTaskName, pr.ObjectMeta.Namespace, pr.ObjectMeta.Name)
+		"TaskRun status for pipeline task name %q not found in the status of PipelineRun %s/%s", pipelineTaskName, pr.Namespace, pr.Name)
 }
 
 // DeleteAllTaskRunsInASpecificNamespace removes all TaskRuns from a given repository. Useful when creating a lot of resources and wanting to remove all of them.
@@ -235,14 +235,14 @@ func (t *TektonController) GetTaskRunParam(c crclient.Client, pr *pipeline.Pipel
 }
 
 func (t *TektonController) GetResultFromTaskRun(tr *pipeline.TaskRun, result string) (string, error) {
-	for _, trResult := range tr.Status.TaskRunStatusFields.Results {
+	for _, trResult := range tr.Status.Results {
 		if trResult.Name == result {
 			// for some reason the result might contain \n suffix
 			return strings.TrimSuffix(trResult.Value.StringVal, "\n"), nil
 		}
 	}
 	return "", fmt.Errorf(
-		"result %q not found in TaskRun %s/%s", result, tr.ObjectMeta.Namespace, tr.ObjectMeta.Name)
+		"result %q not found in TaskRun %s/%s", result, tr.Namespace, tr.Name)
 }
 
 func (t *TektonController) GetEnvVariable(tr *pipeline.TaskRun, envVar string) (string, error) {
@@ -254,7 +254,7 @@ func (t *TektonController) GetEnvVariable(tr *pipeline.TaskRun, envVar string) (
 		}
 	}
 	return "", fmt.Errorf(
-		"env var %q not found in TaskRun %s/%s", envVar, tr.ObjectMeta.Namespace, tr.ObjectMeta.Name,
+		"env var %q not found in TaskRun %s/%s", envVar, tr.Namespace, tr.Name,
 	)
 }
 

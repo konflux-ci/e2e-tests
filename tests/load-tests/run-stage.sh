@@ -8,8 +8,17 @@ options=""
 [[ -n "${PIPELINE_IMAGE_PULL_SECRETS:-}" ]] && for s in $PIPELINE_IMAGE_PULL_SECRETS; do options="$options --pipeline-image-pull-secrets $s"; done
 
 trap "date -Ins --utc >ended" EXIT
+
+if type loadtest &>/dev/null; then
+    cmd="loadtest"
+    echo "Running loadtest from $( type -p loadtest ) binary"
+else
+    cmd="go run loadtest.go"
+    echo "Running loadtest from $( pwd ) with '$cmd' command"
+fi
+
 date -Ins --utc >started
-go run loadtest.go \
+$cmd \
     --applications-count "${APPLICATIONS_COUNT:-1}" \
     --build-pipeline-selector-bundle "${BUILD_PIPELINE_SELECTOR_BUNDLE:-}" \
     --component-repo "${COMPONENT_REPO:-https://github.com/devfile-samples/devfile-sample-code-with-quarkus}" \
@@ -33,6 +42,7 @@ go run loadtest.go \
     --release-pipeline-url "${RELEASE_PIPELINE_URL:-https://github.com/konflux-ci/release-service-catalog.git}" \
     --release-pipeline-revision "${RELEASE_PIPELINE_REVISION:-production}" \
     --release-pipeline-path "${RELEASE_PIPELINE_PATH:-pipelines/managed/e2e/e2e.yaml}" \
+    --release-ociStorage "${OCI_STORAGE:-quay.io/rhtap-test-local/perf-release-service-trusted-artifacts}" \
     --release-pipeline-service-account "${RELEASE_PIPELINE_SERVICE_ACCOUNT:-release-serviceaccount}" \
     --runprefix "${USER_PREFIX:-undef}" \
     --waitintegrationtestspipelines="${WAIT_INTEGRATION_TESTS:-true}" \

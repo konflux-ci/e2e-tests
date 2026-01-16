@@ -20,7 +20,7 @@ func createReleasePlan(f *framework.Framework, namespace, appName string) (strin
 
 	_, err := f.AsKubeDeveloper.ReleaseController.CreateReleasePlan(name, namespace, appName, namespace, "true", nil, nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the ReleasePlan %s in %s: %v", name, namespace, err)
+		return "", fmt.Errorf("unable to create the releasePlan %s in %s: %v", name, namespace, err)
 	}
 
 	return name, nil
@@ -29,7 +29,7 @@ func createReleasePlan(f *framework.Framework, namespace, appName string) (strin
 
 // Create ReleasePlanAdmission CR
 // Assumes enterprise contract policy and service account with required permissions is already there
-func createReleasePlanAdmission(f *framework.Framework, namespace, appName, policyName, releasePipelineSAName, releasePipelineUrl, releasePipelineRevision, releasePipelinePath string) (string, error) {
+func createReleasePlanAdmission(f *framework.Framework, namespace, appName, policyName, releasePipelineSAName, releasePipelineUrl, releasePipelineRevision, releasePipelinePath string, releaseOciStorage string) (string, error) {
 	name := appName + "-rpa"
 	logging.Logger.Debug("Creating release plan admission %s in namespace %s with policy %s and pipeline SA %s", name, namespace, policyName, releasePipelineSAName)
 
@@ -40,11 +40,12 @@ func createReleasePlanAdmission(f *framework.Framework, namespace, appName, poli
 			{Name: "revision", Value: releasePipelineRevision},
 			{Name: "pathInRepo", Value: releasePipelinePath},
 		},
+		OciStorage: releaseOciStorage,
 	}
 	// CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension)
 	_, err := f.AsKubeDeveloper.ReleaseController.CreateReleasePlanAdmission(name, namespace, "", namespace, policyName, releasePipelineSAName, []string{appName}, true, pipeline, nil)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the ReleasePlanAdmission %s in %s: %v", name, namespace, err)
+		return "", fmt.Errorf("unable to create the releasePlanAdmission %s in %s: %v", name, namespace, err)
 	}
 
 	return name, nil
@@ -174,6 +175,7 @@ func HandleReleaseSetup(ctx *types.PerApplicationContext) error {
 		ctx.ParentContext.Opts.ReleasePipelineUrl,
 		ctx.ParentContext.Opts.ReleasePipelineRevision,
 		ctx.ParentContext.Opts.ReleasePipelinePath,
+		ctx.ParentContext.Opts.ReleaseOciStorage,
 	)
 	if err != nil {
 		return logging.Logger.Fail(93, "Release Plan Admission failed creation: %v", err)

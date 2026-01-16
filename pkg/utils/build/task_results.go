@@ -95,7 +95,7 @@ func fetchTaskRunResults(c crclient.Client, pr *pipeline.PipelineRun, pipelineTa
 		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
 			return nil, err
 		}
-		return taskRun.Status.TaskRunStatusFields.Results, nil
+		return taskRun.Status.Results, nil
 	}
 	return nil, fmt.Errorf(
 		"pipelineTaskName %q not found in PipelineRun %s/%s", pipelineTaskName, pr.GetName(), pr.GetNamespace())

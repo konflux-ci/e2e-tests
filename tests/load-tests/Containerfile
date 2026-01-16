@@ -1,0 +1,64 @@
+# Builder for Go
+# (this is to avoid installing all Golang dependencies to our runner image)
+FROM registry.access.redhat.com/ubi10/go-toolset:latest AS builder_go
+# Download dependencies based on just these two files to be able to cache the layer
+COPY go.mod go.sum .
+RUN go mod download -x
+# Copy rest of the source code and build it
+COPY ../../ e2e-tests
+RUN go build -C e2e-tests/tests/load-tests/ -v -o ../../../loadtest loadtest.go
+# Test executable is OK
+RUN ./loadtest --help
+
+
+
+# Builder for oc
+# (this is to awoid installing tar to our runner image)
+FROM registry.access.redhat.com/ubi10/ubi:latest AS builder_oc
+# Download and install it, try multiple times as this is error prone
+RUN attempt=1; \
+    while true; do \
+        echo "Attempt $attempt"; \
+        curl -v -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/openshift-client-linux.tar.gz && \
+            tar zxvf /tmp/openshift-client-linux.tar.gz -C /usr/bin/ && \
+            break; \
+        if [[ $attempt -ge 5 ]]; then \
+            echo "All attempts failed, giving up" >&2; \
+            exit 1; \
+        fi; \
+        sleep 1; \
+        let attempt+=1; \
+    done
+# Test it was installed correctly
+RUN oc version --client
+
+
+
+# Runner
+FROM registry.access.redhat.com/ubi10/python-312-minimal:latest
+# Copy loadtest binary from builder container
+COPY --from=builder_go /opt/app-root/src/loadtest /usr/bin/
+# Copy OpenShift CLI binary from builder container
+COPY --from=builder_oc /usr/bin/oc /usr/bin/
+COPY --from=builder_oc /usr/bin/kubectl /usr/bin/
+# Install internal CA certificate
+COPY tests/load-tests/ci-scripts/config/2022-IT-Root-CA.pem \
+     /etc/pki/ca-trust/source/anchors/2022-IT-Root-CA.pem
+USER 0
+RUN update-ca-trust
+# Install dependencies for our python scripts
+RUN INSTALL_PKGS="git-core jq" && \
+    microdnf -y --setopt=tsflags=nodocs --setopt=install_weak_deps=0 install $INSTALL_PKGS && \
+    microdnf -y clean all --enablerepo='*'
+USER 1001
+RUN python3 -m pip install -U pip && \
+    python3 -m pip install "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team-core&subdirectory=core" && \
+    python3 -m pip install tabulate matplotlib
+# Install our scripts
+COPY tests/load-tests/run-stage.sh \
+     tests/load-tests/evaluate.py \
+     tests/load-tests/errors.py \
+     ./
+COPY tests/load-tests/ci-scripts/ \
+     ./ci-scripts/
+CMD ["sleep", "5d"]

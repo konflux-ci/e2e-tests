@@ -154,8 +154,9 @@ class Something:
             tr_platform = None
             if "params" in tr["spec"]:
                 for p in tr["spec"]["params"]:
-                    if p["name"] == "PLATFORM":
+                    if p["name"] in ("PLATFORM", "image-arch", "image-platform", "platform"):
                         tr_platform = p["value"]
+                        break
 
             tr_steps = {}
             for s in tr["status"]["steps"]:

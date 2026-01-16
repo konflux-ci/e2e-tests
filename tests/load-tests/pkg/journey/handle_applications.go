@@ -13,9 +13,12 @@ import util "github.com/devfile/library/v2/pkg/util"
 
 func createApplication(f *framework.Framework, namespace string, runPrefix string) (string, error) {
 	name := fmt.Sprintf("%s-app-%s", runPrefix, util.GenerateRandomString(5))
+
+	logging.Logger.Debug("Creating application %s in namespace %s", name, namespace)
+
 	_, err := f.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(name, namespace, time.Minute*60)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the Application %s: %v", name, err)
+		return "", fmt.Errorf("unable to create the Application %s: %v", name, err)
 	}
 	return name, nil
 }
@@ -75,8 +78,6 @@ func HandleApplication(ctx *types.PerApplicationContext) error {
 	var iface interface{}
 	var err error
 	var ok bool
-
-	logging.Logger.Debug("Creating application %s in namespace %s", ctx.ApplicationName, ctx.ParentContext.Namespace)
 
 	iface, err = logging.Measure(
 		ctx,

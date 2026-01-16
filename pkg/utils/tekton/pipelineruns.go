@@ -262,7 +262,7 @@ func HasPipelineRunFailed(pr *pipeline.PipelineRun) bool {
 
 func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.PipelineRun) (*FailedPipelineRunDetails, error) {
 	d := &FailedPipelineRunDetails{}
-	for _, chr := range pipelineRun.Status.PipelineRunStatusFields.ChildReferences {
+	for _, chr := range pipelineRun.Status.ChildReferences {
 		taskRun := &pipeline.TaskRun{}
 		taskRunKey := types.NamespacedName{Namespace: pipelineRun.Namespace, Name: chr.Name}
 		if err := c.Get(context.Background(), taskRunKey, taskRun); err != nil {
@@ -272,7 +272,7 @@ func GetFailedPipelineRunDetails(c crclient.Client, pipelineRun *pipeline.Pipeli
 			if c.Reason == "Failed" {
 				d.FailedTaskRunName = taskRun.Name
 				d.PodName = taskRun.Status.PodName
-				for _, s := range taskRun.Status.TaskRunStatusFields.Steps {
+				for _, s := range taskRun.Status.Steps {
 					if s.Terminated != nil && (s.Terminated.Reason == "Error" || strings.Contains(s.Terminated.Reason, "Failed")) {
 						d.FailedContainerName = s.Container
 						return d, nil
