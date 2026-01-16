@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/conforma/crds/api/v1alpha1"
+	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -19,8 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 )
 
 const (
@@ -53,8 +53,8 @@ var (
 	fbcCompBaseBranchName string
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label("release-pipelines", "fbc-release"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", ginkgo.Pending, ginkgo.Label("release-pipelines", "fbc-release"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var (
 		devNamespace     = devWorkspace + "-tenant"
@@ -85,8 +85,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 		fbcPreGAECPolicyName            = "fbc-prega-policy-" + util.GenerateRandomString(4)
 	)
 
-	Describe("with FBC happy path", Label("fbcHappyPath"), func() {
-		BeforeAll(func() {
+	ginkgo.Describe("with FBC happy path", ginkgo.Label("fbcHappyPath"), func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
@@ -98,49 +98,49 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcApplicationName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Println("created application :", fbcApplicationName)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			ginkgo.GinkgoWriter.Println("created application :", fbcApplicationName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcReleasePlanName, devNamespace, fbcApplicationName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcEnterpriseContractPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", false)
 			createFBCEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
 			// delete CRs
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcApplicationName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcEnterpriseContractPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcReleasePlanAdmissionName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 			deleteTestBranches()
 		})
 
-		var _ = Describe("Post-release verification", func() {
-			It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
+		var _ = ginkgo.Describe("Post-release verification", func() {
+			ginkgo.It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
 				fbcComponent, fbcPacBranchName, fbcCompBaseBranchName = releasecommon.CreateComponentWithNewBranch(*devFw, devNamespace, fbcApplicationName, fbcCompRepoName, fbcSourceGitURL, fbcCompRevision, "4.13", fbcDockerFilePath, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultFbcBuilderPipelineBundle))
-				GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
+				ginkgo.GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
 			})
 
-			It("Creates a push snapshot for a release", func() {
+			ginkgo.It("Creates a push snapshot for a release", func() {
 				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcApplicationName, fbcCompRepoName, fbcPacBranchName, buildPipelineRun, fbcComponent)
 			})
 
-			It("verifies the fbc release pipelinerun is running and succeeds", func() {
+			ginkgo.It("verifies the fbc release pipelinerun is running and succeeds", func() {
 				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponent.GetName())
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
 				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcApplicationName, fbcComponent.GetName())
 			})
 		})
 	})
 
-	Describe("with FBC Staged Index", Label("fbcStagedIndex"), func() {
-		BeforeAll(func() {
+	ginkgo.Describe("with FBC Staged Index", ginkgo.Label("fbcStagedIndex"), func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 
@@ -153,50 +153,50 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcStagedAppName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Printf("Application %s is created", fbcStagedAppName)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			ginkgo.GinkgoWriter.Printf("Application %s is created", fbcStagedAppName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcStagedRPName, devNamespace, fbcStagedAppName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcStagedRPAName, *managedFw, devNamespace, managedNamespace, fbcStagedAppName, fbcStagedECPolicyName, relSvcCatalogPathInRepo, false, "", false, "", "", true)
 
 			createFBCEnterpriseContractPolicy(fbcStagedECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcStagedAppName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcStagedECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcStagedRPAName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcStagedAppName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcStagedECPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcStagedRPAName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 			deleteTestBranches()
 		})
 
-		var _ = Describe("Post-release verification", func() {
-			It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
+		var _ = ginkgo.Describe("Post-release verification", func() {
+			ginkgo.It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
 				fbcComponent, fbcPacBranchName, fbcCompBaseBranchName = releasecommon.CreateComponentWithNewBranch(*devFw, devNamespace, fbcStagedAppName, fbcCompRepoName, fbcSourceGitURL, fbcCompRevision, "4.13", fbcDockerFilePath, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultFbcBuilderPipelineBundle))
-				GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
+				ginkgo.GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
 			})
 
-			It("Creates a push snapshot for a release", func() {
+			ginkgo.It("Creates a push snapshot for a release", func() {
 				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcStagedAppName, fbcCompRepoName, fbcPacBranchName, stagedPipelineRun, fbcComponent)
 			})
 
-			It("verifies the fbc release pipelinerun is running and succeeds", func() {
+			ginkgo.It("verifies the fbc release pipelinerun is running and succeeds", func() {
 				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcStagedAppName, fbcComponent.GetName())
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
 				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcStagedAppName, fbcComponent.GetName())
 			})
 		})
 	})
 
-	Describe("with FBC hotfix process", Label("fbcHotfix"), func() {
+	ginkgo.Describe("with FBC hotfix process", ginkgo.Label("fbcHotfix"), func() {
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 
@@ -207,51 +207,51 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcHotfixAppName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Printf("Application %s is created", fbcHotfixAppName)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			ginkgo.GinkgoWriter.Printf("Application %s is created", fbcHotfixAppName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcHotfixRPName, devNamespace, fbcHotfixAppName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createFBCReleasePlanAdmission(fbcHotfixRPAName, *managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcHotfixECPolicyName, relSvcCatalogPathInRepo, true, issueId, false, "", "", false)
 
 			createFBCEnterpriseContractPolicy(fbcHotfixECPolicyName, *managedFw, devNamespace, managedNamespace)
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcHotfixAppName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcHotfixECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcHotfixRPAName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcHotfixAppName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcHotfixECPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcHotfixRPAName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 			deleteTestBranches()
 		})
 
-		var _ = Describe("FBC hotfix post-release verification", func() {
+		var _ = ginkgo.Describe("FBC hotfix post-release verification", func() {
 
-			It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
+			ginkgo.It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
 				fbcComponent, fbcPacBranchName, fbcCompBaseBranchName = releasecommon.CreateComponentWithNewBranch(*devFw, devNamespace, fbcHotfixAppName, fbcCompRepoName, fbcSourceGitURL, fbcCompRevision, "4.13", fbcDockerFilePath, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultFbcBuilderPipelineBundle))
-				GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
+				ginkgo.GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
 			})
 
-			It("Creates a push snapshot for a release", func() {
+			ginkgo.It("Creates a push snapshot for a release", func() {
 				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcHotfixAppName, fbcCompRepoName, fbcPacBranchName, hotfixPipelineRun, fbcComponent)
 			})
 
-			It("verifies the fbc release pipelinerun is running and succeeds", func() {
+			ginkgo.It("verifies the fbc release pipelinerun is running and succeeds", func() {
 				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcComponent.GetName())
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
 				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcHotfixAppName, fbcComponent.GetName())
 			})
 		})
 	})
 
-	Describe("with FBC pre-GA process", Label("fbcPreGA"), func() {
+	ginkgo.Describe("with FBC pre-GA process", ginkgo.Label("fbcPreGA"), func() {
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 
@@ -262,41 +262,41 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(fbcPreGAAppName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Printf("Application %s is created", fbcPreGAAppName)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			ginkgo.GinkgoWriter.Printf("Application %s is created", fbcPreGAAppName)
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(fbcPreGARPName, devNamespace, fbcPreGAAppName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createFBCEnterpriseContractPolicy(fbcPreGAECPolicyName, *managedFw, devNamespace, managedNamespace)
 			createFBCReleasePlanAdmission(fbcPreGARPAName, *managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcPreGAECPolicyName, relSvcCatalogPathInRepo, false, issueId, true, productName, productVersion, false)
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcPreGAAppName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcPreGARPAName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(fbcPreGAAppName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(fbcPreGAECPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(fbcPreGARPAName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 			deleteTestBranches()
 		})
 
-		var _ = Describe("FBC pre-GA post-release verification", func() {
-			It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
+		var _ = ginkgo.Describe("FBC pre-GA post-release verification", func() {
+			ginkgo.It(fmt.Sprintf("creates component from git source %s", fbcSourceGitURL), func() {
 				fbcComponent, fbcPacBranchName, fbcCompBaseBranchName = releasecommon.CreateComponentWithNewBranch(*devFw, devNamespace, fbcPreGAAppName, fbcCompRepoName, fbcSourceGitURL, fbcCompRevision, "4.13", fbcDockerFilePath, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), constants.DefaultFbcBuilderPipelineBundle))
-				GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
+				ginkgo.GinkgoWriter.Printf("Component %s is created", fbcComponent.GetName())
 			})
 
-			It("Creates a push snapshot for a release", func() {
+			ginkgo.It("Creates a push snapshot for a release", func() {
 				snapshot = releasecommon.CreatePushSnapshot(devWorkspace, devNamespace, fbcPreGAAppName, fbcCompRepoName, fbcPacBranchName, preGAPipelineRun, fbcComponent)
 			})
 
-			It("verifies the fbc release pipelinerun is running and succeeds", func() {
+			ginkgo.It("verifies the fbc release pipelinerun is running and succeeds", func() {
 				assertReleasePipelineRunSucceeded(devFw, managedFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcComponent.GetName())
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
 				assertReleaseCRSucceeded(devFw, devNamespace, managedNamespace, fbcPreGAAppName, fbcComponent.GetName())
 			})
 		})
@@ -306,25 +306,25 @@ var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label(
 func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
 
 	snapshot, err = devFw.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", componentName, devNamespace)
-	Expect(err).ToNot(HaveOccurred())
-	GinkgoWriter.Println("snapshot: ", snapshot.Name)
-	Eventually(func() error {
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	ginkgo.GinkgoWriter.Println("snapshot: ", snapshot.Name)
+	gomega.Eventually(func() error {
 		releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
 			return err
 		}
-		GinkgoWriter.Println("Release CR: ", releaseCR.Name)
+		ginkgo.GinkgoWriter.Println("Release CR: ", releaseCR.Name)
 		return nil
-	}, 5*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release being created for snapshot %s/%s", devNamespace, snapshot.Name)
+	}, 5*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed(), "timed out when waiting for Release being created for snapshot %s/%s", devNamespace, snapshot.Name)
 
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		managedPipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 		if err != nil {
 			return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 		}
 
 		for _, condition := range managedPipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", managedPipelineRun.Name, condition.Reason)
+			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", managedPipelineRun.Name, condition.Reason)
 		}
 
 		if !managedPipelineRun.IsDone() {
@@ -337,27 +337,27 @@ func assertReleasePipelineRunSucceeded(devFw, managedFw *framework.Framework, de
 			storeCRsIntoLog()
 			prLogs := ""
 			if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), managedPipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
-				Expect(err).ShouldNot(HaveOccurred())
+				ginkgo.GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 				return nil
 			}
-			GinkgoWriter.Printf("logs: %s", prLogs)
-			Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", managedPipelineRun.Name))
+			ginkgo.GinkgoWriter.Printf("logs: %s", prLogs)
+			gomega.Expect(prLogs).To(gomega.Equal(""), fmt.Sprintf("PipelineRun %s failed", managedPipelineRun.Name))
 			return nil
 		}
-	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+	}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 }
 
 func assertReleaseCRSucceeded(devFw *framework.Framework, devNamespace, managedNamespace, fbcAppName string, componentName string) {
 	devFw = releasecommon.NewFramework(devWorkspace)
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 		if err != nil {
 			return err
 		}
 		err = releasecommon.CheckReleaseStatus(releaseCR)
 		return err
-	}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+	}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
 }
 
 func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Framework, devNamespace, managedNamespace string) {
@@ -376,7 +376,7 @@ func createFBCEnterpriseContractPolicy(fbcECPName string, managedFw framework.Fr
 	}
 
 	_, err := managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(fbcECPName, managedNamespace, defaultEcPolicySpec)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 }
 
@@ -416,7 +416,7 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 			"secret": "pyxis",
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(fbcRPAName, managedNamespace, "", devNamespace, fbcECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{fbcAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
@@ -428,17 +428,17 @@ func createFBCReleasePlanAdmission(fbcRPAName string, managedFw framework.Framew
 	}, &runtime.RawExtension{
 		Raw: data,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 func storeCRsIntoLog() {
 	managedFw = releasecommon.NewFramework(managedWorkspace)
 	// store managedPipelineRun and Release CR
 	if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(managedPipelineRun.Name, managedPipelineRun); err != nil {
-		GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
+		ginkgo.GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
 	}
 	if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), managedPipelineRun); err != nil {
-		GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
+		ginkgo.GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", managedPipelineRun.GetNamespace(), managedPipelineRun.GetName(), err.Error())
 	}
 }
 
@@ -448,10 +448,10 @@ func deleteTestBranches() {
 	// Delete new branches created by PaC and a testing branch used as a component's base branch
 	err = devFw.AsKubeDeveloper.CommonController.Github.DeleteRef(fbcCompRepoName, fbcPacBranchName)
 	if err != nil {
-		Expect(err.Error()).To(ContainSubstring(releasecommon.ReferenceDoesntExist))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring(releasecommon.ReferenceDoesntExist))
 	}
 	err = devFw.AsKubeDeveloper.CommonController.Github.DeleteRef(fbcCompRepoName, fbcCompBaseBranchName)
 	if err != nil {
-		Expect(err.Error()).To(ContainSubstring(releasecommon.ReferenceDoesntExist))
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring(releasecommon.ReferenceDoesntExist))
 	}
 }

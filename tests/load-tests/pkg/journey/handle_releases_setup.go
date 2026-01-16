@@ -20,7 +20,7 @@ func createReleasePlan(f *framework.Framework, namespace, appName string) (strin
 
 	_, err := f.AsKubeDeveloper.ReleaseController.CreateReleasePlan(name, namespace, appName, namespace, "true", nil, nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the ReleasePlan %s in %s: %v", name, namespace, err)
+		return "", fmt.Errorf("unable to create the releasePlan %s in %s: %v", name, namespace, err)
 	}
 
 	return name, nil
@@ -45,7 +45,7 @@ func createReleasePlanAdmission(f *framework.Framework, namespace, appName, poli
 	// CreateReleasePlanAdmission(name, namespace, environment, origin, policy, serviceAccountName string, applications []string, autoRelease bool, pipelineRef *tektonutils.PipelineRef, data *runtime.RawExtension)
 	_, err := f.AsKubeDeveloper.ReleaseController.CreateReleasePlanAdmission(name, namespace, "", namespace, policyName, releasePipelineSAName, []string{appName}, true, pipeline, nil)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the ReleasePlanAdmission %s in %s: %v", name, namespace, err)
+		return "", fmt.Errorf("unable to create the releasePlanAdmission %s in %s: %v", name, namespace, err)
 	}
 
 	return name, nil

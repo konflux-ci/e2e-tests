@@ -96,7 +96,7 @@ func (g *GitHubClient) CreatePullRequest(repository, title, body, head, base str
 }
 
 func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) error {
-	hooks, err := g.Github.ListRepoWebhooks(repository)
+	hooks, err := g.ListRepoWebhooks(repository)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 		hookUrl := h.Config["url"].(string)
 		if strings.Contains(hookUrl, clusterAppDomain) {
 			fmt.Printf("removing webhook URL: %s\n", hookUrl)
-			err = g.Github.DeleteWebhook(repository, h.GetID())
+			err = g.DeleteWebhook(repository, h.GetID())
 			if err != nil {
 				return err
 			}
@@ -115,7 +115,7 @@ func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 }
 
 func (g *GitHubClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
-	pr, err := g.Github.GetPullRequest(repository, prNumber)
+	pr, err := g.GetPullRequest(repository, prNumber)
 	if err != nil {
 		return err
 	}

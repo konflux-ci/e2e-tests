@@ -5,27 +5,27 @@ import (
 	"github.com/konflux-ci/e2e-tests/tests/upgrade/verify"
 
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 )
 
-var _ = framework.UpgradeSuiteDescribe("Create users and check their state", Label("upgrade-verify"), func() {
-	defer GinkgoRecover()
+var _ = framework.UpgradeSuiteDescribe("Create users and check their state", ginkgo.Label("upgrade-verify"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		fw, _ = utils.PrepareForUpgradeTests()
 	})
 
-	It("Verify AppStudioProvisionedUser", func() {
+	ginkgo.It("Verify AppStudioProvisionedUser", func() {
 		verify.VerifyAppStudioProvisionedUser(fw)
 	})
 
-	It("creates AppStudioDeactivatedUser", func() {
+	ginkgo.It("creates AppStudioDeactivatedUser", func() {
 		verify.VerifyAppStudioDeactivatedUser(fw)
 	})
 
-	It("creates AppStudioBannedUser", func() {
+	ginkgo.It("creates AppStudioBannedUser", func() {
 		verify.VerifyAppStudioBannedUser(fw)
 	})
 

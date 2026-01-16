@@ -249,7 +249,7 @@ func (i *InstallAppStudio) CheckOperatorsReady() (err error) {
 				klog.Fatal(err)
 			}
 
-			if !(application.Status.Sync.Status == "Synced" && application.Status.Health.Status == "Healthy") {
+			if application.Status.Sync.Status != "Synced" || application.Status.Health.Status != "Healthy" {
 				klog.Infof("Application %s not ready", app.Name)
 				count++
 			} else if strings.Contains(application.String(), ("context deadline exceeded")) {

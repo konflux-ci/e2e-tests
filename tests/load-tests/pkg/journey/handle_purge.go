@@ -14,27 +14,27 @@ func purgeStage(f *framework.Framework, namespace string) error {
 
 	err = f.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
-		return fmt.Errorf("Error when deleting applications in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error when deleting applications in namespace %s: %v", namespace, err)
 	}
 
 	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
-		return fmt.Errorf("Error when deleting components in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error when deleting components in namespace %s: %v", namespace, err)
 	}
 
 	err = f.AsKubeDeveloper.HasController.DeleteAllImageRepositoriesInASpecificNamespace(namespace, time.Minute*5)
 	if err != nil {
-		return fmt.Errorf("Error when deleting image repositories in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error when deleting image repositories in namespace %s: %v", namespace, err)
 	}
 
 	err = f.AsKubeDeveloper.TektonController.DeleteAllPipelineRunsInASpecificNamespace(namespace)
 	if err != nil {
-		return fmt.Errorf("Error when deleting pipeline runs in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error when deleting pipeline runs in namespace %s: %v", namespace, err)
 	}
 
 	err = f.AsKubeDeveloper.CommonController.DeleteSecretsByLabel(namespace, "build.appstudio.redhat.com/multi-platform-secret", "true")
 	if err != nil {
-		return fmt.Errorf("Error when deleting MPC secrets in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error when deleting MPC secrets in namespace %s: %v", namespace, err)
 	}
 
 	logging.Logger.Debug("Finished purging namespace %s", namespace)
@@ -75,7 +75,7 @@ func Purge() error {
 	}
 
 	if errCounter > 0 {
-		return fmt.Errorf("Hit %d errors when purging resources", errCounter)
+		return fmt.Errorf("hit %d errors when purging resources", errCounter)
 	} else {
 		logging.Logger.Info("No errors when purging resources")
 		return nil

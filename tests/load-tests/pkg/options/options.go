@@ -87,8 +87,20 @@ func (o *Opts) ProcessOptions() error {
 	if o.ForkTarget == "" {
 		o.ForkTarget = os.Getenv("MY_GITHUB_ORG")
 		if o.ForkTarget == "" {
-			return fmt.Errorf("Was not able to get fork target")
+			return fmt.Errorf("was not able to get fork target")
 		}
+	}
+
+	// Convert options struct to pretty JSON
+	jsonOptions, err2 := json.MarshalIndent(o, "", "  ")
+	if err2 != nil {
+		return fmt.Errorf("error marshalling options: %v", err2)
+	}
+
+	// Dump options to JSON file in putput directory for refference
+	err3 := os.WriteFile(o.OutputDir + "/load-test-options.json", jsonOptions, 0600)
+	if err3 != nil {
+		return fmt.Errorf("error writing to file: %v", err3)
 	}
 
 	// If startup delay specified, make sure jitter is not bigger than 2 * delay
@@ -107,18 +119,6 @@ func (o *Opts) ProcessOptions() error {
 				o.JourneyReuseApplications = true
 			}
 		}
-	}
-
-	// Convert options struct to pretty JSON
-	jsonOptions, err2 := json.MarshalIndent(o, "", "  ")
-	if err2 != nil {
-		return fmt.Errorf("Error marshalling options: %v", err2)
-	}
-
-	// Dump options to JSON file in putput directory for refference
-	err3 := os.WriteFile(o.OutputDir + "/load-test-options.json", jsonOptions, 0600)
-	if err3 != nil {
-		return fmt.Errorf("Error writing to file: %v", err3)
 	}
 
 	return nil

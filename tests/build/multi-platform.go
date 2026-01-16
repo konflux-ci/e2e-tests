@@ -19,8 +19,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -60,96 +60,96 @@ var (
 	interval                     = 10 * time.Second
 )
 
-var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", Pending, Label("multi-platform"), func() {
+var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E tests", ginkgo.Pending, ginkgo.Label("multi-platform"), func() {
 	var f *framework.Framework
-	AfterEach(framework.ReportFailure(&f))
+	ginkgo.AfterEach(framework.ReportFailure(&f))
 	var err error
 
-	defer GinkgoRecover()
+	defer ginkgo.GinkgoRecover()
 
-	Describe("aws host-pool allocation", Label("aws-host-pool"), func() {
+	ginkgo.Describe("aws host-pool allocation", ginkgo.Label("aws-host-pool"), func() {
 
 		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, host, userDir string
 		var component *appservice.Component
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			// Cleanup aws secet and host-config
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, AwsSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, AwsSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(gomega.Succeed())
 
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			if !ginkgo.CurrentSpecReport().Failed() {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(gomega.Succeed())
 			} else {
-				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
+				gomega.Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(gomega.Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
-			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
+			gomega.Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(gomega.HaveOccurred())
 		})
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("multi-platform-host"))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			testNamespace = f.UserNamespace
-			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
+			gomega.Expect(testNamespace).NotTo(gomega.BeNil(), "failed to create sandbox user namespace")
 
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			err = createConfigMapForHostPool(f)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			err = createSecretForHostPool(f)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
-		When("the Component with multi-platform-build is created", func() {
-			It("a PipelineRun is triggered", func() {
+		ginkgo.When("the Component with multi-platform-build is created", func() {
+			ginkgo.It("a PipelineRun is triggered", func() {
 				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
-			It("the build-container task from component pipelinerun is buildah-remote", func() {
+			ginkgo.It("the build-container task from component pipelinerun is buildah-remote", func() {
 				_, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
-			It("The multi platform secret is populated", func() {
+			ginkgo.It("The multi platform secret is populated", func() {
 				var secret *v1.Secret
-				Eventually(func() error {
+				gomega.Eventually(func() error {
 					secret, err = f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
+				}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying the secret is created")
 
 				// Get the host and the user directory so we can verify they are cleaned up at the end of the run
 				fullHost, present := secret.Data["host"]
-				Expect(present).To(BeTrue())
+				gomega.Expect(present).To(gomega.BeTrue())
 
 				userDirTmp, present := secret.Data["user-dir"]
-				Expect(present).To(BeTrue())
+				gomega.Expect(present).To(gomega.BeTrue())
 				userDir = string(userDirTmp)
 				hostParts := strings.Split(string(fullHost), "@")
 				host = strings.TrimSpace(hostParts[1])
 			})
 
-			It("that PipelineRun completes successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+			ginkgo.It("that PipelineRun completes successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(gomega.Succeed())
 			})
 
-			It("test that cleanup happened successfully", func() {
+			ginkgo.It("test that cleanup happened successfully", func() {
 
 				// Parse the private key
 				signer, err := ssh.ParsePrivateKey([]byte(os.Getenv("MULTI_PLATFORM_AWS_SSH_KEY")))
@@ -164,7 +164,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 					},
 					HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec
 				}
-				Eventually(func() error {
+				gomega.Eventually(func() error {
 					client, err := ssh.Dial("tcp", host+":22", config)
 					if err != nil {
 						return err
@@ -183,89 +183,89 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 						return fmt.Errorf("cleanup not successful, user dir still exists")
 					}
 					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
+				}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
 		})
 	})
-	Describe("aws dynamic allocation", Label("aws-dynamic"), func() {
+	ginkgo.Describe("aws dynamic allocation", ginkgo.Label("aws-dynamic"), func() {
 		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			// Cleanup aws&ssh secrets and host-config
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, AwsSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, AwsSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(gomega.Succeed())
 
 			//Forcefully remove instance incase it is not removed by multi-platform-controller
 			err = terminateAwsInstance(instanceId)
 			if err != nil {
-				GinkgoWriter.Printf("error terminating instance again: %v", err)
+				ginkgo.GinkgoWriter.Printf("error terminating instance again: %v", err)
 			}
 
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			if !ginkgo.CurrentSpecReport().Failed() {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(gomega.Succeed())
 			} else {
-				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
+				gomega.Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(gomega.Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
-			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
+			gomega.Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(gomega.HaveOccurred())
 		})
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("multi-platform-dynamic"))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			testNamespace = f.UserNamespace
-			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(testNamespace).NotTo(gomega.BeNil(), "failed to create sandbox user namespace")
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			dynamicInstanceTag := "dynamic-instance-" + util.GenerateRandomString(4)
-			GinkgoWriter.Printf("Generated dynamic instance tag: %q\n", dynamicInstanceTag)
+			ginkgo.GinkgoWriter.Printf("Generated dynamic instance tag: %q\n", dynamicInstanceTag)
 
 			// Restart multi-platform-controller pod to reload configMap again
 			restartMultiPlatformControllerPod(f)
 
 			err = createConfigMapForDynamicInstance(f, dynamicInstanceTag)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			err = createSecretsForDynamicInstance(f)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "ARM64")
 		})
 
-		When("the Component with multi-platform-build is created", func() {
-			It("a PipelineRun is triggered", func() {
+		ginkgo.When("the Component with multi-platform-build is created", func() {
+			ginkgo.It("a PipelineRun is triggered", func() {
 				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
-			It("the build-container task from component pipelinerun is buildah-remote", func() {
+			ginkgo.It("the build-container task from component pipelinerun is buildah-remote", func() {
 				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
-			It("The multi platform secret is populated", func() {
+			ginkgo.It("The multi platform secret is populated", func() {
 				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
-			It("that PipelineRun completes successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+			ginkgo.It("that PipelineRun completes successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(gomega.Succeed())
 			})
 
-			It("check cleanup happened successfully", func() {
-				Eventually(func() error {
+			ginkgo.It("check cleanup happened successfully", func() {
+				gomega.Eventually(func() error {
 					instances, err := getDynamicAwsInstance(dynamicInstanceTag)
 					if err != nil {
 						return err
@@ -274,88 +274,88 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 						return fmt.Errorf("instance is not cleaned up properly, current running instances: %v", instances)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
+				}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
 
 		})
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
-	Describe("ibm system z dynamic allocation", Label("ibmz-dynamic"), Pending, func() {
+	ginkgo.Describe("ibm system z dynamic allocation", ginkgo.Label("ibmz-dynamic"), ginkgo.Pending, func() {
 		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			//Cleanup ibm&ssh secrets and host-config
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, IbmSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, IbmSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(gomega.Succeed())
 
 			//Forcefully remove instance incase it is not removed by multi-platform-controller
 			err = terminateIbmZInstance(instanceId)
 			if err != nil {
-				GinkgoWriter.Printf("error terminating instance again: %v", err)
+				ginkgo.GinkgoWriter.Printf("error terminating instance again: %v", err)
 			}
 
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			if !ginkgo.CurrentSpecReport().Failed() {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(gomega.Succeed())
 			} else {
-				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
+				gomega.Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(gomega.Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
-			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
+			gomega.Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(gomega.HaveOccurred())
 		})
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("multi-platform-ibmz"))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			testNamespace = f.UserNamespace
-			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(testNamespace).NotTo(gomega.BeNil(), "failed to create sandbox user namespace")
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			restartMultiPlatformControllerPod(f)
 
 			dynamicInstanceTag = "ibmz-instance-" + util.GenerateRandomString(4)
 			err = createConfigMapForIbmZDynamicInstance(f, dynamicInstanceTag)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			err = createSecretsForIbmDynamicInstance(f)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "S390X")
 		})
 
-		When("the Component with multi-platform-build is created", func() {
-			It("a PipelineRun is triggered", func() {
+		ginkgo.When("the Component with multi-platform-build is created", func() {
+			ginkgo.It("a PipelineRun is triggered", func() {
 				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
-			It("the build-container task from component pipelinerun is buildah-remote", func() {
+			ginkgo.It("the build-container task from component pipelinerun is buildah-remote", func() {
 				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
-			It("The multi platform secret is populated", func() {
+			ginkgo.It("The multi platform secret is populated", func() {
 				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
-			It("that PipelineRun completes successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+			ginkgo.It("that PipelineRun completes successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(gomega.Succeed())
 			})
 
-			It("check cleanup happened successfully", func() {
-				Eventually(func() error {
+			ginkgo.It("check cleanup happened successfully", func() {
+				gomega.Eventually(func() error {
 					instances, err := getIbmZDynamicInstances(dynamicInstanceTag)
 					if err != nil {
 						return err
@@ -364,89 +364,89 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 						return fmt.Errorf("instance is not cleaned up properly, current running instances: %v", instances)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
+				}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
 
 		})
 	})
 	// TODO: Enable the test after https://issues.redhat.com/browse/KFLUXBUGS-1179 is fixed
-	Describe("ibm power pc dynamic allocation", Label("ibmp-dynamic"), Pending, func() {
+	ginkgo.Describe("ibm power pc dynamic allocation", ginkgo.Label("ibmp-dynamic"), ginkgo.Pending, func() {
 		var testNamespace, applicationName, componentName, pacBranchName, baseBranchName, multiPlatformSecretName, multiPlatformTaskName, dynamicInstanceTag, instanceId string
 		var component *appservice.Component
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			// Cleanup ibm key & ssh secrets and host-config
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, IbmSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, IbmSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteSecret(ControllerNamespace, SshSecretName)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.DeleteConfigMap(HostConfig, ControllerNamespace, true)).To(gomega.Succeed())
 
 			//Forcefully remove instance incase it is not removed by multi-platform-controller
 			err = terminateIbmPInstance(instanceId)
 			if err != nil {
-				GinkgoWriter.Printf("error terminating instance again: %v", err)
+				ginkgo.GinkgoWriter.Printf("error terminating instance again: %v", err)
 			}
 
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+			if !ginkgo.CurrentSpecReport().Failed() {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteComponent(componentName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(gomega.Succeed())
 			} else {
-				Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(Succeed())
-				Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(Succeed())
+				gomega.Expect(f.AsKubeAdmin.CommonController.StoreAllPods(testNamespace)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.TektonController.StoreAllPipelineRuns(testNamespace)).To(gomega.Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), pacBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(utils.GetRepoName(multiPlatformProjectGitUrl), baseBranchName)
 			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			}
-			Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(HaveOccurred())
+			gomega.Expect(build.CleanupWebhooks(f, utils.GetRepoName(multiPlatformProjectGitUrl))).ShouldNot(gomega.HaveOccurred())
 		})
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("multi-platform-ibmp"))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			testNamespace = f.UserNamespace
-			Expect(testNamespace).NotTo(BeNil(), "failed to create sandbox user namespace")
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(testNamespace).NotTo(gomega.BeNil(), "failed to create sandbox user namespace")
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			// Restart multi-platform-controller pod to reload configMap again
 			restartMultiPlatformControllerPod(f)
 
 			dynamicInstanceTag = "ibmp-instance-" + util.GenerateRandomString(4)
 			err = createConfigMapForIbmPDynamicInstance(f, dynamicInstanceTag)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			err = createSecretsForIbmDynamicInstance(f)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			component, applicationName, componentName, pacBranchName, baseBranchName = createApplicationAndComponent(f, testNamespace, "PPC64LE")
 		})
 
-		When("the Component with multi-platform-build is created", func() {
-			It("a PipelineRun is triggered", func() {
+		ginkgo.When("the Component with multi-platform-build is created", func() {
+			ginkgo.It("a PipelineRun is triggered", func() {
 				validatePipelineRunIsRunning(f, componentName, applicationName, testNamespace)
 			})
 
-			It("the build-container task from component pipelinerun is buildah-remote", func() {
+			ginkgo.It("the build-container task from component pipelinerun is buildah-remote", func() {
 				multiPlatformTaskName, multiPlatformSecretName = validateBuildContainerTaskIsBuildahRemote(f, componentName, applicationName, testNamespace)
 			})
 
-			It("The multi platform secret is populated", func() {
+			ginkgo.It("The multi platform secret is populated", func() {
 				instanceId = validateMultiPlatformSecretIsPopulated(f, testNamespace, multiPlatformTaskName, multiPlatformSecretName)
 			})
 
-			It("that PipelineRun completes successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+			ginkgo.It("that PipelineRun completes successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(gomega.Succeed())
 			})
 
-			It("check cleanup happened successfully", func() {
-				Eventually(func() error {
+			ginkgo.It("check cleanup happened successfully", func() {
+				gomega.Eventually(func() error {
 					count, err := getIbmPDynamicInstanceCount(dynamicInstanceTag)
 					if err != nil {
 						return err
@@ -455,7 +455,7 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 						return fmt.Errorf("instance is not cleaned up properly, running instances count: %d", count)
 					}
 					return nil
-				}, timeout, interval).Should(Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
+				}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying that the remote host was cleaned up correctly")
 			})
 		})
 	})
@@ -464,12 +464,12 @@ var _ = framework.MultiPlatformBuildSuiteDescribe("Multi Platform Controller E2E
 func createApplicationAndComponent(f *framework.Framework, testNamespace, platform string) (component *appservice.Component, applicationName, componentName, pacBranchName, baseBranchName string) {
 	applicationName = fmt.Sprintf("multi-platform-suite-application-%s", util.GenerateRandomString(4))
 	_, err := f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	componentName = fmt.Sprintf("multi-platform-suite-component-%s", util.GenerateRandomString(4))
 
 	customBuildahRemotePipeline := os.Getenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV + "_" + platform)
-	Expect(customBuildahRemotePipeline).ShouldNot(BeEmpty())
+	gomega.Expect(customBuildahRemotePipeline).ShouldNot(gomega.BeEmpty())
 	buildPipelineAnnotation := map[string]string{
 		"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"buildah-remote-pipeline", "bundle": "%s"}`, customBuildahRemotePipeline),
 	}
@@ -478,7 +478,7 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 	baseBranchName = fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
 	err = f.AsKubeAdmin.CommonController.Github.CreateRef(utils.GetRepoName(multiPlatformProjectGitUrl), "main", multiPlatformProjectRevision, baseBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// Create a component with Git Source URL being defined
 	componentObj := appservice.ComponentSpec{
@@ -494,38 +494,38 @@ func createApplicationAndComponent(f *framework.Framework, testNamespace, platfo
 		},
 	}
 	component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return
 }
 
 func validateMultiPlatformSecretIsPopulated(f *framework.Framework, testNamespace, multiPlatformTaskName, multiPlatformSecretName string) (instanceId string) {
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		_, err := f.AsKubeAdmin.CommonController.GetSecret(testNamespace, multiPlatformSecretName)
 		if err != nil {
 			return err
 		}
 		return nil
-	}, timeout, interval).Should(Succeed(), "timed out when verifying the secret is created")
+	}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying the secret is created")
 
 	// Get the instance id from the task so that we can check during cleanup
 	taskRun, err := f.AsKubeDeveloper.TektonController.GetTaskRun(multiPlatformTaskName, testNamespace)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	instanceId = taskRun.Annotations["build.appstudio.redhat.com/cloud-instance-id"]
-	GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
-	Expect(instanceId).ShouldNot(BeEmpty())
+	ginkgo.GinkgoWriter.Printf("INSTANCE ID: %s\n", instanceId)
+	gomega.Expect(instanceId).ShouldNot(gomega.BeEmpty())
 	return
 }
 
 func validateBuildContainerTaskIsBuildahRemote(f *framework.Framework, componentName, applicationName, testNamespace string) (multiPlatformTaskName, multiPlatformSecretName string) {
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-		Expect(err).ShouldNot(HaveOccurred())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 		for _, chr := range pr.Status.ChildReferences {
 			taskRun := &pipeline.TaskRun{}
 			taskRunKey := types.NamespacedName{Namespace: pr.Namespace, Name: chr.Name}
 			err := f.AsKubeAdmin.CommonController.KubeRest().Get(context.TODO(), taskRunKey, taskRun)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			prTrStatus := &pipeline.PipelineRunTaskRunStatus{
 				PipelineTaskName: chr.PipelineTaskName,
@@ -543,38 +543,38 @@ func validateBuildContainerTaskIsBuildahRemote(f *framework.Framework, component
 			}
 		}
 		return fmt.Errorf("couldn't find a matching step buildah-remote or ssh secret attached as a volume in the task %s in PipelineRun %s/%s", constants.BuildTaskRunName, testNamespace, pr.GetName())
-	}, timeout, interval).Should(Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
+	}, timeout, interval).Should(gomega.Succeed(), "timed out when verifying the buildah-remote image reference in pipelinerun")
 	return
 }
 
 func validatePipelineRunIsRunning(f *framework.Framework, componentName, applicationName, testNamespace string) {
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 		if err != nil {
-			GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
+			ginkgo.GinkgoWriter.Printf("PipelineRun has not been created yet for the component %s/%s", testNamespace, componentName)
 			return err
 		}
 		if !pr.HasStarted() {
 			return fmt.Errorf("pipelinerun %s/%s hasn't started yet", pr.GetNamespace(), pr.GetName())
 		}
 		return nil
-	}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+	}, timeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 }
 
 func restartMultiPlatformControllerPod(f *framework.Framework) {
 	// Restart multi-platform-controller pod to reload configMap again
 	podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	for i := range podList.Items {
 		podName := podList.Items[i].Name
 		if strings.HasPrefix(podName, ControllerNamespace) {
 			err := f.AsKubeAdmin.CommonController.DeletePod(podName, ControllerNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		}
 	}
 	time.Sleep(10 * time.Second)
 	//check that multi-platform-controller pod is running
-	Eventually(func() (bool, error) {
+	gomega.Eventually(func() (bool, error) {
 		podList, err := f.AsKubeAdmin.CommonController.ListAllPods(ControllerNamespace)
 		if err != nil {
 			return false, err
@@ -592,7 +592,7 @@ func restartMultiPlatformControllerPod(f *framework.Framework) {
 			}
 		}
 		return false, nil
-	}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "timed out while checking if the pod is running")
+	}, 1*time.Minute, 5*time.Second).Should(gomega.BeTrue(), "timed out while checking if the pod is running")
 }
 
 func pCloudId() string {
@@ -725,7 +725,7 @@ func getIbmZDynamicInstances(instanceTag string) ([]string, error) {
 	}
 	var vpc *vpcv1.VPC
 	for i := range vpcs.Vpcs {
-		//GinkgoWriter.Println("VPC: " + *vpcs.Vpcs[i].Name)
+		//ginkgo.GinkgoWriter.Println("VPC: " + *vpcs.Vpcs[i].Name)
 		if *vpcs.Vpcs[i].Name == IbmVpc {
 			vpc = &vpcs.Vpcs[i]
 			break
@@ -767,12 +767,12 @@ func terminateIbmZInstance(instanceId string) error {
 		if err.Error() == "Instance not found" {
 			return nil
 		}
-		GinkgoWriter.Printf("failed to delete system z instance, unable to get instance with error: %v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed to delete system z instance, unable to get instance with error: %v\n", err)
 		return err
 	}
 	_, err = vpcService.DeleteInstance(&vpcv1.DeleteInstanceOptions{ID: instance.ID})
 	if err != nil {
-		GinkgoWriter.Printf("failed to delete system z instance: %v\n", err)
+		ginkgo.GinkgoWriter.Printf("failed to delete system z instance: %v\n", err)
 		return err
 	}
 	return nil

@@ -16,7 +16,7 @@ import (
 
 // CreateReleasePlan creates a new ReleasePlan using the given parameters.
 func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targetNamespace, autoReleaseLabel string, data *runtime.RawExtension, tenantPipeline *tektonutils.ParameterizedPipeline, finalPipeline *tektonutils.ParameterizedPipeline) (*releaseApi.ReleasePlan, error) {
-	var releasePlan *releaseApi.ReleasePlan = &releaseApi.ReleasePlan{
+	releasePlan := &releaseApi.ReleasePlan{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: name,
 			Name:         name,
@@ -35,9 +35,9 @@ func (r *ReleaseController) CreateReleasePlan(name, namespace, application, targ
 		},
 	}
 	if autoReleaseLabel == "" || autoReleaseLabel == "true" {
-		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "true"
+		releasePlan.Labels[releaseMetadata.AutoReleaseLabel] = "true"
 	} else {
-		releasePlan.ObjectMeta.Labels[releaseMetadata.AutoReleaseLabel] = "false"
+		releasePlan.Labels[releaseMetadata.AutoReleaseLabel] = "false"
 	}
 
 	return releasePlan, r.KubeRest().Create(context.Background(), releasePlan)

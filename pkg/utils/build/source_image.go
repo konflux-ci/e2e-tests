@@ -47,7 +47,7 @@ func GetBinaryImage(pr *pipeline.PipelineRun) string {
 }
 
 func IsSourceBuildEnabled(pr *pipeline.PipelineRun) bool {
-	for _, p := range pr.Status.PipelineRunStatusFields.PipelineSpec.Params {
+	for _, p := range pr.Status.PipelineSpec.Params {
 		if p.Name == "build-source-image" {
 			if p.Default.StringVal == "true" {
 				return true
@@ -244,13 +244,14 @@ func ReadRequirements(repoUrl string) ([]string, error) {
 
 func IsPreFetchDependenciesFilesExists(gitUrl, absExtraSourceDirPath string, isHermetic bool, prefetchValue string) (bool, error) {
 	var absDependencyPath string
-	if prefetchValue == "gomod" {
+	switch prefetchValue {
+	case "gomod":
 		fmt.Println("Checking go dependency files")
 		absDependencyPath = filepath.Join(absExtraSourceDirPath, gomodDependencySubDir)
-	} else if prefetchValue == "pip" {
+	case "pip":
 		fmt.Println("Checking python dependency files")
 		absDependencyPath = filepath.Join(absExtraSourceDirPath, pipDependencySubDir)
-	} else {
+	default:
 		return false, fmt.Errorf("pre-fetch value type is not implemented")
 	}
 
@@ -351,13 +352,14 @@ func ReadDockerfileUsedForBuild(c client.Client, tektonController *tekton.Tekton
 	var err error
 
 	for _, param := range pr.Spec.Params {
-		if param.Name == "dockerfile" {
+		switch param.Name {
+		case "dockerfile":
 			paramDockerfileValue = param.Value.StringVal
-		} else if param.Name == "path-context" {
+		case "path-context":
 			paramPathContextValue = param.Value.StringVal
-		} else if param.Name == "git-url" {
+		case "git-url":
 			paramUrlValue = param.Value.StringVal
-		} else if param.Name == "revision" {
+		case "revision":
 			paramRevisionValue = param.Value.StringVal
 		}
 	}

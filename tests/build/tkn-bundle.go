@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -12,75 +11,75 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/tektoncd/cli/pkg/bundle"
-	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-)
-
-/* to run locally on a kind cluster
-1. set environment variables with examples
-  - E2E_APPLICATIONS_NAMESPACE=konflux-tasks
-  - TKN_BUNDLE_REPO=quay.io/my-user-org/tkn-bundle:latest
-2. AFTER the namespace is created, create a docker secret and patch the sa
-  - kubectl create secret generic docker-config --from-file=.dockerconfigjson="$HOME/.docker/config.json" --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f
-  - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
-*/
-
-// Re-enable the test when https://issues.redhat.com/browse/KONFLUX-9777 is fixed
-var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templates"), Pending, func() {
-
-	defer GinkgoRecover()
+		"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+		ginkgo "github.com/onsi/ginkgo/v2"
+		gomega "github.com/onsi/gomega"
+		"github.com/tektoncd/cli/pkg/bundle"
+		pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+		corev1 "k8s.io/api/core/v1"
+		metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+		"k8s.io/apimachinery/pkg/runtime"
+	)
+	
+	/* to run locally on a kind cluster
+	1. set environment variables with examples
+	  - E2E_APPLICATIONS_NAMESPACE=konflux-tasks
+	  - TKN_BUNDLE_REPO=quay.io/my-user-org/tkn-bundle:latest
+	2. AFTER the namespace is created, create a docker secret and patch the sa
+	  - kubectl create secret generic docker-config --from-file=.dockerconfigjson="$HOME/.docker/config.json" --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f
+	  - kubectl patch serviceaccount appstudio-pipeline -p '{"imagePullSecrets": [{"name": "docker-config"}], "secrets": [{"name": "docker-config"}]}'
+	*/
+	
+	// Re-enable the test when https://issues.redhat.com/browse/KONFLUX-9777 is fixed
+	var _ = framework.TknBundleSuiteDescribe("tkn bundle task", ginkgo.Label("build-templates"), ginkgo.Pending, func(){
+	
+		defer ginkgo.GinkgoRecover()
 
 	var namespace string
 	var fwk *framework.Framework
-	var taskName string = "tkn-bundle"
-	var pathInRepo string = fmt.Sprintf("task/%s/0.2/%s.yaml", taskName, taskName)
-	var pvcName string = "source-pvc"
+	taskName := "tkn-bundle"
+	pathInRepo := fmt.Sprintf("task/%s/0.2/%s.yaml", taskName, taskName)
+	pvcName := "source-pvc"
 	var pvcAccessMode corev1.PersistentVolumeAccessMode = "ReadWriteOnce"
 	var baseTaskRun *pipeline.TaskRun
-	var qeBundleRepo string = fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), taskName)
+	qeBundleRepo := fmt.Sprintf("quay.io/%s/test-images:%s", utils.GetQuayIOOrganization(), taskName)
 
 	var gitRevision, gitURL, bundleImg string
 
-	AfterEach(framework.ReportFailure(&fwk))
+	ginkgo.AfterEach(framework.ReportFailure(&fwk))
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		var err error
 		fwk, err = framework.NewFramework(utils.GetGeneratedNamespace("konflux-task-runner"))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		namespace = fwk.UserNamespace
 
 		if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
-			Expect(fwk.AsKubeAdmin.CommonController.CreateQuayRegistrySecret(namespace)).To(Succeed())
+			gomega.Expect(fwk.AsKubeAdmin.CommonController.CreateQuayRegistrySecret(namespace)).To(gomega.Succeed())
 		}
 
 		bundleImg = utils.GetEnv("TKN_BUNDLE_REPO", qeBundleRepo)
 
 		// resolve the gitURL and gitRevision
 		gitURL, gitRevision, err = build.ResolveGitDetails(constants.TASK_REPO_URL_ENV, constants.TASK_REPO_REVISION_ENV)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		// if pvc does not exist create it
 		if _, err := fwk.AsKubeAdmin.TektonController.GetPVC(pvcName, namespace); err != nil {
 			_, err = fwk.AsKubeAdmin.TektonController.CreatePVCInAccessMode(pvcName, namespace, pvcAccessMode)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 		// use a pod to copy test data to the pvc
 		testData, err := setupTestData(pvcName)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		pod, err := fwk.AsKubeAdmin.CommonController.CreatePod(testData, namespace)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		// wait for setup pod. make sure it's successful
 		err = fwk.AsKubeAdmin.CommonController.WaitForPod(fwk.AsKubeAdmin.CommonController.IsPodSuccessful(pod.Name, namespace), 300)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		resolverRef := pipeline.ResolverRef{
 			Resolver: "git",
 			Params: []pipeline.Param{
@@ -116,8 +115,20 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 		}
 	})
 
-	DescribeTable("creates Tekton bundles with different params",
+	ginkgo.DescribeTable("creates Tekton bundles with different params",
 		func(params map[string]string, expectedOutput, notExpectedOutput []string, expectedHomeVar, stepImage string) {
+			matchOutput := func(output string, expectedOutput []string) {
+				for _, expected := range expectedOutput {
+					gomega.Expect(output).To(gomega.ContainSubstring(expected))
+				}
+			}
+
+			notMatchOutput := func(output string, notExpectedOutput []string) {
+				for _, notExpected := range notExpectedOutput {
+					gomega.Expect(output).NotTo(gomega.ContainSubstring(notExpected))
+				}
+			}
+
 			for key, val := range params {
 				baseTaskRun.Spec.Params = append(baseTaskRun.Spec.Params, pipeline.Param{
 					Name: key,
@@ -128,53 +139,53 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 				})
 			}
 			tr, err := fwk.AsKubeAdmin.TektonController.RunTaskAndWait(baseTaskRun, namespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// check for a success of the taskRun
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				status, err := fwk.AsKubeAdmin.TektonController.CheckTaskRunSucceeded(tr.Name, namespace)()
 				return err == nil && status
-			}, time.Minute*2, 2*time.Second).Should(BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
+			}, time.Minute*2, 2*time.Second).Should(gomega.BeTrue(), fmt.Sprintf("taskRun %q failed", tr.Name))
 
 			// verify taskRun results
 			imgUrl, err := fwk.AsKubeAdmin.TektonController.GetResultFromTaskRun(tr, "IMAGE_URL")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(imgUrl).To(Equal(bundleImg))
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(imgUrl).To(gomega.Equal(bundleImg))
 
 			imgDigest, err := fwk.AsKubeAdmin.TektonController.GetResultFromTaskRun(tr, "IMAGE_DIGEST")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(imgDigest).To(MatchRegexp(`^sha256:[a-fA-F0-9]{64}$`))
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(imgDigest).To(gomega.MatchRegexp(`^sha256:[a-fA-F0-9]{64}$`))
 
 			// verify taskRun log output
 			podLogs, err := fwk.AsKubeAdmin.CommonController.GetPodLogsByName(tr.Status.PodName, namespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			podLog := fmt.Sprintf("pod-%s-step-build.log", tr.Status.PodName)
-			matchOutput(podLogs[podLog], expectedOutput)
-			notMatchOutput(podLogs[podLog], notExpectedOutput)
+			matchOutput(string(podLogs[podLog]), expectedOutput)
+			notMatchOutput(string(podLogs[podLog]), notExpectedOutput)
 
 			// verify environment variables
 			envVar, err := fwk.AsKubeAdmin.TektonController.GetEnvVariable(tr, "HOME")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(envVar).To(Equal(expectedHomeVar))
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(envVar).To(gomega.Equal(expectedHomeVar))
 
 			// verify the step images
 			visitor := func(apiVersion, kind, name string, obj runtime.Object, raw []byte) {
 				task := &pipeline.Task{}
 				err := json.Unmarshal(raw, task)
-				Expect(err).ToNot(HaveOccurred())
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				for _, step := range task.Spec.Steps {
-					Expect(step.Image).To(Equal(stepImage))
+					gomega.Expect(step.Image).To(gomega.Equal(stepImage))
 				}
 			}
 			bundle := fmt.Sprintf("%s@%s", imgUrl, imgDigest)
-			GinkgoWriter.Printf("Fetching bundle image: %s\n", bundle)
+			ginkgo.GinkgoWriter.Printf("Fetching bundle image: %s\n", bundle)
 
-			Eventually(func() error {
+			gomega.Eventually(func() error {
 				return fetchImage(bundle, visitor)
-			}, time.Minute*2, 2*time.Second).Should(Succeed(), "failed to fetch image %q", bundle)
+			}, time.Minute*2, 2*time.Second).Should(gomega.Succeed(), "failed to fetch image %q", bundle)
 
 		},
-		Entry("when context points to a file", map[string]string{"CONTEXT": "task2.yaml"},
+		ginkgo.Entry("when context points to a file", map[string]string{"CONTEXT": "task2.yaml"},
 			[]string{
 				"\t- Added Task: task2 to image",
 			},
@@ -185,7 +196,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/home",
 			"ubuntu",
 		),
-		Entry("creates Tekton bundles from specific context", map[string]string{"CONTEXT": "sub"}, []string{
+		ginkgo.Entry("creates Tekton bundles from specific context", map[string]string{"CONTEXT": "sub"}, []string{
 			"\t- Added Task: task3 to image",
 		},
 			[]string{
@@ -195,7 +206,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/home",
 			"ubuntu",
 		),
-		Entry("when context is the root directory", map[string]string{}, []string{
+		ginkgo.Entry("when context is the root directory", map[string]string{}, []string{
 			"\t- Added Task: task1 to image",
 			"\t- Added Task: task2 to image",
 			"\t- Added Task: task3 to image",
@@ -204,7 +215,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/home",
 			"ubuntu",
 		),
-		Entry("creates Tekton bundles when context points to a file and a directory", map[string]string{"CONTEXT": "task2.yaml,sub"}, []string{
+		ginkgo.Entry("creates Tekton bundles when context points to a file and a directory", map[string]string{"CONTEXT": "task2.yaml,sub"}, []string{
 			"\t- Added Task: task2 to image",
 			"\t- Added Task: task3 to image",
 		},
@@ -214,7 +225,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/home",
 			"ubuntu",
 		),
-		Entry("creates Tekton bundles when using negation", map[string]string{"CONTEXT": "!sub"}, []string{
+		ginkgo.Entry("creates Tekton bundles when using negation", map[string]string{"CONTEXT": "!sub"}, []string{
 			"\t- Added Task: task1 to image",
 			"\t- Added Task: task2 to image",
 		},
@@ -224,7 +235,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/home",
 			"ubuntu",
 		),
-		Entry("allows overriding HOME environment variable", map[string]string{"CONTEXT": ".", "HOME": "/tekton/summer-home"}, []string{
+		ginkgo.Entry("allows overriding HOME environment variable", map[string]string{"CONTEXT": ".", "HOME": "/tekton/summer-home"}, []string{
 			"\t- Added Task: task1 to image",
 			"\t- Added Task: task2 to image",
 			"\t- Added Task: task3 to image",
@@ -233,7 +244,7 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 			"/tekton/summer-home",
 			"ubuntu",
 		),
-		Entry("allows overriding STEP image", map[string]string{"STEPS_IMAGE": "quay.io/enterprise-contract/contract:latest"}, []string{
+		ginkgo.Entry("allows overriding STEP image", map[string]string{"STEPS_IMAGE": "quay.io/enterprise-contract/contract:latest"}, []string{
 			"\t- Added Task: task1 to image",
 			"\t- Added Task: task2 to image",
 			"\t- Added Task: task3 to image",
@@ -244,20 +255,6 @@ var _ = framework.TknBundleSuiteDescribe("tkn bundle task", Label("build-templat
 		),
 	)
 })
-
-// check output that should exist
-func matchOutput(logs []byte, expectedOutput []string) {
-	for _, out := range expectedOutput {
-		Expect(strings.Split(string(logs), "\n")).To(ContainElement(out))
-	}
-}
-
-// check that output does not exist
-func notMatchOutput(logs []byte, expectedOutput []string) {
-	for _, out := range expectedOutput {
-		Expect(strings.Split(string(logs), "\n")).NotTo(ContainElement(out))
-	}
-}
 
 // fetch the image
 func fetchImage(image string, visitor func(version, kind, name string, element runtime.Object, raw []byte)) error {

@@ -58,11 +58,11 @@ func CheckOptions(optionsArr []Options) (bool, error) {
 	options := optionsArr[0]
 
 	if options.ApiUrl == "" {
-		return true, fmt.Errorf("ApiUrl field is empty")
+		return true, fmt.Errorf("apiUrl field is empty")
 	}
 
 	if options.Token == "" {
-		return true, fmt.Errorf("Token field is empty")
+		return true, fmt.Errorf("token field is empty")
 	}
 
 	return true, nil

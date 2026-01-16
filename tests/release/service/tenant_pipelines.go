@@ -13,19 +13,19 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", Label("release-service", "tenant"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline", ginkgo.Label("release-service", "tenant"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
-	AfterEach(framework.ReportFailure(&fw))
+	ginkgo.AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var devNamespace = "tenant-dev"
 	var releasedImagePushRepo = "quay.io/redhat-appstudio-qe/dcmetromap"
@@ -38,26 +38,26 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 	var releaseCR *releaseApi.Release
 	var snapshotPush *appservice.Snapshot
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		devNamespace = fw.UserNamespace
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
-		Expect(sourceAuthJson).ToNot(BeEmpty())
+		gomega.Expect(sourceAuthJson).ToNot(gomega.BeEmpty())
 
 		_, err := fw.AsKubeAdmin.CommonController.GetSecret(devNamespace, tenantPullSecretName)
 		if errors.IsNotFound(err) {
 			_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(tenantPullSecretName, devNamespace, sourceAuthJson)
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 		}
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateServiceAccount(tenantServiceAccountName, devNamespace, []corev1.ObjectReference{{Name: tenantPullSecretName}}, nil)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
@@ -69,7 +69,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 				},
 			},
 		})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		tenantPipeline := &tektonutils.ParameterizedPipeline{}
 		tenantPipeline.ServiceAccountName = tenantServiceAccountName
@@ -89,37 +89,37 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, "", "", &runtime.RawExtension{
 			Raw: data,
 		}, tenantPipeline, nil)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, devNamespace, corev1.ReadWriteOnce)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(fw.AsKubeAdmin, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
-		Expect(err).ShouldNot(HaveOccurred())
-		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+		ginkgo.GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
 	})
 
-	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(Succeed())
+	ginkgo.AfterAll(func() {
+		if !ginkgo.CurrentSpecReport().Failed() {
+			gomega.Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(fw.UserNamespace)).To(gomega.Succeed())
 		}
 	})
 
-	var _ = Describe("Post-release verification", func() {
+	var _ = ginkgo.Describe("Post-release verification", func() {
 
-		It("verifies that a Release CR should have been created in the dev namespace", func() {
-			Eventually(func() error {
+		ginkgo.It("verifies that a Release CR should have been created in the dev namespace", func() {
+			gomega.Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
 		})
 
-		It("verifies that Tenant PipelineRun is triggered", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, devNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+		ginkgo.It("verifies that Tenant PipelineRun is triggered", func() {
+			gomega.Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, devNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
-		It("verifies that a Release is marked as succeeded.", func() {
-			Eventually(func() error {
+		ginkgo.It("verifies that a Release is marked as succeeded.", func() {
+			gomega.Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
 					return err
@@ -128,7 +128,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service tenant pipeline",
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
 		})
 	})
 })
