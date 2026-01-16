@@ -14,7 +14,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-e2e/testsupport/md5"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -149,7 +149,7 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 
 	// Handle the result.
 	if e != nil {
-		GinkgoWriter.Printf("Sandbox proxy error: %v\n", e)
+		ginkgo.GinkgoWriter.Printf("Sandbox proxy error: %v\n", e)
 	}
 	return res, e
 }
@@ -288,7 +288,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 
 		modifyUserSignup(freshUserSignup)
 		if err := s.KubeRest.Update(context.Background(), freshUserSignup); err != nil {
-			GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...\n", userSignupName, err.Error())
+			ginkgo.GinkgoWriter.Printf("error updating UserSignup '%s': %s. Will retry again...\n", userSignupName, err.Error())
 			return false, nil
 		}
 		userSignup = freshUserSignup
@@ -300,7 +300,7 @@ func (s *SandboxController) UpdateUserSignup(userSignupName string, modifyUserSi
 func (s *SandboxController) RegisterSandboxUserUserWithSignUp(userName string, userSignup *toolchainApi.UserSignup) (compliantUsername string, err error) {
 	if err := s.KubeRest.Create(context.Background(), userSignup); err != nil {
 		if k8sErrors.IsAlreadyExists(err) {
-			GinkgoWriter.Printf("User %s already exists\n", userName)
+			ginkgo.GinkgoWriter.Printf("User %s already exists\n", userName)
 		} else {
 			return "", err
 		}
@@ -329,13 +329,13 @@ func (s *SandboxController) CheckUserCreatedWithSignUp(userName string, userSign
 			if condition.Type == toolchainApi.UserSignupComplete && condition.Status == corev1.ConditionTrue {
 				compliantUsername = userSignup.Status.CompliantUsername
 				if len(compliantUsername) < 1 {
-					GinkgoWriter.Printf("Status.CompliantUsername field in UserSignup CR %s in %s namespace is empty\n", userSignup.GetName(), userSignup.GetNamespace())
+					ginkgo.GinkgoWriter.Printf("Status.CompliantUsername field in UserSignup CR %s in %s namespace is empty\n", userSignup.GetName(), userSignup.GetNamespace())
 					return false, nil
 				}
 				return true, nil
 			}
 		}
-		GinkgoWriter.Printf("Waiting for UserSignup %s to have condition Complete:True\n", userSignup.GetName())
+		ginkgo.GinkgoWriter.Printf("Waiting for UserSignup %s to have condition Complete:True\n", userSignup.GetName())
 		return false, nil
 	}, 4*time.Second, 4*time.Minute)
 

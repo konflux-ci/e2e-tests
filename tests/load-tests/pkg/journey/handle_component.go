@@ -27,12 +27,12 @@ func getPRNumberFromPRUrl(prUrl string) (int, error) {
 	regex := regexp.MustCompile(`/([0-9]+)/?$`)
 	match := regex.FindStringSubmatch(prUrl)
 	if match == nil {
-		return 0, fmt.Errorf("Failed to parse PR number out of url %s", prUrl)
+		return 0, fmt.Errorf("failed to parse PR number out of url %s", prUrl)
 	}
 
 	prNumber, err := strconv.Atoi(match[1])
 	if err != nil {
-		return 0, fmt.Errorf("Failed to convert PR number %s to int: %v", match[1], err)
+		return 0, fmt.Errorf("failed to convert PR number %s to int: %v", match[1], err)
 	}
 
 	return prNumber, nil
@@ -40,7 +40,7 @@ func getPRNumberFromPRUrl(prUrl string) (int, error) {
 
 // Get PR URL from PaC component annotation "build.appstudio.openshift.io/status"
 func getPaCPull(annotations map[string]string) (string, error) {
-	var buildStatusAnn string = "build.appstudio.openshift.io/status"
+	buildStatusAnn := "build.appstudio.openshift.io/status"
 	var buildStatusValue string
 	var buildStatusMap map[string]interface{}
 
@@ -53,7 +53,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 	// Parse JSON
 	err := json.Unmarshal([]byte(buildStatusValue), &buildStatusMap)
 	if err != nil {
-		return "", fmt.Errorf("Error unmarshalling JSON: %v", err)
+		return "", fmt.Errorf("error unmarshalling JSON: %v", err)
 	}
 
 	// Access the nested value using type assertion
@@ -66,10 +66,10 @@ func getPaCPull(annotations map[string]string) (string, error) {
 		// Check "state" is "enabled"
 		if data, ok = pac["state"].(string); ok {
 			if data != "enabled" {
-				return "", fmt.Errorf("Incorrect state: %s", buildStatusValue)
+				return "", fmt.Errorf("incorrect state: %s", buildStatusValue)
 			}
 		} else {
-			return "", fmt.Errorf("Failed parsing state: %s", buildStatusValue)
+			return "", fmt.Errorf("failed parsing state: %s", buildStatusValue)
 		}
 
 		// Get "merge-url"
@@ -77,10 +77,10 @@ func getPaCPull(annotations map[string]string) (string, error) {
 			logging.Logger.Debug("Found PaC merge request URL: %s", data)
 			return data, nil
 		} else {
-			return "", fmt.Errorf("Failed parsing state: %s", buildStatusValue)
+			return "", fmt.Errorf("failed parsing state: %s", buildStatusValue)
 		}
 	} else {
-		return "", fmt.Errorf("Failed parsing: %s", buildStatusValue)
+		return "", fmt.Errorf("failed parsing: %s", buildStatusValue)
 	}
 }
 
@@ -123,7 +123,7 @@ func createComponent(f *framework.Framework, namespace, repoUrl, repoRevision, c
 
 	_, err := f.AsKubeDeveloper.HasController.CreateComponent(componentObj, namespace, "", "", appName, false, annotationsMap)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the Component %s: %v", name, err)
+		return "", fmt.Errorf("unable to create the Component %s: %v", name, err)
 	}
 	return name, nil
 }
@@ -190,13 +190,13 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 		return true, nil
 	}, interval, timeout)
 	if err != nil {
-		return -1, fmt.Errorf("Unable to get PaC pull number for component %s in namespace %s: %v", name, namespace, err)
+		return -1, fmt.Errorf("unable to get PaC pull number for component %s in namespace %s: %v", name, namespace, err)
 	}
 
 	// Get merge request number
 	pullNumber, err = getPRNumberFromPRUrl(pull)
 	if err != nil {
-		return -1, fmt.Errorf("Parsing merge request number failed: %+v", err)
+		return -1, fmt.Errorf("parsing merge request number failed: %+v", err)
 	}
 
 	return pullNumber, err
@@ -210,7 +210,7 @@ func configurePipelineImagePullSecrets(f *framework.Framework, namespace, compon
 	for _, secret := range secrets {
 		err := f.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(namespace, secret, component_sa, true)
 		if err != nil {
-			return fmt.Errorf("Unable to add secret %s to service account %s: %v", secret, component_sa, err)
+			return fmt.Errorf("unable to add secret %s to service account %s: %v", secret, component_sa, err)
 		}
 	}
 
@@ -237,7 +237,7 @@ func listPipelineRunsWithTimeout(f *framework.Framework, namespace, appName, com
 		return true, nil
 	}, interval, timeout)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to list PipelineRuns for component %s in namespace %s: %v", compName, namespace, err)
+		return nil, fmt.Errorf("unable to list PipelineRuns for component %s in namespace %s: %v", compName, namespace, err)
 	}
 
 	logging.Logger.Debug("Found %d/%d PipelineRuns matching %s/%s/%s/%s", len(*prs), expectedCount, namespace, appName, compName, sha)
@@ -255,7 +255,7 @@ func listAndDeletePipelineRunsWithTimeout(f *framework.Framework, namespace, app
 	for _, pr := range *prs {
 		err = f.AsKubeDeveloper.TektonController.DeletePipelineRunIgnoreFinalizers(namespace, pr.Name)
 		if err != nil {
-			return fmt.Errorf("Error when deleting PipelineRun %s in namespace %s: %v", pr.Name, namespace, err)
+			return fmt.Errorf("error when deleting PipelineRun %s in namespace %s: %v", pr.Name, namespace, err)
 		}
 		logging.Logger.Debug("Deleted PipelineRun %s/%s", namespace, pr.Name)
 	}
@@ -270,7 +270,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	// Delete on-pull-request default pipeline run
 	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
 	if err != nil {
-		return fmt.Errorf("Error deleting on-pull-request default PipelineRun in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error deleting on-pull-request default PipelineRun in namespace %s: %v", namespace, err)
 	}
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (first cleanup) for %s/%s/%s", namespace, appName, compName)
 
@@ -278,20 +278,20 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	if strings.Contains(repoUrl, "gitlab.") {
 		repoId, err := getRepoIdFromRepoUrl(repoUrl)
 		if err != nil {
-			return fmt.Errorf("Failed parsing repo org/name: %v", err)
+			return fmt.Errorf("failed parsing repo org/name: %v", err)
 		}
 		_, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(repoId, mergeReqNum)
 		if err != nil {
-			return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
+			return fmt.Errorf("merging %d failed: %v", mergeReqNum, err)
 		}
 	} else {
 		repoName, err := getRepoNameFromRepoUrl(repoUrl)
 		if err != nil {
-			return fmt.Errorf("Failed parsing repo name: %v", err)
+			return fmt.Errorf("failed parsing repo name: %v", err)
 		}
 		_, err = f.AsKubeAdmin.CommonController.Github.MergePullRequest(repoName, mergeReqNum)
 		if err != nil {
-			return fmt.Errorf("Merging %d failed: %v", mergeReqNum, err)
+			return fmt.Errorf("merging %d failed: %v", mergeReqNum, err)
 		}
 	}
 	logging.Logger.Debug("Repo-templating workflow: Merged PR %d in %s", mergeReqNum, repoUrl)
@@ -299,14 +299,14 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	// Delete all pipeline runs as we do not care about these
 	err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, "", 1)
 	if err != nil {
-		return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
+		return fmt.Errorf("error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
 	}
 	logging.Logger.Debug("Repo-templating workflow: Cleaned up (second cleanup) for %s/%s/%s", namespace, appName, compName)
 
 	// Template our multi-arch PaC files
 	shaMap, err := templateFiles(f, repoUrl, repoRev, sourceRepo, sourceRepoDir, placeholders)
 	if err != nil {
-		return fmt.Errorf("Error templating PaC files: %v", err)
+		return fmt.Errorf("error templating PaC files: %v", err)
 	}
 	logging.Logger.Debug("Repo-templating workflow: Our PaC files templated in %s", repoUrl)
 
@@ -315,7 +315,7 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 		if !strings.HasSuffix(file, "-push.yaml") {
 			err = listAndDeletePipelineRunsWithTimeout(f, namespace, appName, compName, sha, 1)
 			if err != nil {
-				return fmt.Errorf("Error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
+				return fmt.Errorf("error deleting on-push merged PipelineRun in namespace %s: %v", namespace, err)
 			}
 		}
 	}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -104,7 +104,7 @@ func (s *SuiteController) GetPodLogs(pod *corev1.Pod) map[string][]byte {
 	for _, c := range containers {
 		log, err := utils.GetContainerLogs(s.KubeInterface(), pod.Name, c.Name, pod.Namespace)
 		if err != nil {
-			GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
+			ginkgo.GinkgoWriter.Printf("error getting logs for pod/container %s/%s: %v\n", pod.Name, c.Name, err.Error())
 			continue
 		}
 

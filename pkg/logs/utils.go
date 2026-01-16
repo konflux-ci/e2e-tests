@@ -5,16 +5,16 @@ import (
 	"os"
 	"time"
 
-	. "github.com/konflux-ci/e2e-tests/pkg/utils"
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"github.com/onsi/ginkgo/v2"
 	"sigs.k8s.io/yaml"
 )
 
 // createArtifactDirectory creates directory for storing artifacts of current spec.
 func createArtifactDirectory() (string, error) {
 	wd, _ := os.Getwd()
-	artifactDir := GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
-	classname := ShortenStringAddHash(CurrentSpecReport())
+	artifactDir := utils.GetEnv("ARTIFACT_DIR", fmt.Sprintf("%s/tmp", wd))
+	classname := ShortenStringAddHash(ginkgo.CurrentSpecReport())
 	testLogsDir := fmt.Sprintf("%s/%s", artifactDir, classname)
 
 	if err := os.MkdirAll(testLogsDir, os.ModePerm); err != nil {
@@ -61,7 +61,7 @@ func StoreTestTiming() error {
 		return err
 	}
 
-	testTime := "Test started at: " + CurrentSpecReport().StartTime.String() + "\nTest ended at: " + time.Now().String()
+	testTime := "Test started at: " + ginkgo.CurrentSpecReport().StartTime.String() + "\nTest ended at: " + time.Now().String()
 	filePath := fmt.Sprintf("%s/test-timing", artifactsDirectory)
 	if err := os.WriteFile(filePath, []byte(testTime), 0644); err != nil {
 		return fmt.Errorf("failed to store test timing: %v", err)

@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
@@ -186,7 +185,7 @@ func (t *TektonController) DeletePipelineRunIgnoreFinalizers(ns, name string) er
 				Namespace: ns,
 			},
 		}
-		patch := crclient.RawPatch(types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers"}]`))
+		patch := client.RawPatch(types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers"}]`))
 		if err := t.KubeRest().Patch(context.Background(), &pipelineRunCR, patch); err != nil {
 			if errors.IsNotFound(err) {
 				// PipelinerRun CR is already removed
@@ -258,13 +257,13 @@ func (t *TektonController) StorePipelineRun(prefix string, pipelineRun *pipeline
 func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
 	pipelineRuns, err := t.ListAllPipelineRuns(namespace)
 	if err != nil {
-		return fmt.Errorf("got error fetching PR list: %v\n", err.Error())
+		return fmt.Errorf("got error fetching PR list: %w", err)
 	}
 
 	for _, pipelineRun := range pipelineRuns.Items {
 		pipelineRun := pipelineRun
 		if err := t.StorePipelineRun(pipelineRun.GetName(), &pipelineRun); err != nil {
-			return fmt.Errorf("got error storing PR: %v\n", err.Error())
+			return fmt.Errorf("got error storing PR: %w", err)
 		}
 	}
 
@@ -274,7 +273,7 @@ func (t *TektonController) StoreAllPipelineRuns(namespace string) error {
 func (t *TektonController) AddFinalizerToPipelineRun(pipelineRun *pipeline.PipelineRun, finalizerName string) error {
 	ctx := context.Background()
 	kubeClient := t.KubeRest()
-	patch := crclient.MergeFrom(pipelineRun.DeepCopy())
+	patch := client.MergeFrom(pipelineRun.DeepCopy())
 	if ok := controllerutil.AddFinalizer(pipelineRun, finalizerName); ok {
 		err := kubeClient.Patch(ctx, pipelineRun, patch)
 		if err != nil {

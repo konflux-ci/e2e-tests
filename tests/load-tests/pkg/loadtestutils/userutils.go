@@ -29,10 +29,10 @@ func LoadStageUsers(filePath string) ([]User, error) {
 
 	// Some sanity checks
 	if len(users) == 0 {
-		return nil, fmt.Errorf("Loaded %s but no users in there", filePath)
+		return nil, fmt.Errorf("loaded %s but no users in there", filePath)
 	}
 	if users[0].APIURL == "" || users[0].Token == "" || users[0].Namespace == "" {
-		return nil, fmt.Errorf("Loaded %s but some expected field missing in first user", filePath)
+		return nil, fmt.Errorf("loaded %s but some expected field missing in first user", filePath)
 	}
 	return users, nil
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
-	. "github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -163,12 +162,12 @@ func (s *SuiteController) AddRegistryAuthSecretToSA(registryAuth, namespace stri
 		return fmt.Errorf("%s", "failed to get registry auth secret")
 	}
 
-	_, err := s.CreateRegistryAuthSecret(RegistryAuthSecretName, namespace, quayToken)
+	_, err := s.CreateRegistryAuthSecret(constants.RegistryAuthSecretName, namespace, quayToken)
 	if err != nil {
 		return err
 	}
 
-	err = s.LinkSecretToServiceAccount(namespace, RegistryAuthSecretName, DefaultPipelineServiceAccount, true)
+	err = s.LinkSecretToServiceAccount(namespace, constants.RegistryAuthSecretName, constants.DefaultPipelineServiceAccount, true)
 	if err != nil {
 		return err
 	}

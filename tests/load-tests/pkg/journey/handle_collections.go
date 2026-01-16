@@ -23,7 +23,7 @@ func getDirName(baseDir, namespace, iteration string) string {
 func createDir(dirPath string) error {
 	err := os.MkdirAll(dirPath, 0750)
 	if err != nil {
-		return fmt.Errorf("Failed to create directory %s: %v", dirPath, err)
+		return fmt.Errorf("failed to create directory %s: %v", dirPath, err)
 	}
 
 	return nil
@@ -35,12 +35,12 @@ func writeToFile(dirPath, file string, contents []byte) error {
 
 	fd, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return fmt.Errorf("Failed to open file %s: %v", fileName, err)
+		return fmt.Errorf("failed to open file %s: %v", fileName, err)
 	}
 
 	_, err = fd.Write(contents)
 	if err != nil {
-		return fmt.Errorf("Failed to write to file %s: %v", fileName, err)
+		return fmt.Errorf("failed to write to file %s: %v", fileName, err)
 	}
 
 	defer fd.Close()
@@ -56,7 +56,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, application stri
 		100,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to list pods in namespace %s for application %s: %v", namespace, application, err)
+		return fmt.Errorf("failed to list pods in namespace %s for application %s: %v", namespace, application, err)
 	}
 
 	for _, pod := range podList.Items {
@@ -66,7 +66,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, application stri
 		for file, log := range podLogs {
 			err = writeToFile(dirPath, file, log)
 			if err != nil {
-				return fmt.Errorf("Failed to write Pod log: %v", err)
+				return fmt.Errorf("failed to write Pod log: %v", err)
 			}
 		}
 
@@ -78,12 +78,12 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, application stri
 
 		podJSON, err := json.Marshal(pod)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Pod JSON: %v", err)
+			return fmt.Errorf("failed to dump Pod JSON: %v", err)
 		}
 
 		err = writeToFile(dirPath, "collected-pod-"+pod.Name+".json", podJSON)
 		if err != nil {
-			return fmt.Errorf("Failed to write Pod: %v", err)
+			return fmt.Errorf("failed to write Pod: %v", err)
 		}
 
 	}
@@ -94,7 +94,7 @@ func collectPodLogs(f *framework.Framework, dirPath, namespace, application stri
 func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, application, component, release string) error {
 	prs, err := f.AsKubeDeveloper.HasController.GetComponentPipelineRunsWithType(component, application, namespace, "", "", "")
 	if err != nil {
-		return fmt.Errorf("Failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
+		return fmt.Errorf("failed to list PipelineRuns %s/%s/%s: %v", namespace, application, component, err)
 	}
 
 	if release != "" {
@@ -112,18 +112,18 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 	for _, pr := range *prs {
 		prJSON, err := json.Marshal(pr)
 		if err != nil {
-			return fmt.Errorf("Failed to dump PipelineRun JSON: %v", err)
+			return fmt.Errorf("failed to dump PipelineRun JSON: %v", err)
 		}
 
 		err = writeToFile(dirPath, "collected-pipelinerun-"+pr.Name+".json", prJSON)
 		if err != nil {
-			return fmt.Errorf("Failed to write PipelineRun: %v", err)
+			return fmt.Errorf("failed to write PipelineRun: %v", err)
 		}
 
 		for _, chr := range pr.Status.ChildReferences {
 			tr, err := f.AsKubeDeveloper.TektonController.GetTaskRun(chr.Name, namespace)
 			if err != nil {
-				return fmt.Errorf("Failed to list TaskRuns %s/%s: %v", namespace, pr.Name, err)
+				return fmt.Errorf("failed to list TaskRuns %s/%s: %v", namespace, pr.Name, err)
 			}
 
 			if tr.Kind == "" {
@@ -137,12 +137,12 @@ func collectPipelineRunJSONs(f *framework.Framework, dirPath, namespace, applica
 			var trJSON []byte
 			trJSON, err = json.Marshal(tr)
 			if err != nil {
-				return fmt.Errorf("Failed to dump TaskRun JSON: %v", err)
+				return fmt.Errorf("failed to dump TaskRun JSON: %v", err)
 			}
 
 			err = writeToFile(dirPath, "collected-taskrun-"+tr.Name+".json", trJSON)
 			if err != nil {
-				return fmt.Errorf("Failed to write TaskRun: %v", err)
+				return fmt.Errorf("failed to write TaskRun: %v", err)
 			}
 		}
 	}
@@ -157,17 +157,17 @@ func collectApplicationJSONs(f *framework.Framework, dirPath, namespace, applica
 		// Get Application JSON
 		app, err := f.AsKubeDeveloper.HasController.GetApplication(application, namespace)
 		if err != nil {
-			return fmt.Errorf("Failed to get Application %s: %v", application, err)
+			return fmt.Errorf("failed to get Application %s: %v", application, err)
 		}
 
 		appJSON, err := json.Marshal(app)
 		if err != nil {
-			return fmt.Errorf("Failed to dump Application JSON: %v", err)
+			return fmt.Errorf("failed to dump Application JSON: %v", err)
 		}
 
 		err = writeToFile(dirPath, appJsonFileName, appJSON)
 		if err != nil {
-			return fmt.Errorf("Failed to write Application: %v", err)
+			return fmt.Errorf("failed to write Application: %v", err)
 		}
 	}
 
@@ -178,17 +178,17 @@ func collectComponentJSONs(f *framework.Framework, dirPath, namespace, component
 	// Collect Component JSON
 	comp, err := f.AsKubeDeveloper.HasController.GetComponent(component, namespace)
 	if err != nil {
-		return fmt.Errorf("Failed to get Component %s: %v", component, err)
+		return fmt.Errorf("failed to get Component %s: %v", component, err)
 	}
 
 	compJSON, err := json.Marshal(comp)
 	if err != nil {
-		return fmt.Errorf("Failed to dump Component JSON: %v", err)
+		return fmt.Errorf("failed to dump Component JSON: %v", err)
 	}
 
 	err = writeToFile(dirPath, "collected-component-"+component+".json", compJSON)
 	if err != nil {
-		return fmt.Errorf("Failed to write Component: %v", err)
+		return fmt.Errorf("failed to write Component: %v", err)
 	}
 
 	return nil
@@ -200,19 +200,19 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 		releasePlan, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlan(releasePlanName, namespace)
 		if err != nil {
 			if !k8s_api_errors.IsNotFound(err) {
-				return fmt.Errorf("Failed to get Release Plan %s: %v", releasePlanName, err)
+				return fmt.Errorf("failed to get Release Plan %s: %v", releasePlanName, err)
 			}
 		}
 
 		if err == nil {
 			releasePlanJSON, err := json.Marshal(releasePlan)
 			if err != nil {
-				return fmt.Errorf("Failed to dump Release Plan JSON: %v", err)
+				return fmt.Errorf("failed to dump Release Plan JSON: %v", err)
 			}
 
 			err = writeToFile(dirPath, "collected-releaseplan-" + releasePlanName + ".json", releasePlanJSON)
 			if err != nil {
-				return fmt.Errorf("Failed to write Release Plan: %v", err)
+				return fmt.Errorf("failed to write Release Plan: %v", err)
 			}
 		}
 	}
@@ -222,19 +222,19 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 		releasePlanAdmission, err := f.AsKubeDeveloper.ReleaseController.GetReleasePlanAdmission(releasePlanAdmissionName, namespace)
 		if err != nil {
 			if !k8s_api_errors.IsNotFound(err) {
-				return fmt.Errorf("Failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
+				return fmt.Errorf("failed to get Release Plan Admission %s: %v", releasePlanAdmissionName, err)
 			}
 		}
 
 		if err == nil {
 			releasePlanAdmissionJSON, err := json.Marshal(releasePlanAdmission)
 			if err != nil {
-				return fmt.Errorf("Failed to dump Release Plan Admission JSON: %v", err)
+				return fmt.Errorf("failed to dump Release Plan Admission JSON: %v", err)
 			}
 
 			err = writeToFile(dirPath, "collected-releaseplanadmission-" + releasePlanAdmissionName + ".json", releasePlanAdmissionJSON)
 			if err != nil {
-				return fmt.Errorf("Failed to write Release Plan Admission: %v", err)
+				return fmt.Errorf("failed to write Release Plan Admission: %v", err)
 			}
 		}
 	}
@@ -244,19 +244,19 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 		snap, err := f.AsKubeDeveloper.IntegrationController.GetSnapshot(snapName, "", compName, namespace)
 		if err != nil {
 			if !k8s_api_errors.IsNotFound(err) {
-				return fmt.Errorf("Failed to get Snapshot %s: %v", snapName, err)
+				return fmt.Errorf("failed to get Snapshot %s: %v", snapName, err)
 			}
 		}
 
 		if err == nil {
 			snapJSON, err := json.Marshal(snap)
 			if err != nil {
-				return fmt.Errorf("Failed to dump Snapshot JSON: %v", err)
+				return fmt.Errorf("failed to dump Snapshot JSON: %v", err)
 			}
 
 			err = writeToFile(dirPath, "collected-snapshot-" + snapName + ".json", snapJSON)
 			if err != nil {
-				return fmt.Errorf("Failed to write Snapshot: %v", err)
+				return fmt.Errorf("failed to write Snapshot: %v", err)
 			}
 		}
 	}
@@ -266,19 +266,19 @@ func collectReleaseRelatedJSONs(f *framework.Framework, dirPath, namespace, appN
 		rel, err := f.AsKubeDeveloper.ReleaseController.GetRelease(relName, "", namespace)
 		if err != nil {
 			if !k8s_api_errors.IsNotFound(err) {
-				return fmt.Errorf("Failed to get Release %s: %v", relName, err)
+				return fmt.Errorf("failed to get Release %s: %v", relName, err)
 			}
 		}
 
 		if err == nil {
 			relJSON, err := json.Marshal(rel)
 			if err != nil {
-				return fmt.Errorf("Failed to dump Release JSON: %v", err)
+				return fmt.Errorf("failed to dump Release JSON: %v", err)
 			}
 
 			err = writeToFile(dirPath, "collected-release-" + relName + ".json", relJSON)
 			if err != nil {
-				return fmt.Errorf("Failed to write Release: %v", err)
+				return fmt.Errorf("failed to write Release: %v", err)
 			}
 		}
 	}

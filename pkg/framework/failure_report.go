@@ -7,7 +7,7 @@ import (
 
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 )
 
 func ReportFailure(f **Framework) func() {
@@ -18,7 +18,7 @@ func ReportFailure(f **Framework) func() {
 		"Image Controller":    "image-controller"}
 
 	return func() {
-		if !CurrentSpecReport().Failed() {
+		if !ginkgo.CurrentSpecReport().Failed() {
 			return
 		}
 
@@ -28,14 +28,14 @@ func ReportFailure(f **Framework) func() {
 		}
 
 		if err := logs.StoreTestTiming(); err != nil {
-			GinkgoWriter.Printf("failed to store test timing: %v\n", err)
+			ginkgo.GinkgoWriter.Printf("failed to store test timing: %v\n", err)
 		}
 
 		allPodLogs := make(map[string][]byte)
 		for _, namespace := range namespaces {
 			podList, err := fwk.AsKubeAdmin.CommonController.ListAllPods(namespace)
 			if err != nil {
-				GinkgoWriter.Printf("failed to list pods in namespace %s: %v\n", namespace, err)
+				ginkgo.GinkgoWriter.Printf("failed to list pods in namespace %s: %v\n", namespace, err)
 				return
 			}
 
@@ -43,7 +43,7 @@ func ReportFailure(f **Framework) func() {
 				podLogs := fwk.AsKubeAdmin.CommonController.GetPodLogs(&pod)
 
 				for podName, log := range podLogs {
-					if filteredLogs := FilterLogs(string(log), CurrentSpecReport().StartTime); filteredLogs != "" {
+					if filteredLogs := FilterLogs(string(log), ginkgo.CurrentSpecReport().StartTime); filteredLogs != "" {
 						allPodLogs[podName] = []byte(filteredLogs)
 					}
 				}
@@ -51,7 +51,7 @@ func ReportFailure(f **Framework) func() {
 		}
 
 		if err := logs.StoreArtifacts(allPodLogs); err != nil {
-			GinkgoWriter.Printf("failed to store pod logs: %v\n", err)
+			ginkgo.GinkgoWriter.Printf("failed to store pod logs: %v\n", err)
 		}
 	}
 }

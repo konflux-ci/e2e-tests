@@ -12,7 +12,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	quay "github.com/konflux-ci/image-controller/pkg/quay"
-	. "github.com/onsi/gomega"
+	gomega "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -138,14 +138,14 @@ func GetRobotAccountToken(robotAccountName string) (string, error) {
 func GetRobotAccountInfoFromSecret(secret *corev1.Secret) (string, string) {
 	uploadSecretDockerconfigJson := string(secret.Data[corev1.DockerConfigJsonKey])
 	var authDataJson interface{}
-	Expect(json.Unmarshal([]byte(uploadSecretDockerconfigJson), &authDataJson)).To(Succeed())
+	gomega.Expect(json.Unmarshal([]byte(uploadSecretDockerconfigJson), &authDataJson)).To(gomega.Succeed())
 
 	authRegexp := regexp.MustCompile(`.*{"auth":"([A-Za-z0-9+/=]*)"}.*`)
 	uploadSecretAuthString, err := base64.StdEncoding.DecodeString(authRegexp.FindStringSubmatch(uploadSecretDockerconfigJson)[1])
-	Expect(err).To(Succeed())
+	gomega.Expect(err).To(gomega.Succeed())
 
 	auth := strings.Split(string(uploadSecretAuthString), ":")
-	Expect(auth).To(HaveLen(2))
+	gomega.Expect(auth).To(gomega.HaveLen(2))
 
 	robotAccountName := strings.TrimPrefix(auth[0], quayOrg+"+")
 	robotAccountToken := auth[1]

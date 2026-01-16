@@ -29,7 +29,7 @@ func createIntegrationTestScenario(f *framework.Framework, namespace, appName, s
 		return true, nil
 	}, interval, timeout)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the Integration Test Scenario %s in namespace %s: %v", name, namespace, err)
+		return "", fmt.Errorf("unable to create the integration Test Scenario %s in namespace %s: %v", name, namespace, err)
 	}
 
 	return name, nil
