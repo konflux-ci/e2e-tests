@@ -323,6 +323,35 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 	return err
 }
 
+// DeleteRepositoryOnlyIfExists soft deletes a GitLab repository if it exists.
+// Returns an error if the deletion fails except for project not being found (404).
+func (gc *GitlabClient) DeleteRepositoryOnlyIfExists(projectID string) error {
+	_, getResp, getErr := gc.client.Projects.GetProject(projectID, nil)
+	if getErr != nil {
+		if getResp != nil && getResp.StatusCode == http.StatusNotFound {
+			return nil
+		} else {
+			return fmt.Errorf("Error getting project %s: %v", projectID, getErr)
+		}
+	}
+	// Delete the project, the response will indicate if the request was successful
+	resp, err := gc.client.Projects.DeleteProject(projectID, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to delete gitlab project: %v", err)
+	}
+
+	// Check the response status code
+	if resp.StatusCode == 202 {
+		fmt.Printf("Project %s marked for deletion (soft delete).\n", projectID)
+		return nil
+	} else if resp.StatusCode == 204 {
+		fmt.Printf("Project %s permanently deleted.\n", projectID)
+		return nil
+	} else {
+		return fmt.Errorf("Unexpected status code %d while deleting gitlab project %s\n", resp.StatusCode, projectID)
+	}
+}
+
 // GitLab have a concept of two deletes. First one just renames the repo,
 // and only second one really deletes it. DeleteRepositoryReally is meant for
 // the second deletition.
@@ -392,4 +421,32 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 	}
 
 	return forkedProject, nil
+}
+
+func (gc *GitlabClient) GetAllProjects() ([]*gitlab.Project, error) {
+	listProjectsOptions := &gitlab.ListProjectsOptions{
+		Membership: gitlab.Ptr(true),
+		ListOptions: gitlab.ListOptions{
+			Page:    1,
+			PerPage: 100,
+		},
+	}
+	var allProjects []*gitlab.Project
+	for {
+		// Get the current page of projects
+		projects, resp, err := gc.client.Projects.ListProjects(listProjectsOptions)
+		if err != nil {
+			return allProjects, fmt.Errorf("Failed to list projects: %v", err)
+		}
+		allProjects = append(allProjects, projects...)
+		// Check if there are more pages. If not, break the loop.
+		if resp.NextPage == 0 {
+			break
+		}
+
+		// Update the page number to fetch the next page in the next iteration
+		listProjectsOptions.Page = resp.NextPage
+	}
+
+	return allProjects, nil
 }

@@ -40,4 +40,6 @@ type Client interface {
 	MergePullRequest(repository string, prNumber int) (*PullRequest, error)
 	DeleteBranchAndClosePullRequest(repository string, prNumber int) error
 	CleanupWebhooks(repository, clusterAppDomain string) error
+	ForkRepository(sourceRepoName, targetRepoName string) error
+	DeleteRepositoryIfExists(repoName string) error
 }

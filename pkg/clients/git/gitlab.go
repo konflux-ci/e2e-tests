@@ -2,6 +2,7 @@ package git
 
 import (
 	"encoding/base64"
+	"strings"
 
 	gitlab2 "github.com/xanzy/go-gitlab"
 
@@ -125,4 +126,22 @@ func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumb
 		return err
 	}
 	return g.CloseMergeRequest(repository, prNumber)
+}
+
+func (g *GitLabClient) ForkRepository(sourceRepoName, targetRepoName string) error {
+	sourceComponents := strings.Split(sourceRepoName, "/")
+	targetComponents := strings.Split(targetRepoName, "/")
+	_, err := g.GitlabClient.ForkRepository(sourceComponents[0], sourceComponents[1], targetComponents[0], targetComponents[1])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GitLabClient) DeleteRepositoryIfExists(repoName string) error {
+	err := g.GitlabClient.DeleteRepositoryOnlyIfExists(repoName)
+	if err != nil {
+		return err
+	}
+	return nil
 }

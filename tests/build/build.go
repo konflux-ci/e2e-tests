@@ -100,30 +100,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			if !CurrentSpecReport().Failed() {
 				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+				Expect(gitClient.DeleteRepositoryIfExists(helloWorldRepository)).To(Succeed())
 			}
 
-			err = gitClient.DeleteBranch(helloWorldRepository, pacBranchName)
-			if err != nil {
-				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
-			}
-			err = gitClient.DeleteBranch(helloWorldRepository, componentBaseBranchName)
-			if err != nil {
-				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
-			}
-
-			err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, prNumber)
-			if err != nil {
-				Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
-			}
-
-			if gitProvider == git.GitLabProvider {
-				err = gitClient.CleanupWebhooks(strings.Split(helloWorldRepository, "/")[1], f.ClusterAppDomain)
-			} else {
-				err = gitClient.CleanupWebhooks(helloWorldRepository, f.ClusterAppDomain)
-			}
-			if err != nil {
-				Expect(err.Error()).To(ContainSubstring("404 Not Found"))
-			}
 		})
 
 		When("a new component without specified branch is created and with visibility private", Label("pac-custom-default-branch"), func() {
@@ -162,7 +141,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldComponentGitSourceRepoName))
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
 			})
 
 			It("workspace parameter is set correctly in PaC repository CR", func() {
@@ -277,7 +256,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						return false, nil
 					}
 					return exists, nil
-				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", customDefaultComponentBranch, helloWorldComponentGitSourceRepoName))
+				}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when waiting for the branch %s to be deleted from %s repository", customDefaultComponentBranch, helloWorldRepository))
 			})
 
 			It("related image repo and the robot account should be deleted after deleting the component", func() {
@@ -365,7 +344,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
@@ -458,10 +437,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				switch gitProvider {
 				case git.GitHubProvider:
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
-					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldRepository, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
 					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
-					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, prHeadSha, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -511,7 +490,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldComponentGitSourceRepoName))
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
 			})
 			It("PipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", createdFileSHA, "",
@@ -523,10 +502,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				switch gitProvider {
 				case git.GitHubProvider:
 					expectedCheckRunName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
-					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldComponentGitSourceRepoName, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+					Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(expectedCheckRunName, helloWorldRepository, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				case git.GitLabProvider:
 					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
-					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldComponentGitLabProjectID, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
+					Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, createdFileSHA, prNumber)).To(Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -539,7 +518,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(helloWorldRepository, prNumber)
 					return err
-				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldComponentGitSourceRepoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, helloWorldRepository))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Println("merged result sha:", mergeResultSha)
@@ -695,7 +674,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return false
-				}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldComponentGitSourceRepoName))
+				}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldRepository))
 
 			})
 
@@ -1305,8 +1284,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			component       *appservice.Component
 		}
 
-		ChildComponentDef := multiComponent{repoName: componentDependenciesChildRepoName, baseRevision: componentDependenciesChildGitRevision, baseBranch: componentDependenciesChildDefaultBranch}
-		ParentComponentDef := multiComponent{repoName: componentDependenciesParentRepoName, baseRevision: componentDependenciesParentGitRevision, baseBranch: componentDependenciesParentDefaultBranch}
+		nameSuffix := util.GenerateRandomString(6)
+		targetChildRepoName := componentDependenciesChildRepoName + "-" + nameSuffix
+		targetParentRepoName := componentDependenciesParentRepoName + "-" + nameSuffix
+		ChildComponentDef := multiComponent{repoName: targetChildRepoName, baseRevision: componentDependenciesChildGitRevision, baseBranch: componentDependenciesChildDefaultBranch}
+		ParentComponentDef := multiComponent{repoName: targetParentRepoName, baseRevision: componentDependenciesParentGitRevision, baseBranch: componentDependenciesParentDefaultBranch}
 		components := []*multiComponent{&ChildComponentDef, &ParentComponentDef}
 		var applicationName, testNamespace, mergeResultSha, imageRepoName string
 		var prNumber int
@@ -1346,7 +1328,15 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				ChildComponentDef.gitRepo = fmt.Sprintf(githubUrlFormat, githubOrg, ChildComponentDef.repoName)
 				childRepository = ChildComponentDef.repoName
 
-				componentDependenciesChildRepository = componentDependenciesChildRepoName
+				componentDependenciesChildRepository = ChildComponentDef.repoName
+
+				// Fork the parent repo
+				err = gitClient.ForkRepository(componentDependenciesParentRepoName, ParentComponentDef.repoName)
+				Expect(err).ShouldNot(HaveOccurred())
+				// Fork the child repo
+				err = gitClient.ForkRepository(componentDependenciesChildRepoName, ChildComponentDef.repoName)
+				Expect(err).ShouldNot(HaveOccurred())
+
 			case git.GitLabProvider:
 				gitClient = git.NewGitlabClient(f.AsKubeAdmin.CommonController.Gitlab)
 
@@ -1356,7 +1346,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				childRepository = fmt.Sprintf("%s/%s", gitlabOrg, ChildComponentDef.repoName)
 				ChildComponentDef.gitRepo = fmt.Sprintf(gitlabUrlFormat, childRepository)
 
-				componentDependenciesChildRepository = fmt.Sprintf("%s/%s", gitlabOrg, componentDependenciesChildRepoName)
+				// Fork the parent repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", gitlabOrg, componentDependenciesParentRepoName), parentRepository)
+				Expect(err).ShouldNot(HaveOccurred())
+				// Fork the child repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", gitlabOrg, componentDependenciesChildRepoName), childRepository)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				componentDependenciesChildRepository = childRepository
 			}
 			ParentComponentDef.componentName = fmt.Sprintf("%s-multi-component-parent-%s", gitPrefix, branchString)
 			ChildComponentDef.componentName = fmt.Sprintf("%s-multi-component-child-%s", gitPrefix, branchString)
@@ -1425,34 +1422,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ParentComponentDef.componentName, testNamespace, true)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ChildComponentDef.componentName, testNamespace, true)).To(Succeed())
 				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Expect(gitClient.DeleteRepositoryIfExists(parentRepository)).To(Succeed())
+				Expect(gitClient.DeleteRepositoryIfExists(childRepository)).To(Succeed())
 			}
 			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
-
-			repositories := []string{childRepository, parentRepository}
-			// Delete new branches created by renovate and a testing branch used as a component's base branch
-			for i, c := range components {
-				println("deleting branch " + c.componentBranch)
-				err = gitClient.DeleteBranch(repositories[i], c.componentBranch)
-				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
-				}
-				err = gitClient.DeleteBranch(repositories[i], c.pacBranchName)
-				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404 Not Found"), ContainSubstring("Branch Not Found")))
-				}
-
-				// Cleanup parent repo webhooks
-				err = gitClient.CleanupWebhooks(componentDependenciesParentRepoName, f.ClusterAppDomain)
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
-				}
-
-				// Cleanup child repo webhooks
-				err = gitClient.CleanupWebhooks(componentDependenciesChildRepoName, f.ClusterAppDomain)
-				if err != nil {
-					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
-				}
-			}
 		})
 
 		When("components are created in same namespace", func() {
@@ -1473,7 +1446,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					}
 					//make the parent repo nudge the child repo
-					if comp.repoName == componentDependenciesParentRepoName {
+					if comp.repoName == targetParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
 					}
 					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
@@ -1645,13 +1618,13 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						}
 					}
 					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", componentDependenciesChildRepoName))
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
 			})
 			It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 				Eventually(func() error {
 					mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
 					return err
-				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, componentDependenciesChildRepoName))
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, targetChildRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -1682,7 +1655,11 @@ func setupGitProvider(f *framework.Framework, gitProvider git.GitProvider) (git.
 	switch gitProvider {
 	case git.GitHubProvider:
 		gitClient := git.NewGitHubClient(f.AsKubeAdmin.CommonController.Github)
-		return gitClient, helloWorldComponentGitHubURL, helloWorldComponentGitSourceRepoName
+		targetRepoName := helloWorldComponentGitSourceRepoName + "-" + util.GenerateRandomString(6)
+		targetRepoURL := fmt.Sprintf(githubUrlFormat, githubOrg, targetRepoName)
+		err := gitClient.ForkRepository(helloWorldComponentGitSourceRepoName, targetRepoName)
+		Expect(err).ShouldNot(HaveOccurred())
+		return gitClient, targetRepoURL, targetRepoName
 	case git.GitLabProvider:
 		gitClient := git.NewGitlabClient(f.AsKubeAdmin.CommonController.Gitlab)
 
@@ -1694,7 +1671,11 @@ func setupGitProvider(f *framework.Framework, gitProvider git.GitProvider) (git.
 		err := build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		return gitClient, helloWorldComponentGitLabURL, helloWorldComponentGitLabProjectID
+		targetGitLabProjectID := fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName+"-"+util.GenerateRandomString(6))
+		err = gitClient.ForkRepository(helloWorldComponentGitLabProjectID, targetGitLabProjectID)
+		targetGitlabURL := fmt.Sprintf(gitlabUrlFormat, targetGitLabProjectID)
+		Expect(err).ShouldNot(HaveOccurred())
+		return gitClient, targetGitlabURL, targetGitLabProjectID
 	}
 	return nil, "", ""
 }
