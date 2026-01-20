@@ -1,0 +1,138 @@
+- id: build_failed_for_unspecified_reasons
+  note: ''
+  reason: Build failed for unspecified reasons
+  regexp: build failed for unspecified reasons.
+  test_dir: []
+- id: taskrun_was_cancelled_as_its_pipelinerun_was_cancelled
+  note: ''
+  reason: TaskRun was cancelled as its PipelineRun was cancelled
+  regexp: TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has been cancelled.
+  test_dir: []
+- id: failed_to_create_task_run_pod_because_ise_on_webhook_proxy_operator_tekton_dev
+  note: ''
+  reason: Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev
+  regexp: 'failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": context deadline exceeded. Maybe missing or invalid Task .*'
+  test_dir: []
+- id: back_off_pulling_task_run_image_from_registry_redhat_io
+  note: ''
+  reason: Back-off pulling task run image from registry.redhat.io
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.redhat.io/.*'
+  test_dir: []
+- id: skip
+  note: Another special error to avoid printing 'Unknown error:' message
+  reason: SKIP
+  regexp: '"message": ?\"..[a-zA-Z0-9-]+.. exited with code 1(: Error)?\"'
+  test_dir: []
+- id: back_off_pulling_task_run_image_from_quay_io
+  note: ''
+  reason: Back-off pulling task run image from quay.io
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"quay.io/.*'
+  test_dir:
+  - run-kflux-ocp-p01-2026_01_08T22_50_18_062000000_00_00
+- id: taskrun_was_cancelled_because_it_timeouted
+  note: ''
+  reason: TaskRun was cancelled because it timeouted
+  regexp: '.message.: .TaskRun [^ ]+ failed to finish within [^ ]+., .reason.: .TaskRunTimeout.'
+  test_dir: []
+- id: pod_stuck_in_incorrect_status
+  note: ''
+  reason: Pod stuck in incorrect status
+  regexp: '.message.: .pod status ..PodReadyToStartContainers..:..False..; message: ....., .reason.: .Pending., .status.: .Unknown.'
+  test_dir: []
+- id: taskrun_was_cancelled_as_its_pipelinerun_timeouted
+  note: ''
+  reason: TaskRun was cancelled as its PipelineRun timeouted
+  regexp: '.message.: .TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has timed out.., .reason.: .TaskRunCancelled.'
+  test_dir: []
+- id: not_enough_nodes_to_schedule_pod
+  note: ''
+  reason: Not enough nodes to schedule pod
+  regexp: '.message.: .pod status ..PodScheduled..:..False..; message: ..[0-9/]+ nodes are available: .*: [0-9]+ Preemption is not helpful for scheduling.'
+  test_dir: []
+- id: missing_expected_fields_in_taskrun
+  note: This is special error, meaning everithing failed basically
+  reason: Missing expected fields in TaskRun
+  regexp: Missing expected fields in TaskRun
+  test_dir: []
+- id: pod_creation_failed_because_etcd_timeouted
+  note: ''
+  reason: Pod creation failed because ETCD timeouted
+  regexp: '.message.: .failed to create task run pod [^ ]+: etcdserver: request timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  test_dir: []
+- id: pod_creation_failed_with_reason_error
+  note: ''
+  reason: Pod creation failed with reason error
+  regexp: '\"message\": \".* exited with code 2: Error\"'
+  test_dir: []
+- id: taskrun_resolution_failed_because_validation_webhook_pipeline_tekton_dev_returned_eof
+  note: ''
+  reason: TaskRun resolution failed because validation.webhook.pipeline.tekton.dev returned EOF
+  regexp: '.message.: .error requesting remote resource: error updating resource request [^ ]+ with data: Internal error occurred: failed calling webhook .*validation.webhook.pipeline.tekton.dev.*: failed to call webhook: Post .*https://tekton-pipelines-webhook.openshift-pipelines.svc:443/resource-validation.timeout=10s.*: EOF., .reason.: .TaskRunResolutionFailed.'
+  test_dir: []
+- id: missing_expected_taskrun_file
+  note: This is special error, meaning everithing failed basically
+  reason: Missing expected TaskRun file
+  regexp: Missing expected TaskRun file
+  test_dir: []
+- id: pod_creation_failed_because_resource_quota_evaluation_timed_out
+  note: ''
+  reason: Pod creation failed because resource quota evaluation timed out
+  regexp: '.message.: .failed to create task run pod [^ ]+: Internal error occurred: resource quota evaluation timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  test_dir: []
+- id: failed_to_create_task_run_pod_because_ise_on_webhook_proxy_operator_tekton_dev_0
+  note: ''
+  reason: Failed to create task run pod because ISE on webhook proxy.operator.tekton.dev
+  regexp: 'failed to create task run pod .*: Internal error occurred: failed calling webhook \\\"proxy.operator.tekton.dev\\\": failed to call webhook: Post \\\"https://tekton-operator-proxy-webhook.openshift-pipelines.svc:443/defaulting.timeout=10s\\\": EOF. Maybe missing or invalid Task.*PodCreationFailed'
+  test_dir:
+  - run-stone-prd-rh02-2026_01_08T21_18_19_659000000_00_00
+- id: skip_0
+  note: Another special error to avoid printing 'Unknown error:' message
+  reason: SKIP
+  regexp: '\"message\": \"All Steps have completed executing\"'
+  test_dir: []
+- id: skip_1
+  note: Another special error to avoid printing 'Unknown error:' message
+  reason: SKIP
+  regexp: '\"message\": \".* exited with code 255.*\"'
+  test_dir: []
+- id: pod_creation_failed_because_serviceaccounts_not_found
+  note: ''
+  reason: Pod creation failed because serviceaccounts not found
+  regexp: '.message.: .failed to create task run pod [^ ]+: translating TaskSpec to Pod: serviceaccounts [^ ]+ not found. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  test_dir: []
+- id: back_off_pulling_task_run_image_from_registry_access_redhat_com
+  note: ''
+  reason: Back-off pulling task run image from registry.access.redhat.com
+  regexp: 'the step .* in TaskRun .* failed to pull the image .*. The pod errored with the message: \\\"Back-off pulling image \\\"registry.access.redhat.com/.*'
+  test_dir: []
+- id: pod_creation_failed_because_mutatingadmissionwebhook_timeout
+  note: ''
+  reason: Pod creation failed because MutatingAdmissionWebhook timeout
+  regexp: 'Internal error occurred: admission plugin \\"MutatingAdmissionWebhook\\" failed to complete mutation in .*s'
+  test_dir:
+  - run-stone-stg-rh01-2025_12_23T05_47_23_049000000_00_00
+- id: pod_creation_failed_due_to_unexpected_end_of_json_input
+  note: ''
+  reason: Pod creation failed due to unexpected end of JSON input
+  regexp: '.message.: .failed to create task run pod [^ ]+: translating TaskSpec to Pod: unexpected end of JSON input. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
+  test_dir:
+  - run-stone-prd-rh02-2026_01_05T18_19_27_596000000_00_00
+  - run-kflux-prd-rh03-2026_01_05T17_45_18_955000000_00_00
+- id: pipelinerun_failed_because_pod_stuck_in_pending_place_scripts_incomplete
+  note: Init container place-scripts failed to complete
+  reason: PipelineRun failed because pod stuck in Pending (place-scripts incomplete)
+  regexp: '.message.: .pod status ..Initialized..:..False..; message: ..containers with incomplete status: \[.*place-scripts.*\].'
+  test_dir:
+  - run-stone-prd-rh02-2026_01_08T15_08_01_609000000_00_00
+- id: init_container_prepare_failed_with_code_137
+  note: Likely OOMKilled
+  reason: Init container prepare failed with code 137
+  regexp: 'init container failed, ..prepare.. exited with code 137: ContainerStatusUnknown'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_11T19_09_19_153000000_00_00
+- id: pod_creation_failed_because_quay_io_502_bad_gateway
+  note: Pod creation failed due to Quay 502
+  reason: Pod creation failed because quay.io 502 Bad Gateway
+  regexp: 'failed to create task run pod .*: translating TaskSpec to Pod: GET https://quay.io/v2/: unexpected status code 502 Bad Gateway. Maybe missing or invalid Task'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_12T18_45_41_298000000_00_00

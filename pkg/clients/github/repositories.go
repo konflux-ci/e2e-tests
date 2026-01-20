@@ -197,18 +197,18 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 			if resp.StatusCode == 403 {
 				// This catches error: "403 Repository is already being forked."
 				// This happens whem more than ~3 forks of one repo is ongoing in parallel
-				fmt.Printf("Warning, got 403: %s", resp.Body)
+				fmt.Printf("Warning, got 403: %s\n", resp.Body)
 				return false, nil
 			}
 			if resp.StatusCode == 500 {
 				// This catches error 500 seen few times
-				fmt.Printf("Warning, got 500: %s", resp.Body)
+				fmt.Printf("Warning, got 500: %s\n", resp.Body)
 				return false, nil
 			}
 			return false, fmt.Errorf("Error forking %s/%s: %v", sourceOrgName, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 5)
+	}, time.Second * 10, time.Minute * 1)
 	if err1 != nil {
 		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", sourceOrgName, sourceName, err1)
 	}
@@ -218,10 +218,11 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 		// https://stackoverflow.com/questions/33666838/determine-if-a-fork-is-ready
 		_, _, err = g.client.Repositories.ListCommits(ctx, targetOrgName, fork.GetName(), &github.CommitsListOptions{})
 		if err != nil {
+			fmt.Printf("Warning, can not list commits: %v\n", err)
 			return false, nil
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 10)
+	}, time.Second * 10, time.Minute * 1)
 	if err2 != nil {
 		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
 	}
@@ -241,7 +242,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 			return false, fmt.Errorf("Error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 10)
+	}, time.Second * 10, time.Minute * 1)
 	if err3 != nil {
 		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", targetOrgName, targetName, err3)
 	}

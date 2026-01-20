@@ -1,0 +1,273 @@
+{
+  "access": "PUBLIC",
+  "owner": "rhtap-perf-test-team",
+  "id": 254,
+  "name": "Konflux loadtest",
+  "folder": "rhtap-perf-test-team",
+  "description": "Test for RHTAP Perf Test team's results.\nFor runs see https://prow.ci.openshift.org/job-history/gs/test-platform-results/logs/periodic-ci-konflux-ci-e2e-tests-main-load-test-ci-daily-10u",
+  "datastoreId": null,
+  "timelineLabels": [],
+  "fingerprintLabels": [
+    ".metadata.env.JOB_NAME"
+  ],
+  "transformers": [],
+  "notificationsEnabled": true,
+  "variables": [
+    {
+      "id": 5309015,
+      "testId": 254,
+      "name": ".measurements.cluster_nodes_worker_count.mean",
+      "order": 2,
+      "labels": [
+        ".measurements.cluster_nodes_worker_count.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309016,
+      "testId": 254,
+      "name": ".measurements.cluster_network_bytes_total.mean",
+      "order": 3,
+      "labels": [
+        ".measurements.cluster_network_bytes_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309019,
+      "testId": 254,
+      "name": ".measurements.tekton-pipelines-controller.restarts.mean",
+      "order": 5,
+      "labels": [
+        ".measurements.tekton-pipelines-controller.restarts.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309020,
+      "testId": 254,
+      "name": ".measurements.scheduler_pending_pods_count.mean",
+      "order": 4,
+      "labels": [
+        ".measurements.scheduler_pending_pods_count.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309021,
+      "testId": 254,
+      "name": ".measurements.cluster_memory_usage_rss_total.mean",
+      "order": 8,
+      "labels": [
+        ".measurements.cluster_memory_usage_rss_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309022,
+      "testId": 254,
+      "name": ".measurements.cluster_disk_throughput_total.mean",
+      "order": 9,
+      "labels": [
+        ".measurements.cluster_disk_throughput_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309023,
+      "testId": 254,
+      "name": ".measurements.node_disk_io_time_seconds_total.mean",
+      "order": 10,
+      "labels": [
+        ".measurements.node_disk_io_time_seconds_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309024,
+      "testId": 254,
+      "name": ".measurements.cluster_network_receive_bytes_total.mean",
+      "order": 11,
+      "labels": [
+        ".measurements.cluster_network_receive_bytes_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309025,
+      "testId": 254,
+      "name": ".measurements.cluster_network_transmit_bytes_total.mean",
+      "order": 12,
+      "labels": [
+        ".measurements.cluster_network_transmit_bytes_total.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309026,
+      "testId": 254,
+      "name": ".measurements.cluster_cpu_usage_seconds_total_rate.mean",
+      "order": 13,
+      "labels": [
+        ".measurements.cluster_cpu_usage_seconds_total_rate.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309027,
+      "testId": 254,
+      "name": ".measurements.etcd_request_duration_seconds_average.mean",
+      "order": 14,
+      "labels": [
+        ".measurements.etcd_request_duration_seconds_average.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309028,
+      "testId": 254,
+      "name": ".measurements.cluster_running_pods_on_workers_count.mean",
+      "order": 15,
+      "labels": [
+        ".measurements.cluster_running_pods_on_workers_count.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309029,
+      "testId": 254,
+      "name": ".measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean",
+      "order": 16,
+      "labels": [
+        ".measurements.tekton_tekton_pipelines_controller_workqueue_depth.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309030,
+      "testId": 254,
+      "name": ".measurements.tekton_pipelines_controller_running_pipelineruns_count.mean",
+      "order": 17,
+      "labels": [
+        ".measurements.tekton_pipelines_controller_running_pipelineruns_count.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309031,
+      "testId": 254,
+      "name": ".measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean",
+      "order": 18,
+      "labels": [
+        ".measurements.tekton_pipelines_controller_running_taskruns_throttled_by_node.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309032,
+      "testId": 254,
+      "name": ".measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean",
+      "order": 19,
+      "labels": [
+        ".measurements.tekton_pipelines_controller_running_taskruns_throttled_by_quota.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309017,
+      "testId": 254,
+      "name": ".measurements.tekton-pipelines-controller.cpu.mean",
+      "order": 7,
+      "labels": [
+        ".measurements.tekton-pipelines-controller.cpu.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309018,
+      "testId": 254,
+      "name": ".measurements.tekton-pipelines-controller.memory.mean",
+      "order": 6,
+      "labels": [
+        ".measurements.tekton-pipelines-controller.memory.mean"
+      ],
+      "changeDetection": []
+    },
+    {
+      "id": 5309013,
+      "testId": 254,
+      "name": ".results.measurements.KPI.mean",
+      "order": 0,
+      "labels": [
+        ".results.measurements.KPI.mean"
+      ],
+      "changeDetection": [
+        {
+          "id": 5309267,
+          "model": "fixedThreshold",
+          "config": {
+            "model": "fixedThreshold",
+            "min": {
+              "value": 0,
+              "enabled": false,
+              "inclusive": true
+            },
+            "max": {
+              "value": 600,
+              "enabled": true,
+              "inclusive": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5309014,
+      "testId": 254,
+      "name": ".results.measurements.KPI.errors",
+      "order": 1,
+      "labels": [
+        ".results.measurements.KPI.errors"
+      ],
+      "changeDetection": [
+        {
+          "id": 5309268,
+          "model": "fixedThreshold",
+          "config": {
+            "model": "fixedThreshold",
+            "min": {
+              "value": 0,
+              "enabled": false,
+              "inclusive": true
+            },
+            "max": {
+              "value": 1,
+              "enabled": true,
+              "inclusive": true
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "missingDataRules": [
+    {
+      "id": 5047029,
+      "name": "weekly run - DELME",
+      "labels": [],
+      "maxStaleness": 3153600000000,
+      "testId": 254
+    }
+  ],
+  "experiments": [],
+  "actions": [],
+  "subscriptions": {
+    "id": 4974590,
+    "users": [],
+    "optout": [],
+    "teams": [
+      "rhtap-perf-test-team"
+    ],
+    "testId": 254
+  }
+}
