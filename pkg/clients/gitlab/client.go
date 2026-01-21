@@ -1,6 +1,9 @@
 package gitlab
 
 import (
+	"net/http"
+	"time"
+
 	gitlabClient "github.com/xanzy/go-gitlab"
 )
 
@@ -15,7 +18,15 @@ type GitlabClient struct {
 func NewGitlabClient(accessToken, baseUrl string) (*GitlabClient, error) {
 	var err error
 	var glc = &GitlabClient{}
-	glc.client, err = gitlabClient.NewClient(accessToken, gitlabClient.WithBaseURL(baseUrl))
+
+	// Create a custom http.Client with a 1 minute timeout
+	var customHttpClient = &http.Client{Timeout: 1 * time.Minute}
+	customHttpClient.Transport = &http.Transport{
+		MaxIdleConns:    100,
+		IdleConnTimeout: 20 * time.Minute,
+	}
+
+	glc.client, err = gitlabClient.NewClient(accessToken, gitlabClient.WithBaseURL(baseUrl), gitlabClient.WithHTTPClient(customHttpClient))
 	if err != nil {
 		return nil, err
 	}
