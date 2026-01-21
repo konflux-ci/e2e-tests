@@ -93,12 +93,18 @@ func (gc *GitlabClient) CreateGitlabNewBranch(projectID, branchName, sha, baseBr
 }
 
 // GetMergeRequests returns a list of all MergeRequests in a given project ID and repository name
-func (gc *GitlabClient) GetMergeRequests() ([]*gitlab.MergeRequest, error) {
+func (gc *GitlabClient) GetMergeRequests(projectId string) ([]*gitlab.MergeRequest, error) {
 
-	// Get merge requests using Gitlab client
-	mergeRequests, _, err := gc.client.MergeRequests.ListMergeRequests(&gitlab.ListMergeRequestsOptions{State: gitlab.Ptr("opened")})
+	listMRsOptions := &gitlab.ListProjectMergeRequestsOptions{
+		State: gitlab.Ptr("opened"), // Filter for only open merge requests
+		ListOptions: gitlab.ListOptions{
+			Page:    1,
+			PerPage: 100,
+		},
+	}
+	// Get merge requests for the specific group
+	mergeRequests, _, err := gc.client.MergeRequests.ListProjectMergeRequests(projectId, listMRsOptions)
 	if err != nil {
-		// Handle error
 		return nil, err
 	}
 
@@ -266,7 +272,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 			return fmt.Errorf("Error getting project %s: %v", projectID, getErr)
 		}
 	}
-	if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID + "-deletion_scheduled-")) {
+	if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID+"-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID+"-deletion_scheduled-")) {
 		// We asked for repo like "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale"
 		// and got "jhutar/nodejs-devfile-sample7-ocpp01v1-konflux-perfscale-deleted-138805"
 		// and that means repo was moved by being deleted for a first
@@ -302,7 +308,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 			}
 		}
 
-		if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID + "-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID + "-deletion_scheduled-")) {
+		if getProj.PathWithNamespace != projectID && (strings.Contains(getProj.PathWithNamespace, projectID+"-deleted-") || strings.Contains(getProj.PathWithNamespace, projectID+"-deletion_scheduled-")) {
 			errDel := gc.DeleteRepositoryReally(getProj.PathWithNamespace)
 			if errDel != nil {
 				return false, errDel
@@ -312,7 +318,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 
 		fmt.Printf("Repo %s still exists: %+v\n", projectID, getResp)
 		return false, nil
-	}, time.Second * 10, time.Minute * 5)
+	}, time.Second*10, time.Minute*5)
 
 	return err
 }
@@ -322,7 +328,7 @@ func (gc *GitlabClient) DeleteRepositoryIfExists(projectID string) error {
 // the second deletition.
 func (gc *GitlabClient) DeleteRepositoryReally(projectID string) error {
 	opts := &gitlab.DeleteProjectOptions{
-		FullPath: gitlab.Ptr(projectID),
+		FullPath:          gitlab.Ptr(projectID),
 		PermanentlyRemove: gitlab.Ptr(true),
 	}
 	_, err := gc.client.Projects.DeleteProject(projectID, opts)
@@ -343,9 +349,9 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 	targetProjectID := targetOrgName + "/" + targetName
 
 	opts := &gitlab.ForkProjectOptions{
-		Name: gitlab.Ptr(targetName),
+		Name:          gitlab.Ptr(targetName),
 		NamespacePath: gitlab.Ptr(targetOrgName),
-		Path: gitlab.Ptr(targetName),
+		Path:          gitlab.Ptr(targetName),
 	}
 
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -355,7 +361,7 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 			return false, nil
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 5)
+	}, time.Second*10, time.Minute*5)
 	if err != nil {
 		return nil, fmt.Errorf("Error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
 	}
@@ -379,7 +385,7 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 		}
 
 		return false, nil
-	}, time.Second * 10, time.Minute * 10)
+	}, time.Second*10, time.Minute*10)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
