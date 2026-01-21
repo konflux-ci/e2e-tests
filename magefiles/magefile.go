@@ -842,7 +842,8 @@ func CleanGitLabWebHooks() error {
 		return fmt.Errorf("empty GITLAB_BOT_TOKEN env variable")
 	}
 	gitlabURL := utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL)
-	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL)
+	groupId := utils.GetEnv("GITLAB_GROUP_ID", constants.DefaultGilabGroupId) // default id is for konflux-qe group
+	gc, err := gitlab.NewGitlabClient(gcToken, gitlabURL, groupId)
 	if err != nil {
 		return err
 	}

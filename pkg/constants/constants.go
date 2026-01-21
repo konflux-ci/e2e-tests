@@ -270,6 +270,8 @@ const (
 	DefaultKonfluxAdminRoleBindingName = "user2-konflux-admin"
 	// Default user name available after deploying upstream version of konflux-ci
 	DefaultKonfluxCIUserName = "user2@konflux.dev"
+
+	DefaultGilabGroupId = "85150202"
 )
 
 var (
