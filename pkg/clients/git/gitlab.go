@@ -2,7 +2,11 @@ package git
 
 import (
 	"encoding/base64"
+	"fmt"
+	"net/http"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	gitlab2 "github.com/xanzy/go-gitlab"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
@@ -26,10 +30,39 @@ func (g *GitLabClient) BranchExists(repository, branchName string) (bool, error)
 }
 
 func (g *GitLabClient) ListPullRequests(string) ([]*PullRequest, error) {
-	mrs, err := g.GetMergeRequests()
-	if err != nil {
-		return nil, err
+
+	var mrs []*gitlab2.MergeRequest
+	var err error
+
+	isRequestTimeoutError := func(err error) bool {
+		// Try to cast the error to a gitlab.ErrorResponse
+		if errResp, ok := err.(*gitlab2.ErrorResponse); ok {
+			// Check for the specific HTTP status code (e.g., 408)
+			return errResp.Response.StatusCode == http.StatusRequestTimeout
+		}
+		return false
 	}
+	err = retry.Do(
+		func() error {
+			mrs, err = g.GetMergeRequests()
+			if err != nil {
+				return err // Return the error to be checked by RetryIf
+			}
+			return nil
+		},
+		retry.Attempts(5),
+		retry.Delay(5*time.Second),           // Initial delay
+		retry.DelayType(retry.BackOffDelay),  // Use exponential backoff
+		retry.RetryIf(isRequestTimeoutError), // Only retry if the specific error condition is met
+		retry.OnRetry(func(n uint, err error) {
+			fmt.Printf("Retry attempt %d failed with error: %v\n", n+1, err)
+		}),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("Max retries reached for listing pull requests with error: %v", err)
+	}
+
 	var pullRequests []*PullRequest
 	for _, mr := range mrs {
 		pullRequests = append(pullRequests, &PullRequest{
