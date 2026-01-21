@@ -1324,6 +1324,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		var gitClient git.Client
 		var componentDependenciesChildRepository string
+		var parentPurgePRNumber, childPurgePRNumber int
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
@@ -1451,6 +1452,47 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				err = gitClient.CleanupWebhooks(componentDependenciesChildRepoName, f.ClusterAppDomain)
 				if err != nil {
 					Expect(err.Error()).To(ContainSubstring("404 Not Found"))
+				}
+			}
+			if gitProvider == git.GitLabProvider {
+				// Find the parent purge PR and close it
+				Eventually(func() bool {
+					prs, err := gitClient.ListPullRequests(componentDependenciesParentRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.TargetBranch == ParentComponentDef.componentBranch {
+							parentPurgePRNumber = pr.Number
+							return true
+						}
+					}
+					return false
+				}, time.Minute, time.Second*10).Should(BeTrue(), "timed out when waiting for purge PR to be created for the parent repository")
+
+				// Close Parent Pruge PR if exists
+				err = gitClient.DeleteBranchAndClosePullRequest(gitlabOrg+"/"+componentDependenciesParentRepoName, parentPurgePRNumber)
+				if err != nil {
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+				}
+
+				// Find the child purge PR and close it
+				Eventually(func() bool {
+					prs, err := gitClient.ListPullRequests(componentDependenciesChildRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					for _, pr := range prs {
+						if pr.TargetBranch == ChildComponentDef.componentBranch {
+							childPurgePRNumber = pr.Number
+							return true
+						}
+					}
+					return false
+				}, time.Minute, time.Second*10).Should(BeTrue(), "timed out when waiting for purge PR to be created for the child repository")
+
+				// Close Child Pruge PR if exists
+				err = gitClient.DeleteBranchAndClosePullRequest(gitlabOrg+"/"+componentDependenciesChildRepoName, childPurgePRNumber)
+				if err != nil {
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
 				}
 			}
 		})
