@@ -25,8 +25,8 @@ func (g *GitLabClient) BranchExists(repository, branchName string) (bool, error)
 	return g.ExistsBranch(repository, branchName)
 }
 
-func (g *GitLabClient) ListPullRequests(string) ([]*PullRequest, error) {
-	mrs, err := g.GetMergeRequests()
+func (g *GitLabClient) ListPullRequests(projectId string) ([]*PullRequest, error) {
+	mrs, err := g.GetMergeRequests(projectId)
 	if err != nil {
 		return nil, err
 	}

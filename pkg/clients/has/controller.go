@@ -29,8 +29,9 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*HasController, error) {
 		return nil, err
 	}
 
+	groupId := utils.GetEnv("GITLAB_GROUP_ID", constants.DefaultGilabGroupId) // default id is for konflux-qe group
 	gl, err := gitlab.NewGitlabClient(utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, ""),
-		utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL))
+		utils.GetEnv(constants.GITLAB_API_URL_ENV, constants.DefaultGitLabAPIURL), groupId)
 	if err != nil {
 		return nil, err
 	}

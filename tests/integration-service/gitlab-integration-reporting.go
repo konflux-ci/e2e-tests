@@ -143,7 +143,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			It("should have a related PaC init MR is created", func() {
 				Eventually(func() bool {
-					mrs, err := f.AsKubeAdmin.CommonController.Gitlab.GetMergeRequests()
+					mrs, err := f.AsKubeAdmin.CommonController.Gitlab.GetMergeRequests(projectID)
 					Expect(err).ShouldNot(HaveOccurred())
 
 					for _, mr := range mrs {

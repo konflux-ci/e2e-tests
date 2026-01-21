@@ -9,12 +9,13 @@ const (
 )
 
 type GitlabClient struct {
-	client *gitlabClient.Client
+	client  *gitlabClient.Client
+	groupID string
 }
 
-func NewGitlabClient(accessToken, baseUrl string) (*GitlabClient, error) {
+func NewGitlabClient(accessToken, baseUrl, groupID string) (*GitlabClient, error) {
 	var err error
-	var glc = &GitlabClient{}
+	var glc = &GitlabClient{groupID: groupID}
 	glc.client, err = gitlabClient.NewClient(accessToken, gitlabClient.WithBaseURL(baseUrl))
 	if err != nil {
 		return nil, err
