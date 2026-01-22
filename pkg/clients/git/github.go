@@ -125,3 +125,19 @@ func (g *GitHubClient) DeleteBranchAndClosePullRequest(repository string, prNumb
 	}
 	return err
 }
+
+func (g *GitHubClient) ForkRepository(sourceRepoName, targetRepoName string) error {
+	_, err := g.Github.ForkRepository(sourceRepoName, targetRepoName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GitHubClient) DeleteRepositoryIfExists(repoName string) error {
+	err := g.Github.DeleteRepositoryIfExists(repoName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
