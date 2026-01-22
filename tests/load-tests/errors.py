@@ -144,7 +144,7 @@ def check_failed_taskrun(data_dir, ns, tr_name):
     try:
         data = load(datafile)
     except FileNotFoundError as e:
-        print(f"ERROR: Missing file: {str(e)}")
+        print(f"WARNING: Missing file: {str(e)}")
         return False, "Missing expected TaskRun file", datafile
 
     try:

@@ -136,3 +136,9 @@
   regexp: 'failed to create task run pod .*: translating TaskSpec to Pod: GET https://quay.io/v2/: unexpected status code 502 Bad Gateway. Maybe missing or invalid Task'
   test_dir:
   - run-stone-prd-rh01-2026_01_12T18_45_41_298000000_00_00
+- id: pod_creation_failed_due_to_manifest_digest_mismatch
+  note: ''
+  reason: Pod creation failed due to manifest digest mismatch
+  regexp: 'manifest digest: .* does not match requested digest'
+  test_dir:
+  - run-stone-prod-p01-2026_01_20T03_42_20_461000000_00_00
