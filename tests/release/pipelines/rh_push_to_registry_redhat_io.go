@@ -34,7 +34,7 @@ const (
 
 var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-registry-redhat-io"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Label("release-pipelines", "rh-push-to-registry-redhat-io"), Ordered, func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)

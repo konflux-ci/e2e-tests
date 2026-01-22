@@ -43,7 +43,7 @@ const (
 var rhtapComponentName = "rhtap-comp-" + util.GenerateRandomString(4)
 var gh *github.Github
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-push pipeline", Label("release-pipelines", "rhtap-service-push"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-push pipeline", Label("release-pipelines", "rhtap-service-push"), Ordered, func() {
 	defer GinkgoRecover()
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
