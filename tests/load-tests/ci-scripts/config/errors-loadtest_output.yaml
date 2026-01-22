@@ -545,6 +545,6 @@
 - id: github_repo_forking_failed_due_to_502_server_error
   note: ''
   reason: GitHub repo forking failed due to 502 Server Error
-  regexp: 'Repo forking failed: .* 502 Server Error'
+  regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 502 Server Error'
   test_dir:
   - run-stone-stg-rh01-2026_01_15T16_09_21_945000000_00_00
