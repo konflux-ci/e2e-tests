@@ -533,3 +533,15 @@
   regexp: \+ curl -s https://api\.github\.com/repos/.* \+\+ jq -r '\.sha // ""' \+ sha= *$
   test_dir:
   - run-stone-prd-rh01-2026_01_14T09_03_00_254000000_00_00
+- id: release_pipeline_failed_collecting_data_from_github
+  note: ''
+  reason: Release pipeline failed collecting data from github
+  regexp: 'parse error: Invalid numeric literal at line 1, column 10'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_15T17_01_45_403000000_00_00
+- id: build_failed_to_find_local_image_and_pull_from_remote_registry
+  note: ''
+  reason: Build failed to find local image and pull from remote registry
+  regexp: unsupported transport .docker. for looking up local images
+  test_dir:
+  - run-stone-prod-p01-2026_01_16T17_17_21_058000000_00_00
