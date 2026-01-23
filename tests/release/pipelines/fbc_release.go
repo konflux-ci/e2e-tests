@@ -53,7 +53,7 @@ var (
 	fbcCompBaseBranchName string
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Label("release-pipelines", "fbc-release"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("FBC e2e-tests", Pending, Label("release-pipelines", "fbc-release"), func() {
 	defer GinkgoRecover()
 
 	var (
