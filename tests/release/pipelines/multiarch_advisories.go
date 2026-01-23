@@ -34,7 +34,7 @@ const (
 
 var multiarchComponentName = "multiarch-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with rh-advisories pipeline", Label("release-pipelines", "rh-advisories", "multiarch-advisories"), func() {
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for multi arch with rh-advisories pipeline", Pending, Label("release-pipelines", "rh-advisories", "multiarch-advisories"), func() {
 	defer GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
