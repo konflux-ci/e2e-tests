@@ -10,7 +10,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
@@ -189,11 +189,11 @@ func (r *ReleaseController) WaitForReleasePipelineToGetStarted(release *releaseA
 	err := wait.PollUntilContextTimeout(context.Background(), time.Second*2, time.Minute*5, true, func(ctx context.Context) (done bool, err error) {
 		releasePipelinerun, err = r.GetPipelineRunInNamespace(managedNamespace, release.GetName(), release.GetNamespace())
 		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
+			ginkgo.GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
 			return false, nil
 		}
 		if !releasePipelinerun.HasStarted() {
-			GinkgoWriter.Println("pipelinerun %s/%s hasn't started yet", releasePipelinerun.GetNamespace(), releasePipelinerun.GetName())
+			ginkgo.GinkgoWriter.Println("pipelinerun %s/%s hasn't started yet", releasePipelinerun.GetNamespace(), releasePipelinerun.GetName())
 			return false, nil
 		}
 		return true, nil
@@ -208,11 +208,11 @@ func (r *ReleaseController) WaitForReleasePipelineToBeFinished(release *releaseA
 	return wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		pipelineRun, err := r.GetPipelineRunInNamespace(managedNamespace, release.GetName(), release.GetNamespace())
 		if err != nil {
-			GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
+			ginkgo.GinkgoWriter.Println("PipelineRun has not been created yet for release %s/%s", release.GetNamespace(), release.GetName())
 			return false, nil
 		}
 		for _, condition := range pipelineRun.Status.Conditions {
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 
 			if !pipelineRun.IsDone() {
 				return false, nil

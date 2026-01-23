@@ -9,23 +9,23 @@ import (
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/conforma/crds/api/v1alpha1"
+	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pending, Label("release-pipelines", "push-to-external-registry"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", ginkgo.Pending, ginkgo.Label("release-pipelines", "push-to-external-registry"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
-	AfterEach(framework.ReportFailure(&fw))
+	ginkgo.AfterEach(framework.ReportFailure(&fw))
 	var err error
 	var devNamespace = "ex-registry"
 	var managedNamespace = "ex-registry-managed"
@@ -37,48 +37,48 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pen
 	var gitSourceRevision = "d49914874789147eb2de9bb6a12cd5d150bfff92"
 	var ecPolicyName = "ex-registry-policy-" + util.GenerateRandomString(4)
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		devNamespace = fw.UserNamespace
 		managedNamespace = utils.GetGeneratedNamespace(managedNamespace)
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Error when creating managedNamespace: %v", err)
 
 		sourceAuthJson := utils.GetEnv("QUAY_TOKEN", "")
-		Expect(sourceAuthJson).ToNot(BeEmpty())
+		gomega.Expect(sourceAuthJson).ToNot(gomega.BeEmpty())
 
 		// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
 		releaseCatalogTrustedArtifactsQuayAuthJson := utils.GetEnv("RELEASE_CATALOG_TA_QUAY_TOKEN", "")
-		Expect(releaseCatalogTrustedArtifactsQuayAuthJson).ToNot(BeEmpty())
+		gomega.Expect(releaseCatalogTrustedArtifactsQuayAuthJson).ToNot(gomega.BeEmpty())
 
 		managedServiceAccount, err := fw.AsKubeAdmin.CommonController.CreateServiceAccount(releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, releasecommon.ManagednamespaceSecret, nil)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePipelineRoleBindingForServiceAccount(managedNamespace, managedServiceAccount)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.RedhatAppstudioUserSecret, managedNamespace, sourceAuthJson)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		// Create secret for quay repo for trusted artifacts "quay.io/konflux-ci/release-service-trusted-artifacts".
 		_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.ReleaseCatalogTAQuaySecret, managedNamespace, releaseCatalogTrustedArtifactsQuayAuthJson)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		releasePublicKeyDecoded := []byte("-----BEGIN PUBLIC KEY-----\n" +
 			"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEocSG/SnE0vQ20wRfPltlXrY4Ib9B\n" +
 			"CRnFUCg/fndZsXdz0IX5sfzIyspizaTbu4rapV85KirmSBU6XUaLY347xg==\n" +
 			"-----END PUBLIC KEY-----")
 
-		Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(Succeed())
+		gomega.Expect(fw.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+			releasePublicKeyDecoded, releasecommon.PublicSecretNameAuth, managedNamespace)).To(gomega.Succeed())
 
 		defaultEcPolicy, err := fw.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		defaultEcPolicySpec := ecp.EnterpriseContractPolicySpec{
 			Description: "Red Hat's enterprise requirements",
 			PublicKey:   fmt.Sprintf("k8s://%s/%s", managedNamespace, releasecommon.PublicSecretNameAuth),
@@ -89,13 +89,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pen
 			},
 		}
 		_, err = fw.AsKubeAdmin.TektonController.CreateEnterpriseContractPolicy(ecPolicyName, managedNamespace, defaultEcPolicySpec)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "", nil, nil, nil)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		data, err := json.Marshal(map[string]interface{}{
 			"mapping": map[string]interface{}{
@@ -112,7 +112,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pen
 				},
 			},
 		})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, ecPolicyName, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, false, &tektonutils.PipelineRef{
 			Resolver: "git",
@@ -124,56 +124,56 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pen
 		}, &runtime.RawExtension{
 			Raw: data,
 		})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.TektonController.CreatePVCInAccessMode(releasecommon.ReleasePvcName, managedNamespace, corev1.ReadWriteOnce)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRole("role-release-service-account", managedNamespace, map[string][]string{
 			"apiGroupsList": {""},
 			"roleResources": {"secrets"},
 			"roleVerbs":     {"get", "list", "watch"},
 		})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateRoleBinding("role-release-service-account-binding", managedNamespace, "ServiceAccount", releasecommon.ReleasePipelineServiceAccountDefault, managedNamespace, "Role", "role-release-service-account", "rbac.authorization.k8s.io")
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(fw.AsKubeAdmin, releasecommon.ComponentName, releasecommon.ApplicationNameDefault, devNamespace, sampleImage, gitSourceURL, gitSourceRevision, "", "", "", "")
-		GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
-		Expect(err).ShouldNot(HaveOccurred())
+		ginkgo.GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	})
 
-	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
-			Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
+	ginkgo.AfterAll(func() {
+		if !ginkgo.CurrentSpecReport().Failed() {
+			gomega.Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(gomega.Succeed())
+			gomega.Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(gomega.Succeed())
 		}
 	})
 
-	var _ = Describe("Post-release verification", func() {
+	var _ = ginkgo.Describe("Post-release verification", func() {
 
-		It("verifies that a Release CR should have been created in the dev namespace", func() {
-			Eventually(func() error {
+		ginkgo.It("verifies that a Release CR should have been created in the dev namespace", func() {
+			gomega.Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				return err
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed(), "timed out when waiting for Release CR is created in Namespace %s", devNamespace)
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), "timed out when waiting for Release CR is created in Namespace %s", devNamespace)
 		})
 
-		It("verifies that Release PipelineRun should eventually succeed", func() {
-			Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
+		ginkgo.It("verifies that Release PipelineRun should eventually succeed", func() {
+			gomega.Expect(fw.AsKubeAdmin.ReleaseController.WaitForReleasePipelineToBeFinished(releaseCR, managedNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for a release pipelinerun for release %s/%s to finish", releaseCR.GetNamespace(), releaseCR.GetName()))
 		})
 
-		It("tests if the image was pushed to quay", func() {
+		ginkgo.It("tests if the image was pushed to quay", func() {
 			containerImageDigest := strings.Split(sampleImage, "@")[1]
 			digestExist, err := releasecommon.DoesDigestExistInQuay(releasecommon.ReleasedImagePushRepo, containerImageDigest)
-			Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+"@"+containerImageDigest, err))
-			Expect(digestExist).To(BeTrue())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("failed while getting Digest for quay image %s with error: %+v", releasecommon.ReleasedImagePushRepo+"@"+containerImageDigest, err))
+			gomega.Expect(digestExist).To(gomega.BeTrue())
 		})
 
-		It("verifies that a Release is marked as succeeded.", func() {
-			Eventually(func() error {
+		ginkgo.It("verifies that a Release is marked as succeeded.", func() {
+			gomega.Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
 					return err
@@ -182,7 +182,7 @@ var _ = framework.ReleasePipelinesSuiteDescribe("Push to external registry", Pen
 					return fmt.Errorf("release %s/%s is not marked as finished yet", releaseCR.GetNamespace(), releaseCR.GetName())
 				}
 				return nil
-			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			}, releasecommon.ReleaseCreationTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
 		})
 	})
 })

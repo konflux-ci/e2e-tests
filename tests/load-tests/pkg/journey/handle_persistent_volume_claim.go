@@ -12,15 +12,15 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 func collectPersistentVolumeClaims(f *framework.Framework, namespace string) error {
 	pvcs, err := f.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("Error getting PVC: %v\n", err)
+		return fmt.Errorf("error getting PVC: %v", err)
 	}
 	for _, pvc := range pvcs.Items {
 		pv, err := f.AsKubeAdmin.TektonController.KubeInterface().CoreV1().PersistentVolumes().Get(context.Background(), pvc.Spec.VolumeName, metav1.GetOptions{})
 		if err != nil {
-			_ = logging.Logger.Fail(76, "Error getting PV: %v\n", err)
+			_ = logging.Logger.Fail(76, "error getting PV: %v", err)
 			continue
 		}
-		waittime := (pv.ObjectMeta.CreationTimestamp.Time).Sub(pvc.ObjectMeta.CreationTimestamp.Time)
+		waittime := (pv.CreationTimestamp.Time).Sub(pvc.CreationTimestamp.Time)
 		logging.LogMeasurement("PVC_to_PV_CreationTimestamp", -1, -1, -1, -1, map[string]string{"pv.Name": pv.Name}, waittime, "", nil)
 	}
 	return nil

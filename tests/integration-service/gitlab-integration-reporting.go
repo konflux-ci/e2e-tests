@@ -18,13 +18,13 @@ import (
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
-var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of Integration tests", Label("integration-service", "gitlab-status-reporting"), func() {
-	defer GinkgoRecover()
+var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of Integration tests", ginkgo.Label("integration-service", "gitlab-status-reporting"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var f *framework.Framework
 	var err error
@@ -40,29 +40,29 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 	var mergeResult *gitlab.MergeRequest
 	var mergeResultSha string
 
-	AfterEach(framework.ReportFailure(&f))
+	ginkgo.AfterEach(framework.ReportFailure(&f))
 
-	Describe("Gitlab with status reporting of Integration tests in the assosiated merge request", Ordered, func() {
-		BeforeAll(func() {
+	ginkgo.Describe("Gitlab with status reporting of Integration tests in the assosiated merge request", ginkgo.Ordered, func() {
+		ginkgo.BeforeAll(func() {
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
-				Skip("Skipping this test due to configuration issue with Spray proxy")
+				ginkgo.Skip("Skipping this test due to configuration issue with Spray proxy")
 			}
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("gitlab-rep"))
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			testNamespace = f.UserNamespace
 
 			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
-				Skip("Using private cluster (not reachable from Github), skipping...")
+				ginkgo.Skip("Using private cluster (not reachable from Github), skipping...")
 			}
 
 			applicationName = createApp(*f, testNamespace)
 
 			integrationTestScenarioPass, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoPass, "", []string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			componentName = fmt.Sprintf("%s-%s", "test-comp-pac-gitlab", util.GenerateRandomString(6))
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
@@ -71,33 +71,33 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			projectID = gitlabProjectIDForStatusReporting
 
 			gitlabToken = utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
-			Expect(gitlabToken).ShouldNot(BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.GITLAB_BOT_TOKEN_ENV))
+			gomega.Expect(gitlabToken).ShouldNot(gomega.BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.GITLAB_BOT_TOKEN_ENV))
 
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateGitlabNewBranch(projectID, componentBaseBranchName, componentRevision, componentDefaultBranch)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			secretAnnotations := map[string]string{}
 
 			err = build.CreateGitlabBuildSecret(f, "gitlab-build-secret", secretAnnotations, gitlabToken)
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 
 			// Cleanup test: close MR if opened, delete created branch, delete associated Webhooks
-			Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).To(Succeed())
-			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(HaveOccurred())
-			Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(HaveOccurred())
+			gomega.Expect(f.AsKubeAdmin.CommonController.Gitlab.CloseMergeRequest(projectID, mrID)).To(gomega.Succeed())
+			gomega.Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteBranch(projectID, componentBaseBranchName)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(gomega.HaveOccurred())
 
-			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+			if !ginkgo.CurrentSpecReport().Failed() {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
 			}
 
 		})
 
-		When("a new Component with specified custom branch is created", Label("custom-branch"), func() {
-			BeforeAll(func() {
+		ginkgo.When("a new Component with specified custom branch is created", ginkgo.Label("custom-branch"), func() {
+			ginkgo.BeforeAll(func() {
 				componentObj := appstudioApi.ComponentSpec{
 					ComponentName: componentName,
 					Application:   applicationName,
@@ -115,36 +115,36 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 				buildPipelineAnnotation := build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 				// Create a component with Git Source URL, a specified git branch
 				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
-				Expect(err).ShouldNot(HaveOccurred())
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 			})
 
-			It("triggers a Build PipelineRun", func() {
-				Eventually(func() error {
+			ginkgo.It("triggers a Build PipelineRun", func() {
+				gomega.Eventually(func() error {
 					buildPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					if err != nil {
-						GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						ginkgo.GinkgoWriter.Printf("Build PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 						return err
 					}
 					if !buildPipelineRun.HasStarted() {
 						return fmt.Errorf("build pipelinerun %s/%s hasn't started yet", buildPipelineRun.GetNamespace(), buildPipelineRun.GetName())
 					}
 					return nil
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
 
-			It("does not contain an annotation with a Snapshot Name", func() {
-				Expect(buildPipelineRun.Annotations[snapshotAnnotation]).To(Equal(""))
+			ginkgo.It("does not contain an annotation with a Snapshot Name", func() {
+				gomega.Expect(buildPipelineRun.Annotations[snapshotAnnotation]).To(gomega.Equal(""))
 			})
 
-			It("should lead to build PipelineRun finishing successfully", func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "",
-					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, buildPipelineRun)).To(Succeed())
+			ginkgo.It("should lead to build PipelineRun finishing successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "",
+					"", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, buildPipelineRun)).To(gomega.Succeed())
 			})
 
-			It("should have a related PaC init MR is created", func() {
-				Eventually(func() bool {
+			ginkgo.It("should have a related PaC init MR is created", func() {
+				gomega.Eventually(func() bool {
 					mrs, err := f.AsKubeAdmin.CommonController.Gitlab.GetMergeRequests(projectID)
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, mr := range mrs {
 						if mr.SourceBranch == pacBranchName {
@@ -154,56 +154,56 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return false
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC MR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(), fmt.Sprintf("timed out when waiting for init PaC MR (branch name '%s') to be created in %s repository", pacBranchName, componentRepoNameForStatusReporting))
 
 				// in case the first pipelineRun attempt has failed and was retried, we need to update the value of pipelineRun variable
 				buildPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mrSha)
-				Expect(err).ShouldNot(HaveOccurred())
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 			})
-			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
-					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(Succeed())
+			ginkgo.It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+					f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, nil)).To(gomega.Succeed())
 			})
 		})
 
-		When("the PaC build pipelineRun run succeeded", func() {
-			It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, chainsSignedAnnotation)).To(Succeed())
+		ginkgo.When("the PaC build pipelineRun run succeeded", func() {
+			ginkgo.It("checks if the BuildPipelineRun have the annotation of chains signed", func() {
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, chainsSignedAnnotation)).To(gomega.Succeed())
 			})
 
-			It("checks if the Snapshot is created", func() {
+			ginkgo.It("checks if the Snapshot is created", func() {
 				snapshot, err = f.AsKubeDeveloper.IntegrationController.WaitForSnapshotToGetCreated("", "", componentName, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 			})
 
-			It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
-				Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(Succeed())
+			ginkgo.It("checks if the Build PipelineRun got annotated with Snapshot name", func() {
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForBuildPipelineRunToGetAnnotated(testNamespace, applicationName, componentName, snapshotAnnotation)).To(gomega.Succeed())
 			})
 		})
 
-		When("the Snapshot was created", func() {
-			It("should find the Integration Test Scenario PipelineRun", func() {
+		ginkgo.When("the Snapshot was created", func() {
+			ginkgo.It("should find the Integration Test Scenario PipelineRun", func() {
 				testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenarioPass.Name, snapshot.Name, testNamespace)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
-				Expect(testPipelinerun.Labels[scenarioAnnotation]).To(ContainSubstring(integrationTestScenarioPass.Name))
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+				gomega.Expect(testPipelinerun.Labels[snapshotAnnotation]).To(gomega.ContainSubstring(snapshot.Name))
+				gomega.Expect(testPipelinerun.Labels[scenarioAnnotation]).To(gomega.ContainSubstring(integrationTestScenarioPass.Name))
 
-				Expect(testPipelinerun.Labels[snapshotAnnotation]).To(ContainSubstring(snapshot.Name))
+				gomega.Expect(testPipelinerun.Labels[snapshotAnnotation]).To(gomega.ContainSubstring(snapshot.Name))
 
 			})
 		})
 
-		When("Integration PipelineRun is created", func() {
+		ginkgo.When("Integration PipelineRun is created", func() {
 
-			It("should eventually complete successfully", func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+			ginkgo.It("should eventually complete successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 
-			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
-				Eventually(func() string {
+			ginkgo.It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
+				gomega.Eventually(func() string {
 					commitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, commitStatus := range commitStatuses {
 						commitStatusNames := strings.Split(commitStatus.Name, "/")
@@ -214,17 +214,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return ""
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
-				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusSuccess))
+			ginkgo.It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(gomega.Equal(integrationPipelineRunCommitStatusSuccess))
 			})
 
-			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
-				Eventually(func() string {
+			ginkgo.It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
+				gomega.Eventually(func() string {
 					commitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, commitStatus := range commitStatuses {
 						commitStatusNames := strings.Split(commitStatus.Name, "/")
@@ -235,47 +235,47 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return ""
-				}, longTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+				}, longTimeout, constants.PipelineRunPollingInterval).Should(gomega.Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
-				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusFail))
+			ginkgo.It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(gomega.Equal(integrationPipelineRunCommitStatusFail))
 			})
 
-			It("merging the PR should be successful", func() {
-				Eventually(func() error {
+			ginkgo.It("merging the PR should be successful", func() {
+				gomega.Eventually(func() error {
 					mergeResult, err = f.AsKubeAdmin.CommonController.Gitlab.AcceptMergeRequest(projectID, mrID)
 					return err
-				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC merge request ID #%d in ProjectID %s", mrID, projectID))
+				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("error when merging PaC merge request ID #%d in ProjectID %s", mrID, projectID))
 
 				mergeResultSha = mergeResult.SHA
-				GinkgoWriter.Printf("merged result sha: %s for MR #%d\n", mergeResultSha, mrID)
+				ginkgo.GinkgoWriter.Printf("merged result sha: %s for MR #%d\n", mergeResultSha, mrID)
 
 			})
-			It("leads to triggering on push PipelineRun", func() {
-				Eventually(func() error {
+			ginkgo.It("leads to triggering on push PipelineRun", func() {
+				gomega.Eventually(func() error {
 					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)
 					if err != nil {
-						GinkgoWriter.Printf("Push PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
+						ginkgo.GinkgoWriter.Printf("Push PipelineRun has not been created yet for the component %s/%s\n", testNamespace, componentName)
 						return err
 					}
 					if !pipelineRun.HasStarted() {
 						return fmt.Errorf("push pipelinerun %s/%s hasn't started yet", pipelineRun.GetNamespace(), pipelineRun.GetName())
 					}
 					return nil
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", testNamespace, componentName))
 			})
 		})
-		When("Run integration tests after Merged MR", func() {
-			It("should eventually complete successfully", func() {
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
-				Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+		ginkgo.When("Run integration tests after Merged MR", func() {
+			ginkgo.It("should eventually complete successfully", func() {
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 
-			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
-				Eventually(func() string {
+			ginkgo.It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it pass", func() {
+				gomega.Eventually(func() string {
 					commitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, commitStatus := range commitStatuses {
 						commitStatusNames := strings.Split(commitStatus.Name, "/")
@@ -286,17 +286,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return ""
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Equal(integrationPipelineRunCommitStatusSuccess), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
-				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(Equal(constants.CheckrunConclusionSuccess))
+			ginkgo.It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, mrID)).To(gomega.Equal(constants.CheckrunConclusionSuccess))
 			})
 
-			It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
-				Eventually(func() string {
+			ginkgo.It("validates the Integration test scenario PipelineRun is reported to merge request CommitStatus, and it fails", func() {
+				gomega.Eventually(func() string {
 					commitStatuses, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Commits.GetCommitStatuses(projectID, mrSha, nil)
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, commitStatus := range commitStatuses {
 						commitStatusNames := strings.Split(commitStatus.Name, "/")
@@ -307,11 +307,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 						}
 					}
 					return ""
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Equal(integrationPipelineRunCommitStatusFail), fmt.Sprintf("timed out when waiting for expected commitStatus to be created for sha %s in %s repository", mrSha, componentRepoNameForStatusReporting))
 			})
 
-			It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
-				Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(Equal(integrationPipelineRunCommitStatusFail))
+			ginkgo.It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
+				gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(gomega.Equal(integrationPipelineRunCommitStatusFail))
 			})
 		})
 	})

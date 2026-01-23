@@ -12,7 +12,6 @@ import (
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -26,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 )
 
 const (
@@ -38,8 +37,8 @@ const (
 	sampCatalogPathInRepo = "pipelines/managed/release-to-github/release-to-github.yaml"
 )
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", Pending, Label("release-pipelines", "release-to-github"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github pipeline", ginkgo.Pending, ginkgo.Label("release-pipelines", "release-to-github"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 	var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -59,13 +58,13 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 
 	var snapshot *appservice.Snapshot
 	var releaseCR *releaseapi.Release
-	var releasePR *tektonv1.PipelineRun
+	var releasePR *pipeline.PipelineRun
 	var gh *github.Github
 	var sampReleaseURL string
 	var pipelineRun *pipeline.PipelineRun
 
-	Describe("Release-to-github happy path", Label("releaseToGithub"), func() {
-		BeforeAll(func() {
+	ginkgo.Describe("Release-to-github happy path", ginkgo.Label("releaseToGithub"), func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
@@ -73,8 +72,8 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 			githubUser := utils.GetEnv("GITHUB_USER", "redhat-appstudio-qe-bot")
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, githubUser)
-			Expect(githubToken).ToNot(BeEmpty())
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(githubToken).ToNot(gomega.BeEmpty())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			_, err = managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, releasecommon.RedhatAppstudioQESecret)
 			if errors.IsNotFound(err) {
@@ -89,71 +88,71 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 					},
 				}
 				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, githubSecret)
-				Expect(err).ToNot(HaveOccurred())
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 			}
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioQESecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(sampApplicationName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(sampReleasePlanName, devNamespace, sampApplicationName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createGHReleasePlanAdmission(sampReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, sampApplicationName, sampEnterpriseContractPolicyName, sampCatalogPathInRepo, "false", "", "", "", "")
 
 			createGHEnterpriseContractPolicy(sampEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, sampComponentName, sampApplicationName, devNamespace, sampleImage, sampSourceGitURL, sampGitSrcSHA, "", "", "", "")
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			if gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, sampReleaseURL) {
 				gh.DeleteRelease(sampRepoOwner, sampRepo, sampReleaseURL)
 			}
 
 			// store pipelineRun and Release CR
 			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
 
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(sampApplicationName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(sampEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(sampReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(sampApplicationName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(sampEnterpriseContractPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(sampReleasePlanAdmissionName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 		})
 
-		var _ = Describe("Post-release verification", func() {
+		var _ = ginkgo.Describe("Post-release verification", func() {
 
-			It("verifies if release CR is created", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies if release CR is created", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
 			})
 
-			It("verifies the release pipelinerun is running and succeeds", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies the release pipelinerun is running and succeeds", func() {
+				gomega.Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
 						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+						ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 					}
 
 					if !pipelineRun.IsDone() {
@@ -165,40 +164,40 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for release-to-github
 					} else {
 						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
-							Expect(err).ShouldNot(HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+							gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 							return nil
 						}
-						GinkgoWriter.Printf("logs: %s", prLogs)
-						Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+						ginkgo.GinkgoWriter.Printf("logs: %s", prLogs)
+						gomega.Expect(prLogs).To(gomega.Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
 						return nil
 					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 
 				releasePR, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err := devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					err = releasecommon.CheckReleaseStatus(releaseCR)
 					return err
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed())
 			})
 
-			It("verifies if the Release exists in github repo", func() {
+			ginkgo.It("verifies if the Release exists in github repo", func() {
 				trReleasePr, err := managedFw.AsKubeAdmin.TektonController.GetTaskRunStatus(managedFw.AsKubeAdmin.CommonController.KubeRest(), releasePR, "create-github-release")
-				Expect(err).NotTo(HaveOccurred())
-				trReleaseURL := trReleasePr.Status.TaskRunStatusFields.Results[0].Value.StringVal
-				releaseURL := strings.Replace(trReleaseURL, "\n", "", -1)
-				Expect(gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, releaseURL)).To(BeTrue(), fmt.Sprintf("release %s doesn't exist", releaseURL))
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				trReleaseURL := trReleasePr.Status.Results[0].Value.StringVal
+				releaseURL := strings.ReplaceAll(trReleaseURL, "\n", "")
+				gomega.Expect(gh.CheckIfReleaseExist(sampRepoOwner, sampRepo, releaseURL)).To(gomega.BeTrue(), fmt.Sprintf("release %s doesn't exist", releaseURL))
 				sampReleaseURL = releaseURL
 				if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-					GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+					ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 				}
 			})
 		})
@@ -221,7 +220,7 @@ func createGHEnterpriseContractPolicy(sampECPName string, managedFw framework.Fr
 	}
 
 	_, err := managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(sampECPName, managedNamespace, defaultEcPolicySpec)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 }
 
@@ -236,7 +235,7 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(sampRPAName, managedNamespace, "", devNamespace, sampECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{sampAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
@@ -248,5 +247,5 @@ func createGHReleasePlanAdmission(sampRPAName string, managedFw framework.Framew
 	}, &runtime.RawExtension{
 		Raw: data,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }

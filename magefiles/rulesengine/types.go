@@ -459,7 +459,7 @@ func NewRuleCtx() *RuleCtx {
 	var reporterConfig = types.NewDefaultReporterConfig()
 	var cliConfig = types.NewDefaultCLIConfig()
 	var goFlagsConfig = types.NewDefaultGoFlagsConfig()
-	var envData map[string]any = make(map[string]any)
+	envData := make(map[string]any)
 
 	r := &RuleCtx{cliConfig,
 		suiteConfig,

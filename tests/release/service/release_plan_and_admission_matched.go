@@ -11,13 +11,13 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	releasecommon "github.com/konflux-ci/e2e-tests/tests/release"
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmission match", Label("release-service", "release_plan_and_admission"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmission match", ginkgo.Label("release-service", "release_plan_and_admission"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
 	var err error
@@ -27,49 +27,49 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 	var releasePlanCR, secondReleasePlanCR *releaseApi.ReleasePlan
 	var releasePlanAdmissionCR *releaseApi.ReleasePlanAdmission
 
-	AfterEach(framework.ReportFailure(&fw))
+	ginkgo.AfterEach(framework.ReportFailure(&fw))
 
-	BeforeAll(func() {
+	ginkgo.BeforeAll(func() {
 		fw, err = framework.NewFramework(utils.GetGeneratedNamespace(devNamespace))
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		devNamespace = fw.UserNamespace
 
 		_, err = fw.AsKubeAdmin.CommonController.CreateTestNamespace(managedNamespace)
-		Expect(err).NotTo(HaveOccurred(), "Error when creating managedNamespace: %v", err)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Error when creating managedNamespace: %v", err)
 
 		_, err = fw.AsKubeAdmin.HasController.CreateApplication(releasecommon.ApplicationNameDefault, devNamespace)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		//Create ReleasePlan
 		_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "true", nil, nil, nil)
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 
-	AfterAll(func() {
-		if !CurrentSpecReport().Failed() {
-			Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(HaveOccurred())
-			Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
-			Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(Succeed())
+	ginkgo.AfterAll(func() {
+		if !ginkgo.CurrentSpecReport().Failed() {
+			gomega.Expect(fw.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(devNamespace, time.Minute*5)).To(gomega.Succeed())
+			gomega.Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(devNamespace, time.Minute*5)).To(gomega.Succeed())
 		}
 	})
 
-	var _ = Describe("RP and PRA status change verification", func() {
-		It("verifies that the ReleasePlan CR is unmatched in the beginning", func() {
+	ginkgo.Describe("RP and PRA status change verification", func() {
+		ginkgo.It("verifies that the ReleasePlan CR is unmatched in the beginning", func() {
 			var condition *metav1.Condition
-			Eventually(func() error {
+			gomega.Eventually(func() error {
 				releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 				if condition == nil {
 					return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanCR.Name)
 				}
 				return nil
-			}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
+			}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
 			condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionFalse))
 		})
 
-		It("Creates ReleasePlanAdmission CR in corresponding managed namespace", func() {
+		ginkgo.It("Creates ReleasePlanAdmission CR in corresponding managed namespace", func() {
 			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, "", devNamespace, releasecommon.ReleaseStrategyPolicyDefault, releasecommon.ReleasePipelineServiceAccountDefault, []string{releasecommon.ApplicationNameDefault}, false, &tektonutils.PipelineRef{
 				Resolver: "git",
 				Params: []tektonutils.Param{
@@ -78,15 +78,15 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					{Name: "pathInRepo", Value: "pipelines/managed/e2e/e2e.yaml"},
 				},
 			}, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
-		When("ReleasePlanAdmission CR is created in managed namespace", func() {
-			It("verifies that the ReleasePlan CR is set to matched", func() {
+		ginkgo.When("ReleasePlanAdmission CR is created in managed namespace", func() {
+			ginkgo.It("verifies that the ReleasePlan CR is set to matched", func() {
 				var condition *metav1.Condition
-				Eventually(func() error {
+				gomega.Eventually(func() error {
 					releasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SourceReleasePlanName, devNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition = meta.FindStatusCondition(releasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
 						return fmt.Errorf("the MatchedConditon of %s is still not set", releasePlanCR.Name)
@@ -96,41 +96,41 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", releasePlanCR.Name)
 					}
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-				Expect(releasePlanCR.Status.ReleasePlanAdmission.Name).To(Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
-				Expect(releasePlanCR.Status.ReleasePlanAdmission.Active).To(BeTrue())
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
+				gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionTrue))
+				gomega.Expect(releasePlanCR.Status.ReleasePlanAdmission.Name).To(gomega.Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
+				gomega.Expect(releasePlanCR.Status.ReleasePlanAdmission.Active).To(gomega.BeTrue())
 			})
 
-			It("verifies that the ReleasePlanAdmission CR is set to matched", func() {
+			ginkgo.It("verifies that the ReleasePlanAdmission CR is set to matched", func() {
 				var condition *metav1.Condition
-				Eventually(func() error {
+				gomega.Eventually(func() error {
 					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition = meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition.Status == metav1.ConditionFalse {
 						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", releasePlanCR.Name)
 					}
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), "time out when waiting for ReleasePlanAdmission being reconciled to matched")
-				Expect(condition).NotTo(BeNil())
-				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(1))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}}))
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), "time out when waiting for ReleasePlanAdmission being reconciled to matched")
+				gomega.Expect(condition).NotTo(gomega.BeNil())
+				gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionTrue))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.HaveLen(1))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}}))
 			})
 		})
 
-		It("Creates a manual release ReleasePlan CR in devNamespace", func() {
+		ginkgo.It("Creates a manual release ReleasePlan CR in devNamespace", func() {
 			_, err = fw.AsKubeAdmin.ReleaseController.CreateReleasePlan(releasecommon.SecondReleasePlanName, devNamespace, releasecommon.ApplicationNameDefault, managedNamespace, "false", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
-		When("the second ReleasePlan CR is created", func() {
-			It("verifies that the second ReleasePlan CR is set to matched", func() {
+		ginkgo.When("the second ReleasePlan CR is created", func() {
+			ginkgo.It("verifies that the second ReleasePlan CR is set to matched", func() {
 				var condition *metav1.Condition
-				Eventually(func() error {
+				gomega.Eventually(func() error {
 					secondReleasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition = meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 
 					if condition == nil {
@@ -141,16 +141,16 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", secondReleasePlanCR.Name)
 					}
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Name).To(Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
-				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Active).To(BeTrue())
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
+				gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionTrue))
+				gomega.Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Name).To(gomega.Equal(managedNamespace + "/" + releasecommon.TargetReleasePlanAdmissionName))
+				gomega.Expect(secondReleasePlanCR.Status.ReleasePlanAdmission.Active).To(gomega.BeTrue())
 			})
 
-			It("verifies that the ReleasePlanAdmission CR has two matched ReleasePlan CRs", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies that the ReleasePlanAdmission CR has two matched ReleasePlan CRs", func() {
+				gomega.Eventually(func() error {
 					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
 						return fmt.Errorf("failed to get the MatchedConditon of RPA %s ", releasePlanAdmissionCR.Name)
@@ -159,25 +159,25 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					if len(releasePlanAdmissionCR.Status.ReleasePlans) < 2 {
 						return fmt.Errorf("the second ReleasePlan CR has not being added to %s", releasePlanAdmissionCR.Name)
 					}
-					Expect(condition).NotTo(BeNil())
-					Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+					gomega.Expect(condition).NotTo(gomega.BeNil())
+					gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionTrue))
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled to matched", releasePlanAdmissionCR.Name))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(2))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}, {Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled to matched", releasePlanAdmissionCR.Name))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.HaveLen(2))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SourceReleasePlanName, Active: true}, {Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
 			})
 		})
 
-		It("deletes one ReleasePlan CR", func() {
+		ginkgo.It("deletes one ReleasePlan CR", func() {
 			err = fw.AsKubeAdmin.ReleaseController.DeleteReleasePlan(releasecommon.SourceReleasePlanName, devNamespace, true)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
-		When("One ReleasePlan CR is deleted in managed namespace", func() {
-			It("verifies that the ReleasePlanAdmission CR has only one matching ReleasePlan", func() {
-				Eventually(func() error {
+		ginkgo.When("One ReleasePlan CR is deleted in managed namespace", func() {
+			ginkgo.It("verifies that the ReleasePlanAdmission CR has only one matching ReleasePlan", func() {
+				gomega.Eventually(func() error {
 					releasePlanAdmissionCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition := meta.FindStatusCondition(releasePlanAdmissionCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
 						return fmt.Errorf("failed to find the MatchedConditon of %s", releasePlanAdmissionCR.Name)
@@ -186,25 +186,25 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 					if len(releasePlanAdmissionCR.Status.ReleasePlans) > 1 {
 						return fmt.Errorf("ReleasePlan CR is deleted, but ReleasePlanAdmission CR %s has not been reconciled", releasePlanAdmissionCR.Name)
 					}
-					Expect(condition).NotTo(BeNil())
-					Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+					gomega.Expect(condition).NotTo(gomega.BeNil())
+					gomega.Expect(condition.Status).To(gomega.Equal(metav1.ConditionTrue))
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled after one ReleasePlan is deleted", releasePlanAdmissionCR.Name))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(HaveLen(1))
-				Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("time out when waiting for ReleasePlanAdmission %s being reconciled after one ReleasePlan is deleted", releasePlanAdmissionCR.Name))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.HaveLen(1))
+				gomega.Expect(releasePlanAdmissionCR.Status.ReleasePlans).To(gomega.Equal([]releaseApi.MatchedReleasePlan{{Name: devNamespace + "/" + releasecommon.SecondReleasePlanName, Active: false}}))
 			})
 		})
 
-		It("deletes the ReleasePlanAdmission CR", func() {
+		ginkgo.It("deletes the ReleasePlanAdmission CR", func() {
 			err = fw.AsKubeAdmin.ReleaseController.DeleteReleasePlanAdmission(releasecommon.TargetReleasePlanAdmissionName, managedNamespace, true)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
-		When("ReleasePlanAdmission CR is deleted in managed namespace", func() {
-			It("verifies that the ReleasePlan CR has no matched ReleasePlanAdmission", func() {
-				Eventually(func() error {
+		ginkgo.When("ReleasePlanAdmission CR is deleted in managed namespace", func() {
+			ginkgo.It("verifies that the ReleasePlan CR has no matched ReleasePlanAdmission", func() {
+				gomega.Eventually(func() error {
 					secondReleasePlanCR, err = fw.AsKubeAdmin.ReleaseController.GetReleasePlan(releasecommon.SecondReleasePlanName, devNamespace)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					condition := meta.FindStatusCondition(secondReleasePlanCR.Status.Conditions, releaseApi.MatchedConditionType.String())
 					if condition == nil {
 						return fmt.Errorf("failed to get the MatchedConditon of %s", secondReleasePlanCR.Name)
@@ -215,8 +215,8 @@ var _ = framework.ReleaseServiceSuiteDescribe("ReleasePlan and ReleasePlanAdmiss
 						return fmt.Errorf("the MatchedConditon of %s has not reconciled yet", secondReleasePlanCR.Name)
 					}
 					return nil
-				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(Succeed())
-				Expect(secondReleasePlanCR.Status.ReleasePlanAdmission).To(Equal(releaseApi.MatchedReleasePlanAdmission{}))
+				}, releasecommon.ReleasePlanStatusUpdateTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
+				gomega.Expect(secondReleasePlanCR.Status.ReleasePlanAdmission).To(gomega.Equal(releaseApi.MatchedReleasePlanAdmission{}))
 			})
 		})
 	})

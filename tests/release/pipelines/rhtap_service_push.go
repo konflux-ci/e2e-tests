@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
 	ecp "github.com/conforma/crds/api/v1alpha1"
+	"github.com/devfile/library/v2/pkg/util"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -27,8 +27,8 @@ import (
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 )
 
 const (
@@ -43,8 +43,8 @@ const (
 var rhtapComponentName = "rhtap-comp-" + util.GenerateRandomString(4)
 var gh *github.Github
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-push pipeline", Pending, Label("release-pipelines", "rhtap-service-push"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-push pipeline", ginkgo.Pending, ginkgo.Label("release-pipelines", "rhtap-service-push"), func() {
+	defer ginkgo.GinkgoRecover()
 	var pyxisKeyDecoded, pyxisCertDecoded []byte
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
@@ -71,31 +71,31 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 	var releaseCR *releaseapi.Release
 	var pipelineRun *pipeline.PipelineRun
 
-	Describe("Rhtap-service-push happy path", Label("RhtapServicePush"), func() {
-		BeforeAll(func() {
+	ginkgo.Describe("Rhtap-service-push happy path", ginkgo.Label("RhtapServicePush"), func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
 			githubToken := utils.GetEnv(constants.GITHUB_TOKEN_ENV, "")
 			gh, err = github.NewGithubClient(githubToken, "hacbs-release")
-			Expect(githubToken).ToNot(BeEmpty())
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(githubToken).ToNot(gomega.BeEmpty())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			sourcePrNum, mergeResultSha = prepareMergedPR(devFw, testBaseBranchName, testPRBranchName)
 
 			keyPyxisStage := os.Getenv(constants.PYXIS_STAGE_KEY_ENV)
-			Expect(keyPyxisStage).ToNot(BeEmpty())
+			gomega.Expect(keyPyxisStage).ToNot(gomega.BeEmpty())
 
 			certPyxisStage := os.Getenv(constants.PYXIS_STAGE_CERT_ENV)
-			Expect(certPyxisStage).ToNot(BeEmpty())
+			gomega.Expect(certPyxisStage).ToNot(gomega.BeEmpty())
 
 			// Creating k8s secret to access Pyxis stage based on base64 decoded of key and cert
 			pyxisKeyDecoded, err = base64.StdEncoding.DecodeString(string(keyPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			pyxisCertDecoded, err = base64.StdEncoding.DecodeString(string(certPyxisStage))
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			pyxisSecret, err := managedFw.AsKubeAdmin.CommonController.GetSecret(managedNamespace, "pyxis")
 			if pyxisSecret == nil || errors.IsNotFound(err) {
@@ -112,59 +112,59 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 				}
 
 				_, err = managedFw.AsKubeAdmin.CommonController.CreateSecret(managedNamespace, secret)
-				Expect(err).ToNot(HaveOccurred())
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 			}
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhtapApplicationName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhtapReleasePlanName, devNamespace, rhtapApplicationName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createRHTAPReleasePlanAdmission(rhtapReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhtapApplicationName, rhtapEnterpriseContractPolicyName, rhtapCatalogPathInRepo)
 
 			createRHTAPEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshot, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, rhtapComponentName, rhtapApplicationName, devNamespace, sampleImage, rhtapGitSourceURL, rhtapGitSrcSHA, "", "", "", "")
-			Expect(err).ShouldNot(HaveOccurred())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			// store pipelineRun if there pipelineRun failed
 			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
 
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhtapApplicationName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhtapReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhtapApplicationName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhtapEnterpriseContractPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhtapReleasePlanAdmissionName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 		})
 
-		var _ = Describe("Post-release verification", func() {
-			It("verifies if the release CR is created", func() {
-				Eventually(func() error {
+		var _ = ginkgo.Describe("Post-release verification", func() {
+			ginkgo.It("verifies if the release CR is created", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshot.Name)
 			})
 
-			It("verifies the rhtap release pipelinerun is running and succeeds", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies the rhtap release pipelinerun is running and succeeds", func() {
+				gomega.Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
 						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+						ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 					}
 
 					if !pipelineRun.IsDone() {
@@ -176,56 +176,56 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rhtap-service-pus
 					} else {
 						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
-							Expect(err).ShouldNot(HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("failed to get PLR logs: %+v\n", err)
+							gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 							return nil
 						}
-						GinkgoWriter.Printf("logs: %s", prLogs)
-						Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+						ginkgo.GinkgoWriter.Printf("logs: %s\n", prLogs)
+						gomega.Expect(prLogs).To(gomega.Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
 						return nil
 					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshot.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					err = releasecommon.CheckReleaseStatus(releaseCR)
 					return err
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed())
 			})
-			It("verifies if the PR in infra-deployments repo is created/updated", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies if the PR in infra-deployments repo is created/updated", func() {
+				gomega.Eventually(func() error {
 					prs, err := gh.ListPullRequests("infra-deployments")
-					Expect(err).ShouldNot(HaveOccurred())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 					for _, pr := range prs {
-						GinkgoWriter.Printf("PR branch: %s", pr.Head.GetRef())
+						ginkgo.GinkgoWriter.Printf("PR branch: %s\n", pr.Head.GetRef())
 						if strings.Contains(pr.Head.GetRef(), rhtapGitSourceRepoName) {
 							contents, err := gh.GetFile("infra-deployments", "components/release/development/kustomization.yaml", rhtapGitSourceRepoName)
-							Expect(err).ShouldNot(HaveOccurred())
+							gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 							content, err := contents.GetContent()
-							Expect(err).ShouldNot(HaveOccurred())
-							GinkgoWriter.Printf("Content of PR #%d: %s \n", pr.GetNumber(), content)
+							gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("Content of PR #%d: %s \n", pr.GetNumber(), content)
 							if strings.Contains(content, mergeResultSha) {
-								GinkgoWriter.Printf("The reference is updated")
+								ginkgo.GinkgoWriter.Printf("The reference is updated\n")
 								return nil
 							}
 
 							body := pr.Body
-							GinkgoWriter.Printf("Body of PR #%d: %s \n", pr.GetNumber(), *body)
+							ginkgo.GinkgoWriter.Printf("Body of PR #%d: %s \n", pr.GetNumber(), *body)
 							prLink := fmt.Sprintf(rhtapGitSourceURL+"/pull/%d", sourcePrNum)
-							GinkgoWriter.Printf("The source PR link: %s", prLink)
+							ginkgo.GinkgoWriter.Printf("The source PR link: %s\n", prLink)
 							if strings.Contains(*body, prLink) {
-								GinkgoWriter.Printf("The source PR#%d is added to the PR of infra-deployments", sourcePrNum)
+								ginkgo.GinkgoWriter.Printf("The source PR#%d is added to the PR of infra-deployments\n", sourcePrNum)
 								return nil
 							}
 						}
 					}
-					return fmt.Errorf("The reference is not updated and the source PR#%d is not added to the PR of infra-deployments", sourcePrNum)
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+					return fmt.Errorf("the reference is not updated and the source PR#%d is not added to the PR of infra-deployments", sourcePrNum)
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed())
 			})
 		})
 	})
@@ -247,7 +247,7 @@ func createRHTAPEnterpriseContractPolicy(rhtapECPName string, managedFw framewor
 	}
 
 	_, err := managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(rhtapECPName, managedNamespace, defaultEcPolicySpec)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 }
 
@@ -282,7 +282,7 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 			"configMapName": "hacbs-signing-pipeline-config-redhatbeta2",
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhtapRPAName, managedNamespace, "", devNamespace, rhtapECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhtapAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
@@ -294,36 +294,36 @@ func createRHTAPReleasePlanAdmission(rhtapRPAName string, managedFw framework.Fr
 	}, &runtime.RawExtension{
 		Raw: data,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 // prepareMergedPR function is to prepare a merged PR in source repo for testing update-infra-deployments task
 func prepareMergedPR(devFw *framework.Framework, testBaseBranchName, testPRBranchName string) (int, string) {
 	//Create the ref, add the file,  create the PR and merge the PR
 	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(rhtapGitSourceRepoName, rhtapGitSrcDefaultBranch, rhtapGitSrcDefaultSHA, testBaseBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	err = devFw.AsKubeAdmin.CommonController.Github.CreateRef(rhtapGitSourceRepoName, rhtapGitSrcDefaultBranch, rhtapGitSrcDefaultSHA, testPRBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	fileToCreatePath := fmt.Sprintf("%s/sample-file.txt", "testdir")
 	createdFileSha, err := devFw.AsKubeAdmin.CommonController.Github.CreateFile(rhtapGitSourceRepoName, fileToCreatePath, fmt.Sprintf("sample test file inside %s", "testdir"), testPRBranchName)
-	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("error while creating file: %s", fileToCreatePath))
 
 	pr, err := devFw.AsKubeAdmin.CommonController.Github.CreatePullRequest(rhtapGitSourceRepoName, "sample pr title", "sample pr body", testPRBranchName, testBaseBranchName)
-	Expect(err).ShouldNot(HaveOccurred())
-	GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), createdFileSha.GetSHA())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	ginkgo.GinkgoWriter.Printf("PR #%d got created with sha %s\n", pr.GetNumber(), createdFileSha.GetSHA())
 
 	var mergeResultSha string
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		mergeResult, err := devFw.AsKubeAdmin.CommonController.Github.MergePullRequest(rhtapGitSourceRepoName, pr.GetNumber())
 		if err == nil {
 			mergeResultSha := mergeResult.GetSHA()
-			GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, pr.GetNumber())
+			ginkgo.GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, pr.GetNumber())
 			return nil
 		}
 		return fmt.Errorf("PR #%d merge failed", pr.GetNumber())
-	}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+	}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed())
 
 	return pr.GetNumber(), mergeResultSha
 }

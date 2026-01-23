@@ -263,7 +263,7 @@ func LogMeasurement(metric string, perUserId, perAppId, perCompId, repeatsCounte
 	sort.Strings(paramsKeys)
 
 	// Construct string showing parameters except for framework that contains token, so we hide it
-	var params_string string = ""
+	params_string := ""
 	for _, k := range paramsKeys {
 		if strings.HasPrefix(k, "*framework.Framework") {
 			params_string = params_string + fmt.Sprintf(" %s:redacted", k)

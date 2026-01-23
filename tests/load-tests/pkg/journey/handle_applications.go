@@ -18,7 +18,7 @@ func createApplication(f *framework.Framework, namespace string, runPrefix strin
 
 	_, err := f.AsKubeDeveloper.HasController.CreateApplicationWithTimeout(name, namespace, time.Minute*60)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create the Application %s: %v", name, err)
+		return "", fmt.Errorf("unable to create the Application %s: %v", name, err)
 	}
 	return name, nil
 }

@@ -24,8 +24,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/utils/contract"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/pipeline"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 
 	tektonpipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -59,23 +59,23 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 	var err error
 	var buildPipelineAnnotation map[string]string
 	var baseBranchName, pacBranchName string
-	Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+	gomega.Expect(scenario.PipelineBundleNames).Should(gomega.HaveLen(1))
 	pipelineBundleName := scenario.PipelineBundleNames[0]
-	Expect(pipelineBundleName).ShouldNot(BeEmpty())
+	gomega.Expect(pipelineBundleName).ShouldNot(gomega.BeEmpty())
 	customBuildBundle := getDefaultPipeline(pipelineBundleName)
 
 	if scenario.EnableHermetic {
 		//Update the docker-build pipeline bundle with param hermetic=true
 		customBuildBundle, err = enableHermeticBuildInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.PrefetchInput)
 		if err != nil {
-			return fmt.Errorf("failed to enable hermetic build in the pipeline bundle with: %v\n", err)
+			return fmt.Errorf("failed to enable hermetic build in the pipeline bundle with: %v", err)
 		}
 	}
 	if scenario.OverrideMediaType != "" {
 		// Update the pipeline bundle with updating BUILDAH_FORMAT value
 		customBuildBundle, err = enableDockerMediaTypeInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.OverrideMediaType)
 		if err != nil {
-			return fmt.Errorf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v\n", err)
+			return fmt.Errorf("failed to update BUILDAH_FORMAT in the pipeline bundle with: %v", err)
 		}
 	}
 
@@ -83,7 +83,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply additional tags
 		customBuildBundle, err = applyAdditionalTagsInPipelineBundle(customBuildBundle, pipelineBundleName, additionalTags)
 		if err != nil {
-			return fmt.Errorf("failed to apply additinal tags in the pipeline bundle with: %v\n", err)
+			return fmt.Errorf("failed to apply additinal tags in the pipeline bundle with: %v", err)
 		}
 	}
 
@@ -91,7 +91,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		//Update the pipeline bundle to apply WORKINGDIR_MOUNT
 		customBuildBundle, err = addWorkingDirMountInPipelineBundle(customBuildBundle, pipelineBundleName, scenario.WorkingDirMount)
 		if err != nil {
-			return fmt.Errorf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v\n", err)
+			return fmt.Errorf("failed to apply WORKINGDIR_MOUNT in the pipeline bundle with: %v", err)
 
 		}
 	}
@@ -111,7 +111,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 	if scenario.Revision == gitRepoContainsSymlinkBranchName {
 		revision := symlinkBranchRevision
 		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), gitRepoContainsSymlinkBranchName, revision, baseBranchName)
-		Expect(err).ShouldNot(HaveOccurred())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
 			RepoName:       utils.GetRepoName(scenario.GitURL),
 			BranchName:     gitRepoContainsSymlinkBranchName,
@@ -120,7 +120,7 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 		})
 	} else {
 		err = commonCtrl.Github.CreateRef(utils.GetRepoName(scenario.GitURL), "main", scenario.Revision, baseBranchName)
-		Expect(err).ShouldNot(HaveOccurred())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		pacAndBaseBranches = append(pacAndBaseBranches, TestBranches{
 			RepoName:       utils.GetRepoName(scenario.GitURL),
 			BranchName:     "main",
@@ -145,16 +145,16 @@ func CreateComponent(commonCtrl *common.SuiteController, ctrl *has.HasController
 
 	if os.Getenv(constants.CUSTOM_BUILD_PIPELINE_BUNDLE_ENV) != "" {
 		customBuildBundle := os.Getenv(constants.CUSTOM_BUILD_PIPELINE_BUNDLE_ENV)
-		Expect(customBuildBundle).ShouldNot(BeEmpty())
+		gomega.Expect(customBuildBundle).ShouldNot(gomega.BeEmpty())
 		buildPipelineAnnotation = map[string]string{
 			"build.appstudio.openshift.io/pipeline": fmt.Sprintf(`{"name":"%s", "bundle": "%s"}`, pipelineBundleName, customBuildBundle),
 		}
 	}
 	c, err := ctrl.CreateComponentCheckImageRepository(componentObj, namespace, "", "", applicationName, false, utils.MergeMaps(constants.ComponentPaCRequestAnnotation, buildPipelineAnnotation))
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(c.Name).Should(Equal(componentName))
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(c.Name).Should(gomega.Equal(componentName))
 
-	GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
+	ginkgo.GinkgoWriter.Printf("Created component for scenario %s: component: %s, repo: %s, baseBranchName: %s, pacBranchName: %s\n",
 		scenario.Name, c.Name, scenario.GitURL, baseBranchName, pacBranchName)
 	return nil
 }
@@ -179,10 +179,10 @@ func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, com
 	timeoutMsg := fmt.Sprintf(
 		"timed out when waiting for the PipelineRun to start for the Component %s", namespacedName)
 	var prName string
-	Eventually(func() error {
+	gomega.Eventually(func() error {
 		pipelineRun, err := hub.HasController.GetComponentPipelineRun(componentName, applicationName, namespace, "")
 		if err != nil {
-			GinkgoWriter.Printf("PipelineRun has not been created yet for Component %s\n", namespacedName)
+			ginkgo.GinkgoWriter.Printf("PipelineRun has not been created yet for Component %s\n", namespacedName)
 			return err
 		}
 		if !pipelineRun.HasStarted() {
@@ -195,17 +195,17 @@ func WaitForPipelineRunStarts(hub *framework.ControllerHub, applicationName, com
 		}
 		prName = pipelineRun.GetName()
 		return nil
-	}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), timeoutMsg)
+	}, timeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), timeoutMsg)
 	return prName
 }
 
-var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", "build-templates", "HACBS", "pipeline-service"), func() {
+var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("build", "build-templates", "HACBS", "pipeline-service"), func() {
 	var f *framework.Framework
 	var err error
-	AfterEach(framework.ReportFailure(&f))
+	ginkgo.AfterEach(framework.ReportFailure(&f))
 
-	defer GinkgoRecover()
-	Describe("HACBS pipelines", Ordered, Label("pipeline"), func() {
+	defer ginkgo.GinkgoRecover()
+	ginkgo.Describe("HACBS pipelines", ginkgo.Ordered, ginkgo.Label("pipeline"), func() {
 
 		var applicationName, symlinkPRunName, testNamespace string
 		components := make(map[string]ComponentScenarioSpec)
@@ -213,7 +213,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 
 		for _, gitUrl := range GetScenarios() {
 			scenario := GetComponentScenarioDetailsFromGitUrl(gitUrl)
-			Expect(scenario.PipelineBundleNames).ShouldNot(BeEmpty())
+			gomega.Expect(scenario.PipelineBundleNames).ShouldNot(gomega.BeEmpty())
 			for _, pipelineBundleName := range scenario.PipelineBundleNames {
 				componentName := fmt.Sprintf("test-comp-%s", util.GenerateRandomString(4))
 
@@ -225,14 +225,14 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		}
 
 		symlinkScenario := GetComponentScenarioDetailsFromGitUrl(pythonComponentGitHubURL)
-		Expect(symlinkScenario.PipelineBundleNames).ShouldNot(BeEmpty())
+		gomega.Expect(symlinkScenario.PipelineBundleNames).ShouldNot(gomega.BeEmpty())
 		symlinkComponentName := fmt.Sprintf("test-symlink-comp-%s", util.GenerateRandomString(4))
 		// Use the other value defined in componentScenarios in build_templates_scenario.go except revision and pipelineBundle
 		symlinkScenario.Revision = gitRepoContainsSymlinkBranchName
 		symlinkScenario.PipelineBundleNames = []constants.BuildPipelineType{constants.DockerBuild}
 		symlinkScenario.OverrideMediaType = ""
 
-		BeforeAll(func() {
+		ginkgo.BeforeAll(func() {
 			if os.Getenv("APP_SUFFIX") != "" {
 				applicationName = fmt.Sprintf("test-app-%s", os.Getenv("APP_SUFFIX"))
 			} else {
@@ -240,60 +240,60 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			}
 
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(f.UserNamespace).NotTo(BeNil())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(f.UserNamespace).NotTo(gomega.BeNil())
 			testNamespace = f.UserNamespace
 
 			_, err = f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 			// In case the app with the same name exist in the selected namespace, delete it first
 			if err == nil {
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
-				Eventually(func() bool {
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(gomega.Succeed())
+				gomega.Eventually(func() bool {
 					_, err := f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 					return errors.IsNotFound(err)
-				}, time.Minute*5, time.Second*1).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace))
+				}, time.Minute*5, time.Second*1).Should(gomega.BeTrue(), fmt.Sprintf("timed out when waiting for the app %s to be deleted in %s namespace", applicationName, testNamespace))
 			}
 			_, err = f.AsKubeAdmin.HasController.CreateApplication(applicationName, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			for componentName, scenario := range components {
 				err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, componentName, testNamespace, scenario)
-				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to create component for scenario: %s", scenario.Name))
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("failed to create component for scenario: %s", scenario.Name))
 			}
 			// Create the symlink component
 			err = CreateComponent(f.AsKubeAdmin.CommonController, f.AsKubeAdmin.HasController, applicationName, symlinkComponentName, testNamespace, symlinkScenario)
-			Expect(err).ShouldNot(HaveOccurred(), "failed to create component for symlink scenario")
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred(), "failed to create component for symlink scenario")
 
 		})
 
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			//Remove finalizers from pipelineruns
-			Eventually(func() error {
+			gomega.Eventually(func() error {
 				pipelineRuns, err := f.AsKubeAdmin.HasController.GetAllPipelineRunsForApplication(applicationName, testNamespace)
 				if err != nil {
-					GinkgoWriter.Printf("error while getting pipelineruns: %v\n", err)
+					ginkgo.GinkgoWriter.Printf("error while getting pipelineruns: %v", err)
 					return err
 				}
 				for i := 0; i < len(pipelineRuns.Items); i++ {
 					if utils.Contains(pipelineRunsWithE2eFinalizer, pipelineRuns.Items[i].GetName()) {
 						err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(&pipelineRuns.Items[i], constants.E2ETestFinalizerName)
 						if err != nil {
-							GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
+							ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pipelineRuns.Items[i].GetName(), err)
 							return err
 						}
 					}
 				}
 				return nil
-			}, time.Minute*1, time.Second*10).Should(Succeed(), "timed out when trying to remove the e2e-test finalizer from pipelineruns")
+			}, time.Minute*1, time.Second*10).Should(gomega.Succeed(), "timed out when trying to remove the e2e-test finalizer from pipelineruns")
 			// Do cleanup only in case the test succeeded
-			if !CurrentSpecReport().Failed() {
+			if !ginkgo.CurrentSpecReport().Failed() {
 				// Clean up only Application CR (Component and Pipelines are included) in case we are targeting specific namespace
 				// Used e.g. in build-definitions e2e tests, where we are targeting build-templates-e2e namespace
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
-					DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
+					ginkgo.DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
-					Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
-					Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(Succeed())
+					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
+					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
 				}
 			}
 			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
@@ -301,39 +301,39 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			// for _, branches := range pacAndBaseBranches {
 			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
 			// 	if err != nil {
-			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			// 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			// 	}
 			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
 			// 	if err != nil {
-			// 		Expect(err.Error()).To(ContainSubstring("Reference does not exist"))
+			// 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
 			// 	}
 			// }
 			//Cleanup webhook when not running for build-definitions CI
 			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
 				for _, branches := range pacAndBaseBranches {
-					Expect(build.CleanupWebhooks(f, branches.RepoName)).ShouldNot(HaveOccurred(), fmt.Sprintf("failed to cleanup webhooks for repo: %s", branches.RepoName))
+					gomega.Expect(build.CleanupWebhooks(f, branches.RepoName)).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("failed to cleanup webhooks for repo: %s", branches.RepoName))
 				}
 			}
 		})
 
-		It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		ginkgo.It(fmt.Sprintf("triggers PipelineRun for symlink component with source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 			timeout := time.Minute * 20
 			symlinkPRunName = WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, symlinkComponentName, testNamespace, timeout)
-			Expect(symlinkPRunName).ShouldNot(BeEmpty())
+			gomega.Expect(symlinkPRunName).ShouldNot(gomega.BeEmpty())
 			pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, symlinkPRunName)
 		})
 
 		for componentName, scenario := range components {
 			componentName := componentName
 			scenario := scenario
-			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+			gomega.Expect(scenario.PipelineBundleNames).Should(gomega.HaveLen(1))
 			pipelineBundleName := scenario.PipelineBundleNames[0]
-			It(fmt.Sprintf("scenario %s triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.Name, scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+			ginkgo.It(fmt.Sprintf("scenario %s triggers PipelineRun for component with source URL %s and Pipeline %s", scenario.Name, scenario.GitURL, pipelineBundleName), ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 				// Increase the timeout to 20min to help debug the issue https://issues.redhat.com/browse/STONEBLD-2981, once issue is fixed, revert to 5min
 				timeout := time.Minute * 20
 				prName := WaitForPipelineRunStarts(f.AsKubeAdmin, applicationName, componentName, testNamespace, timeout)
-				Expect(prName).ShouldNot(BeEmpty())
+				gomega.Expect(prName).ShouldNot(gomega.BeEmpty())
 				pipelineRunsWithE2eFinalizer = append(pipelineRunsWithE2eFinalizer, prName)
 			})
 		}
@@ -341,98 +341,98 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 		for componentName, scenario := range components {
 			componentName := componentName
 			scenario := scenario
-			Expect(scenario.PipelineBundleNames).Should(HaveLen(1))
+			gomega.Expect(scenario.PipelineBundleNames).Should(gomega.HaveLen(1))
 			pipelineBundleName := scenario.PipelineBundleNames[0]
 			var pr *tektonpipeline.PipelineRun
 
-			Context(fmt.Sprintf("scenario %s", scenario.Name), func() {
+			ginkgo.Context(fmt.Sprintf("scenario %s", scenario.Name), func() {
 
-				It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+				ginkgo.It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
-						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+					gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(gomega.Succeed())
 				})
-				It("should push Dockerfile to registry", Label(buildTemplatesTestLabel), func() {
+				ginkgo.It("should push Dockerfile to registry", ginkgo.Label(buildTemplatesTestLabel), func() {
 					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+					gomega.Expect(pr).ToNot(gomega.BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
 					if pipelineBundleName != constants.FbcBuilder {
 						ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
 					}
 				})
 
-				It("floating tags are created successfully", Label(buildTemplatesTestLabel), func() {
+				ginkgo.It("floating tags are created successfully", ginkgo.Label(buildTemplatesTestLabel), func() {
 					if !scenario.CheckAdditionalTags {
-						Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
+						ginkgo.Skip(fmt.Sprintf("floating tag validation is not needed for: %s", scenario.GitURL))
 					}
 					builtImage := build.GetBinaryImage(pr)
-					Expect(builtImage).ToNot(BeEmpty(), "built image url is empty")
+					gomega.Expect(builtImage).ToNot(gomega.BeEmpty(), "built image url is empty")
 					builtImageRef, err := reference.Parse(builtImage)
-					Expect(err).ShouldNot(HaveOccurred(),
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred(),
 						fmt.Sprintf("cannot parse image pullspec: %s", builtImage))
 					for _, tagName := range additionalTags {
 						_, err := build.GetImageTag(builtImageRef.Namespace, builtImageRef.Name, tagName)
-						Expect(err).ShouldNot(HaveOccurred(),
+						gomega.Expect(err).ShouldNot(gomega.HaveOccurred(),
 							fmt.Sprintf("failed to get tag %s from image repo", tagName),
 						)
 					}
 				})
 
-				It("image manifest mediaType is correct", Label(buildTemplatesTestLabel), func() {
+				ginkgo.It("image manifest mediaType is correct", ginkgo.Label(buildTemplatesTestLabel), func() {
 					builtImage := build.GetBinaryImage(pr)
 					switch scenario.ManifestMediaType {
 					case "docker":
 						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
 							// Check for docker.manifest.list mediaType
-							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifestList), "mediaType of the image manifest is not of type docker.manifest.list")
+							gomega.Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(gomega.Equal(build.MediaTypeDockerManifestList), "mediaType of the image manifest is not of type docker.manifest.list")
 						} else {
 							// Check for docker.manifest mediaType
-							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeDockerManifest), "mediaType of the image manifest is not of type docker.manifest")
+							gomega.Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(gomega.Equal(build.MediaTypeDockerManifest), "mediaType of the image manifest is not of type docker.manifest")
 						}
 					case "oci":
 						if pipelineBundleName == constants.FbcBuilder || pipelineBundleName == constants.DockerBuildMultiPlatformOciTa {
 							// Check for oci image index mediaType
-							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciImageIndex), "mediaType of the image manifest is not of type oci.image.index")
+							gomega.Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(gomega.Equal(build.MediaTypeOciImageIndex), "mediaType of the image manifest is not of type oci.image.index")
 						} else {
 							// Check for oci image manifest mediaType
-							Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(Equal(build.MediaTypeOciManifest), "mediaType of the image is not of type oci.image.manifest")
+							gomega.Expect(build.GetBuiltImageManifestMediaType(builtImage)).Should(gomega.Equal(build.MediaTypeOciManifest), "mediaType of the image is not of type oci.image.manifest")
 						}
 					default:
-						Fail(fmt.Sprintf("Unknown ManifestMediaType value %s in scenario \n", scenario.ManifestMediaType))
+						ginkgo.Fail(fmt.Sprintf("Unknown ManifestMediaType value %s in scenario \n", scenario.ManifestMediaType))
 					}
 
 				})
 
-				It("check for source images if enabled in pipeline", Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+				ginkgo.It("check for source images if enabled in pipeline", ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(pr).ToNot(BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+					gomega.Expect(pr).ToNot(gomega.BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
 
 					if pipelineBundleName == constants.FbcBuilder {
-						GinkgoWriter.Println("This is FBC build, which does not require source container build.")
-						Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
+						ginkgo.GinkgoWriter.Println("This is FBC build, which does not require source container build.")
+						ginkgo.Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
 						return
 					}
 
 					isSourceBuildEnabled := build.IsSourceBuildEnabled(pr)
-					GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
+					ginkgo.GinkgoWriter.Printf("Source build is enabled: %v\n", isSourceBuildEnabled)
 					if !isSourceBuildEnabled {
-						Skip("Skipping source image check since it is not enabled in the pipeline")
+						ginkgo.Skip("Skipping source image check since it is not enabled in the pipeline")
 					}
 
 					binaryImage := build.GetBinaryImage(pr)
 					if binaryImage == "" {
-						Fail("Failed to get the binary image url from pipelinerun")
+						ginkgo.Fail("Failed to get the binary image url from pipelinerun")
 					}
 
 					binaryImageRef, err := reference.Parse(binaryImage)
-					Expect(err).ShouldNot(HaveOccurred(),
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred(),
 						fmt.Sprintf("cannot parse binary image pullspec %s", binaryImage))
 
 					tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
-					Expect(err).ShouldNot(HaveOccurred(),
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred(),
 						fmt.Sprintf("failed to get tag %s info for constructing source container image", binaryImageRef.Tag),
 					)
 
@@ -444,126 +444,126 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					}
 					srcImage := srcImageRef.String()
 					tagExists, err := build.DoesTagExistsInQuay(srcImage)
-					Expect(err).ShouldNot(HaveOccurred(),
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred(),
 						fmt.Sprintf("failed to check existence of source container image %s", srcImage))
-					Expect(tagExists).To(BeTrue(),
+					gomega.Expect(tagExists).To(gomega.BeTrue(),
 						fmt.Sprintf("cannot find source container image %s", srcImage))
 
 					CheckSourceImage(srcImage, scenario.GitURL, f.AsKubeAdmin, pr)
 				})
 
-				When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label("pipeline"), func() {
+				ginkgo.When(fmt.Sprintf("Pipeline Results are stored for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), ginkgo.Label("pipeline"), func() {
 					var resultClient *pipeline.ResultClient
 					var pr *tektonpipeline.PipelineRun
 
-					BeforeAll(func() {
+					ginkgo.BeforeAll(func() {
 						if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
-							Skip("upstream test environment detected, skipping the test")
+							ginkgo.Skip("upstream test environment detected, skipping the test")
 						}
 						trRoute, err := f.AsKubeAdmin.CommonController.GetOpenshiftRoute("tekton-results", "tekton-results")
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						tektonResultsUrl := fmt.Sprintf("https://%s", trRoute.Spec.Host)
 						restConfig, err := config.GetConfig()
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						bearerToken := restConfig.BearerToken
 						if bearerToken == "" {
-							Skip("the bearer token is empty, skipping the test")
+							ginkgo.Skip("the bearer token is empty, skipping the test")
 						}
 						resultClient = pipeline.NewClient(tektonResultsUrl, bearerToken)
 
 						pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-						Expect(err).ShouldNot(HaveOccurred())
+						gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 					})
 
-					It("should have Pipeline Records", func() {
+					ginkgo.It("should have Pipeline Records", func() {
 						records, err := resultClient.GetRecords(testNamespace, string(pr.GetUID()))
 						// temporary logs due to RHTAPBUGS-213
-						GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pr.Name, records)
-						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting records for PipelineRun %s: %v", pr.Name, err))
-						Expect(records.Record).NotTo(BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
+						ginkgo.GinkgoWriter.Printf("records for PipelineRun %s:\n%s\n", pr.Name, records)
+						gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("got error getting records for PipelineRun %s: %v", pr.Name, err))
+						gomega.Expect(records.Record).NotTo(gomega.BeEmpty(), fmt.Sprintf("No records found for PipelineRun %s", pr.Name))
 					})
 
 					// This test is disabled since logs are being stored in s3 which is not available in dev env
-					It("should have Pipeline Logs", Pending, func() {
+					ginkgo.It("should have Pipeline Logs", ginkgo.Pending, func() {
 						// Verify if result is stored in Database
 						// temporary logs due to RHTAPBUGS-213
 						logs, err := resultClient.GetLogs(testNamespace, string(pr.GetUID()))
-						GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.GetName(), logs)
-						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting logs for PipelineRun %s: %v", pr.Name, err))
+						ginkgo.GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.GetName(), logs)
+						gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("got error getting logs for PipelineRun %s: %v", pr.Name, err))
 
 						timeout := time.Minute * 2
 						interval := time.Second * 10
 						// temporary timeout  due to RHTAPBUGS-213
-						Eventually(func() error {
+						gomega.Eventually(func() error {
 							// temporary logs due to RHTAPBUGS-213
 							logs, err = resultClient.GetLogs(testNamespace, string(pr.GetUID()))
 							if err != nil {
 								return fmt.Errorf("failed to get logs for PipelineRun %s: %v", pr.Name, err)
 							}
-							GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.Name, logs)
+							ginkgo.GinkgoWriter.Printf("logs for PipelineRun %s:\n%s\n", pr.Name, logs)
 
 							if len(logs.Record) == 0 {
 								return fmt.Errorf("logs for PipelineRun %s/%s are empty", pr.GetNamespace(), pr.GetName())
 							}
 							return nil
-						}, timeout, interval).Should(Succeed(), fmt.Sprintf("timed out when getting logs for PipelineRun %s/%s", pr.GetNamespace(), pr.GetName()))
+						}, timeout, interval).Should(gomega.Succeed(), fmt.Sprintf("timed out when getting logs for PipelineRun %s/%s", pr.GetNamespace(), pr.GetName()))
 
 						// Verify if result is stored in S3
 						// temporary logs due to RHTAPBUGS-213
 						log, err := resultClient.GetLogByName(logs.Record[0].Name)
-						GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
-						Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pr.GetName(), err))
-						Expect(log).NotTo(BeEmpty(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
+						ginkgo.GinkgoWriter.Printf("log for record %s:\n%s\n", logs.Record[0].Name, log)
+						gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("got error getting log '%s' for PipelineRun %s: %v", logs.Record[0].Name, pr.GetName(), err))
+						gomega.Expect(log).NotTo(gomega.BeEmpty(), fmt.Sprintf("no log content '%s' found for PipelineRun %s", logs.Record[0].Name, pr.GetName()))
 					})
 				})
 
-				It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), Label(buildTemplatesTestLabel), func() {
+				ginkgo.It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), ginkgo.Label(buildTemplatesTestLabel), func() {
 					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(Succeed())
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+					gomega.Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(gomega.Succeed())
 				})
 
-				When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), Label("sbom", "slow"), func() {
+				ginkgo.When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), ginkgo.Label("sbom", "slow"), func() {
 					var imageWithDigest string
 					var pr *tektonpipeline.PipelineRun
 
-					BeforeAll(func() {
+					ginkgo.BeforeAll(func() {
 						var err error
 						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					})
-					AfterAll(func() {
-						if !CurrentSpecReport().Failed() {
+					ginkgo.AfterAll(func() {
+						if !ginkgo.CurrentSpecReport().Failed() {
 							err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
 							if err != nil {
-								Expect(err.Error()).To(ContainSubstring("not found"))
+								gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
 							}
 						}
 					})
 
-					It("verify-enterprise-contract check should pass", Label(buildTemplatesTestLabel), func() {
+					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Label(buildTemplatesTestLabel), func() {
 						// If the Tekton Chains controller is busy, it may take longer than usual for it
 						// to sign and attest the image built in BeforeAll.
 						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
-						Expect(err).ToNot(HaveOccurred())
+						gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 						cm, err := f.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-						Expect(err).ToNot(HaveOccurred())
+						gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 						verifyECTaskBundle := cm.Data["verify_ec_task_bundle"]
-						Expect(verifyECTaskBundle).ToNot(BeEmpty())
+						gomega.Expect(verifyECTaskBundle).ToNot(gomega.BeEmpty())
 
 						publicSecretName := "cosign-public-key"
 						publicKey, err := f.AsKubeAdmin.TektonController.GetTektonChainsPublicKey()
-						Expect(err).ToNot(HaveOccurred())
+						gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-						Expect(f.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
-							publicKey, publicSecretName, testNamespace)).To(Succeed())
+						gomega.Expect(f.AsKubeAdmin.TektonController.CreateOrUpdateSigningSecret(
+							publicKey, publicSecretName, testNamespace)).To(gomega.Succeed())
 
 						defaultECP, err := f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						ecpSource := ecp.Source{
 							Config: &ecp.SourceConfig{
@@ -577,13 +577,13 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						}
 						policy := contract.PolicySpecWithSource(defaultECP.Spec, ecpSource)
 
-						Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+						gomega.Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(gomega.Succeed())
 
 						pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-						Expect(err).ToNot(HaveOccurred())
+						gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 						revision := pipelineRun.Annotations["build.appstudio.redhat.com/commit_sha"]
-						Expect(revision).ToNot(BeEmpty())
+						gomega.Expect(revision).ToNot(gomega.BeEmpty())
 
 						generator := tekton.VerifyEnterpriseContract{
 							Snapshot: appservice.SnapshotSpec{
@@ -614,47 +614,47 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 						}
 
 						pr, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-						Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+						gomega.Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(gomega.Succeed())
 
 						pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
-						Expect(err).NotTo(HaveOccurred())
-						Expect(tekton.DidTaskRunSucceed(tr)).To(BeTrue(), fmt.Sprintf("%q pipeline failed", pr.Name))
-						Expect(tr.Status.TaskRunStatusFields.Results).Should(
-							ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
+						gomega.Expect(tekton.DidTaskRunSucceed(tr)).To(gomega.BeTrue(), fmt.Sprintf("%q pipeline failed", pr.Name))
+						gomega.Expect(tr.Status.Results).Should(
+							gomega.ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
 						)
 					})
 
-					It("should have Hermeto content in the SBOM in case the build was hermetic", Label(buildTemplatesTestLabel), func() {
+					ginkgo.It("should have Hermeto content in the SBOM in case the build was hermetic", ginkgo.Label(buildTemplatesTestLabel), func() {
 						if !scenario.EnableHermetic {
-							Skip("Hermetic build is not enabled, skipping the test")
+							ginkgo.Skip("Hermetic build is not enabled, skipping the test")
 						}
 
 						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
-						Expect(err).ShouldNot(HaveOccurred())
+						gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 						taskRun, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "build-container")
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						var sbomBlobUrl string
 
-						for _, r := range taskRun.Status.TaskRunStatusFields.Results {
+						for _, r := range taskRun.Status.Results {
 							if r.Name == "SBOM_BLOB_URL" {
 								sbomBlobUrl = r.Value.StringVal
 							}
 						}
-						Expect(sbomBlobUrl).NotTo(BeEmpty())
+						gomega.Expect(sbomBlobUrl).NotTo(gomega.BeEmpty())
 
 						imageRef, err := reference.Parse(sbomBlobUrl)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						c := ociregistry.NewOciRegistryV2Client(imageRef.Registry)
 
 						sbom, err := build.FetchSbomFromRegistry(c, imageRef.Namespace, imageRef.Name, imageRef.ID)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						hasHermetoPackages := false
 						for _, pkg := range sbom.GetPackages() {
@@ -663,11 +663,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								break
 							}
 						}
-						Expect(hasHermetoPackages).To(BeTrue(), "no hermeto packages found")
+						gomega.Expect(hasHermetoPackages).To(gomega.BeTrue(), "no hermeto packages found")
 					})
 				})
 
-				Context("build-definitions ec pipelines", Label(buildTemplatesTestLabel), func() {
+				ginkgo.Context("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
 					ecPipelines := []string{
 						"pipelines/enterprise-contract.yaml",
 					}
@@ -675,30 +675,30 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 					var gitRevision, gitURL, imageWithDigest string
 					var defaultECP *ecp.EnterpriseContractPolicy
 
-					BeforeAll(func() {
+					ginkgo.BeforeAll(func() {
 						// resolve the gitURL and gitRevision
 						var err error
 						gitURL, gitRevision, err = build.ResolveGitDetails(constants.EC_PIPELINES_REPO_URL_ENV, constants.EC_PIPELINES_REPO_REVISION_ENV)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						// Double check that the component has finished. There's an earlier test that
 						// verifies this so this should be a no-op. It is added here in order to avoid
 						// unnecessary coupling of unrelated tests.
 						component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
-						Expect(err).ShouldNot(HaveOccurred())
-						Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
-							component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(Succeed())
+						gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+						gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(
+							component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(gomega.Succeed())
 
 						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
-						Expect(err).NotTo(HaveOccurred())
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					})
 
 					for _, pathInRepo := range ecPipelines {
 						pathInRepo := pathInRepo
-						It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
+						ginkgo.It(fmt.Sprintf("runs ec pipeline %s", pathInRepo), func() {
 							generator := tekton.ECIntegrationTestScenario{
 								Image:                       imageWithDigest,
 								Namespace:                   testNamespace,
@@ -708,7 +708,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 								PipelinePolicyConfiguration: "ec-policy",
 							}
 							defaultECP, err = f.AsKubeAdmin.TektonController.GetEnterpriseContractPolicy("default", "enterprise-contract-service")
-							Expect(err).NotTo(HaveOccurred())
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 							//exclude the slsa_source_correlated.source_code_reference_provided because snapshot doesn't get the info of source
 							policy := contract.PolicySpecWithSourceConfig(
 								defaultECP.Spec,
@@ -717,61 +717,61 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 									Exclude: []string{"slsa_source_correlated.source_code_reference_provided"},
 								},
 							)
-							Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(Succeed())
+							gomega.Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(gomega.Succeed())
 
 							pr, err := f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
-							Expect(err).NotTo(HaveOccurred())
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 							defer func(pr *tektonpipeline.PipelineRun) {
 								err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
 								if err != nil {
-									GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+									ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
 								}
 								// Avoid blowing up PipelineRun usage
 								err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
 								if err != nil {
-									Expect(err.Error()).To(ContainSubstring("not found"))
+									gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
 								}
 							}(pr)
 
 							err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
-							Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
+							gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
 
-							Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(Succeed())
+							gomega.Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(gomega.Succeed())
 
 							// Refresh our copy of the PipelineRun for latest results
 							pr, err = f.AsKubeAdmin.TektonController.GetPipelineRun(pr.Name, pr.Namespace)
-							Expect(err).NotTo(HaveOccurred())
-							GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
 							// The UI uses this label to display additional information.
-							Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+							gomega.Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(gomega.Equal("enterprise-contract"))
 
 							// The UI uses this label to display additional information.
 							tr, err := f.AsKubeAdmin.TektonController.GetTaskRunFromPipelineRun(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify")
-							Expect(err).NotTo(HaveOccurred())
-							GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
-							Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(Equal("enterprise-contract"))
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("The TaskRun %s of PipelineRun %s  has status.conditions: \n%#v\n", tr.Name, pr.Name, tr.Status.Conditions)
+							gomega.Expect(tr.Labels["build.appstudio.redhat.com/pipeline"]).To(gomega.Equal("enterprise-contract"))
 
 							logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.Name, "verify", pr.Namespace)
-							Expect(err).NotTo(HaveOccurred())
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 							// The logs from the report step are used by the UI to display validation
 							// details. Let's make sure it has valid JSON.
 							reportLogs := logs["step-report-json"]
-							Expect(reportLogs).NotTo(BeEmpty())
+							gomega.Expect(reportLogs).NotTo(gomega.BeEmpty())
 							var report any
 							err = json.Unmarshal([]byte(reportLogs), &report)
-							Expect(err).NotTo(HaveOccurred())
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 							// The logs from the summary step are used by the UI to display an overview of
 							// the validation.
 							summaryLogs := logs["step-summary"]
-							GinkgoWriter.Printf("got step-summary log: %s\n", summaryLogs)
-							Expect(summaryLogs).NotTo(BeEmpty())
+							ginkgo.GinkgoWriter.Printf("got step-summary log: %s\n", summaryLogs)
+							gomega.Expect(summaryLogs).NotTo(gomega.BeEmpty())
 							var summary build.TestOutput
 							err = json.Unmarshal([]byte(summaryLogs), &summary)
-							Expect(err).NotTo(HaveOccurred())
-							Expect(summary).NotTo(Equal(build.TestOutput{}))
+							gomega.Expect(err).NotTo(gomega.HaveOccurred())
+							gomega.Expect(summary).NotTo(gomega.Equal(build.TestOutput{}))
 						})
 					}
 				})
@@ -779,11 +779,11 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", Label("build", 
 			})
 		}
 
-		It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
+		ginkgo.It(fmt.Sprintf("pipelineRun should fail for symlink component with Git source URL %s with component name %s", pythonComponentGitHubURL, symlinkComponentName), ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 			component, err := f.AsKubeAdmin.HasController.GetComponent(symlinkComponentName, testNamespace)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
-				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(MatchError(ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+			gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
+				f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 0}, nil)).Should(gomega.MatchError(gomega.ContainSubstring("cloned repository contains symlink pointing outside of the cloned repository")))
 		})
 
 	})
@@ -806,7 +806,7 @@ func getImageWithDigest(c *framework.ControllerHub, componentName, applicationNa
 		return "", fmt.Errorf("output-image of a component %q could not be found", componentName)
 	}
 
-	for _, r := range pipelineRun.Status.PipelineRunStatusFields.Results {
+	for _, r := range pipelineRun.Status.Results {
 		if r.Name == "IMAGE_DIGEST" {
 			digest = r.Value.StringVal
 		}
@@ -993,13 +993,13 @@ func addWorkingDirMountInPipelineBundle(customDockerBuildBundle string, pipeline
 
 func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpipeline.PipelineRun) {
 	binaryImage := build.GetBinaryImage(pr)
-	Expect(binaryImage).ShouldNot(BeEmpty())
+	gomega.Expect(binaryImage).ShouldNot(gomega.BeEmpty())
 
 	binaryImageRef, err := reference.Parse(binaryImage)
-	Expect(err).Should(Succeed())
+	gomega.Expect(err).Should(gomega.Succeed())
 
 	tagInfo, err := build.GetImageTag(binaryImageRef.Namespace, binaryImageRef.Name, binaryImageRef.Tag)
-	Expect(err).Should(Succeed())
+	gomega.Expect(err).Should(gomega.Succeed())
 
 	dockerfileImageTag := fmt.Sprintf("%s.dockerfile", strings.Replace(tagInfo.ManifestDigest, ":", "-", 1))
 
@@ -1010,26 +1010,26 @@ func ensureOriginalDockerfileIsPushed(hub *framework.ControllerHub, pr *tektonpi
 		Tag:       dockerfileImageTag,
 	}.String()
 	exists, err := build.DoesTagExistsInQuay(dockerfileImage)
-	Expect(err).Should(Succeed())
-	Expect(exists).Should(BeTrue(), fmt.Sprintf("image doesn't exist: %s", dockerfileImage))
+	gomega.Expect(err).Should(gomega.Succeed())
+	gomega.Expect(exists).Should(gomega.BeTrue(), fmt.Sprintf("image doesn't exist: %s", dockerfileImage))
 
 	// Ensure the original Dockerfile used for build was pushed
 	c := hub.CommonController.KubeRest()
 	originDockerfileContent, err := build.ReadDockerfileUsedForBuild(c, hub.TektonController, pr)
-	Expect(err).Should(Succeed())
+	gomega.Expect(err).Should(gomega.Succeed())
 
 	storePath, err := oras.PullArtifacts(dockerfileImage)
-	Expect(err).Should(Succeed())
+	gomega.Expect(err).Should(gomega.Succeed())
 	entries, err := os.ReadDir(storePath)
-	Expect(err).Should(Succeed())
+	gomega.Expect(err).Should(gomega.Succeed())
 	for _, entry := range entries {
 		if entry.Type().IsRegular() && entry.Name() == "Dockerfile" {
 			content, err := os.ReadFile(filepath.Join(storePath, entry.Name()))
-			Expect(err).Should(Succeed())
-			Expect(string(content)).Should(Equal(string(originDockerfileContent)))
+			gomega.Expect(err).Should(gomega.Succeed())
+			gomega.Expect(string(content)).Should(gomega.Equal(string(originDockerfileContent)))
 			return
 		}
 	}
 
-	Fail(fmt.Sprintf("Dockerfile is not found from the pulled artifacts for %s", dockerfileImage))
+	ginkgo.Fail(fmt.Sprintf("Dockerfile is not found from the pulled artifacts for %s", dockerfileImage))
 }

@@ -55,6 +55,7 @@ func init() {
 	rootCmd.Flags().StringVar(&opts.ReleasePipelineUrl, "release-pipeline-url", "https://github.com/konflux-ci/release-service-catalog.git", "release pipeline URL suitable for git resolver")
 	rootCmd.Flags().StringVar(&opts.ReleasePipelineRevision, "release-pipeline-revision", "production", "release pipeline repo branch suitable for git resolver")
 	rootCmd.Flags().StringVar(&opts.ReleasePipelinePath, "release-pipeline-path", "pipelines/managed/e2e/e2e.yaml", "release pipeline file path suitable for git resolver")
+	rootCmd.Flags().StringVar(&opts.ReleaseOciStorage, "release-ociStorage", "quay.io/rhtap-test-local/perf-release-service-trusted-artifacts", "ociStorage path used in the release pipelinerun")
 	rootCmd.Flags().StringVar(&opts.ReleasePipelineServiceAccount, "release-pipeline-service-account", "release-serviceaccount", "service account to use for release pipeline")
 	rootCmd.Flags().BoolVarP(&opts.WaitPipelines, "waitpipelines", "w", false, "if you want to wait for pipelines to finish")
 	rootCmd.Flags().BoolVarP(&opts.WaitIntegrationTestsPipelines, "waitintegrationtestspipelines", "i", false, "if you want to wait for IntegrationTests (Integration Test Scenario) pipelines to finish")

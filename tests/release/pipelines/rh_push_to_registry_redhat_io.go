@@ -12,7 +12,6 @@ import (
 	releaseapi "github.com/konflux-ci/release-service/api/v1alpha1"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	tektonv1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
@@ -22,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 )
 
 const (
@@ -34,8 +33,8 @@ const (
 
 var rhioComponentName = "rhio-comp-" + util.GenerateRandomString(4)
 
-var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", Pending, Label("release-pipelines", "rh-push-to-registry-redhat-io"), func() {
-	defer GinkgoRecover()
+var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat-io pipeline", ginkgo.Pending, ginkgo.Label("release-pipelines", "rh-push-to-registry-redhat-io"), func() {
+	defer ginkgo.GinkgoRecover()
 
 	var devWorkspace = utils.GetEnv(constants.RELEASE_DEV_WORKSPACE_ENV, constants.DevReleaseTeam)
 	var managedWorkspace = utils.GetEnv(constants.RELEASE_MANAGED_WORKSPACE_ENV, constants.ManagedReleaseTeam)
@@ -54,11 +53,11 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 
 	var snapshotPush *appservice.Snapshot
 	var releaseCR *releaseapi.Release
-	var releasePR *tektonv1.PipelineRun
+	var releasePR *pipeline.PipelineRun
 	var pipelineRun *pipeline.PipelineRun
 
-	Describe("Rh-push-to-redhat-io happy path", Label("PushToRedhatIO"), func() {
-		BeforeAll(func() {
+	ginkgo.Describe("Rh-push-to-redhat-io happy path", ginkgo.Label("PushToRedhatIO"), func() {
+		ginkgo.BeforeAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
@@ -70,61 +69,60 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
-			Expect(err).ToNot(HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.HasController.CreateApplication(rhioApplicationName, devNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			_, err = devFw.AsKubeDeveloper.ReleaseController.CreateReleasePlan(rhioReleasePlanName, devNamespace, rhioApplicationName, managedNamespace, "true", nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			createRHIOReleasePlanAdmission(rhioReleasePlanAdmissionName, *managedFw, devNamespace, managedNamespace, rhioApplicationName, rhioEnterpriseContractPolicyName, rhioCatalogPathInRepo)
 
 			createRHIOEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, *managedFw, devNamespace, managedNamespace)
 
 			snapshotPush, err = releasecommon.CreateSnapshotWithImageSource(devFw.AsKubeAdmin, rhioComponentName, rhioApplicationName, devNamespace, sampleImage, rhioGitSourceURL, rhioGitSrcSHA, "", "", "", "")
-			GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
-			Expect(err).ShouldNot(HaveOccurred())
+			ginkgo.GinkgoWriter.Println("snapshotPush.Name: %s", snapshotPush.GetName())
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
-
-		AfterAll(func() {
+		ginkgo.AfterAll(func() {
 			devFw = releasecommon.NewFramework(devWorkspace)
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			// store pipelineRun and Release CR
 			if err = managedFw.AsKubeDeveloper.TektonController.StorePipelineRun(pipelineRun.Name, pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = managedFw.AsKubeDeveloper.TektonController.StoreTaskRunsForPipelineRun(managedFw.AsKubeDeveloper.CommonController.KubeRest(), pipelineRun); err != nil {
-				GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store TaskRuns for PipelineRun %s:%s: %s\n", pipelineRun.GetNamespace(), pipelineRun.GetName(), err.Error())
 			}
 			if err = devFw.AsKubeDeveloper.ReleaseController.StoreRelease(releaseCR); err != nil {
-				GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store Release %s:%s: %s\n", releaseCR.GetNamespace(), releaseCR.GetName(), err.Error())
 			}
 
-			Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhioApplicationName, devNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, managedNamespace, false)).NotTo(HaveOccurred())
-			Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhioReleasePlanAdmissionName, managedNamespace, false)).NotTo(HaveOccurred())
+			gomega.Expect(devFw.AsKubeDeveloper.HasController.DeleteApplication(rhioApplicationName, devNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.TektonController.DeleteEnterpriseContractPolicy(rhioEnterpriseContractPolicyName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(managedFw.AsKubeDeveloper.ReleaseController.DeleteReleasePlanAdmission(rhioReleasePlanAdmissionName, managedNamespace, false)).NotTo(gomega.HaveOccurred())
 		})
 
-		var _ = Describe("Post-release verification", func() {
-			It("verifies if the release CR is created", func() {
-				Eventually(func() error {
+		var _ = ginkgo.Describe("Post-release verification", func() {
+			ginkgo.It("verifies if the release CR is created", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					return nil
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed(), "timed out when trying to get release CR for snapshot %s/%s", devNamespace, snapshotPush.Name)
 			})
 
-			It("verifies the rhio release pipelinerun is running and succeeds", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies the rhio release pipelinerun is running and succeeds", func() {
+				gomega.Eventually(func() error {
 					pipelineRun, err = managedFw.AsKubeAdmin.ReleaseController.GetPipelineRunInNamespace(managedNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
 					if err != nil {
 						return fmt.Errorf("PipelineRun has not been created yet for release %s/%s", releaseCR.GetNamespace(), releaseCR.GetName())
 					}
 					for _, condition := range pipelineRun.Status.Conditions {
-						GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
+						ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pipelineRun.Name, condition.Reason)
 					}
 
 					if !pipelineRun.IsDone() {
@@ -136,36 +134,36 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 					} else {
 						prLogs := ""
 						if prLogs, err = tekton.GetFailedPipelineRunLogs(managedFw.AsKubeAdmin.ReleaseController.KubeRest(), managedFw.AsKubeAdmin.ReleaseController.KubeInterface(), pipelineRun); err != nil {
-							GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
-							Expect(err).ShouldNot(HaveOccurred())
+							ginkgo.GinkgoWriter.Printf("failed to get PLR logs: %+v", err)
+							gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 							return nil
 						}
-						GinkgoWriter.Printf("logs: %s", prLogs)
-						Expect(prLogs).To(Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
+						ginkgo.GinkgoWriter.Printf("logs: %s", prLogs)
+						gomega.Expect(prLogs).To(gomega.Equal(""), fmt.Sprintf("PipelineRun %s failed", pipelineRun.Name))
 						return nil
 					}
-				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
+				}, releasecommon.BuildPipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the release PipelineRun to be finished for the release %s/%s", releaseCR.GetName(), releaseCR.GetNamespace()))
 			})
 
-			It("verifies release CR completed and set succeeded.", func() {
-				Eventually(func() error {
+			ginkgo.It("verifies release CR completed and set succeeded.", func() {
+				gomega.Eventually(func() error {
 					releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
 					if err != nil {
 						return err
 					}
 					err = releasecommon.CheckReleaseStatus(releaseCR)
 					return err
-				}, 10*time.Minute, releasecommon.DefaultInterval).Should(Succeed())
+				}, 10*time.Minute, releasecommon.DefaultInterval).Should(gomega.Succeed())
 			})
 
-			It("verifies if the MR URL is valid", func() {
+			ginkgo.It("verifies if the MR URL is valid", func() {
 				releasePR, err = managedFw.AsKubeDeveloper.ReleaseController.GetPipelineRunInNamespace(managedFw.UserNamespace, releaseCR.GetName(), releaseCR.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 				trReleaseLogs, err := managedFw.AsKubeDeveloper.TektonController.GetTaskRunLogs(releasePR.GetName(), "run-file-updates", releasePR.GetNamespace())
-				Expect(err).NotTo(HaveOccurred())
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-				GinkgoWriter.Printf("Length of trReleaseLogs is: %d", len(trReleaseLogs))
+				ginkgo.GinkgoWriter.Printf("Length of trReleaseLogs is: %d", len(trReleaseLogs))
 
 				var log, mrURL string
 				var matches []string
@@ -180,16 +178,17 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-push-to-redhat
 
 				if len(matches) > 1 {
 					mrURL = matches[1]
-					GinkgoWriter.Println("Extracted MR URL:", mrURL)
+					ginkgo.GinkgoWriter.Println("Extracted MR URL:", mrURL)
 					pattern := `https?://[^/\s]+/[^/\s]+/[^/\s]+/+\-\/merge_requests\/(\d+)`
 					re, err = regexp.Compile(pattern)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(re.MatchString(mrURL)).To(BeTrue(), fmt.Sprintf("MR URL %s is not valid", mrURL))
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					gomega.Expect(re.MatchString(mrURL)).To(gomega.BeTrue(), fmt.Sprintf("MR URL %s is not valid", mrURL))
 				} else {
 					err = fmt.Errorf("no MR URL found in log from taskRun log: %s", log)
-					Expect(err).NotTo(HaveOccurred())
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				}
 			})
+
 		})
 	})
 })
@@ -210,7 +209,7 @@ func createRHIOEnterpriseContractPolicy(rhioECPName string, managedFw framework.
 	}
 
 	_, err := managedFw.AsKubeDeveloper.TektonController.CreateEnterpriseContractPolicy(rhioECPName, managedNamespace, defaultEcPolicySpec)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 }
 
@@ -256,7 +255,7 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 			"cosignSecretName": "test-cosign-secret",
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = managedFw.AsKubeAdmin.ReleaseController.CreateReleasePlanAdmission(rhioRPAName, managedNamespace, "", devNamespace, rhioECPName, releasecommon.ReleasePipelineServiceAccountDefault, []string{rhioAppName}, false, &tektonutils.PipelineRef{
 		Resolver: "git",
@@ -268,5 +267,5 @@ func createRHIOReleasePlanAdmission(rhioRPAName string, managedFw framework.Fram
 	}, &runtime.RawExtension{
 		Raw: data,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }

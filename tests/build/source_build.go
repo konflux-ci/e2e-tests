@@ -7,8 +7,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/clients/tekton"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	"github.com/openshift/library-go/pkg/image/reference"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,10 +18,10 @@ func parseDockerfileUsedForBuild(
 	c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun,
 ) *build.Dockerfile {
 	dockerfileContent, err := build.ReadDockerfileUsedForBuild(c, tektonController, pr)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	parsedDockerfile, err := build.ParseDockerfile(dockerfileContent)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	return parsedDockerfile
 }
@@ -31,30 +31,30 @@ func parseDockerfileUsedForBuild(
 // for including parent sources are handled as well.
 func CheckParentSources(c client.Client, tektonController *tekton.TektonController, pr *pipeline.PipelineRun, gitUrl string) {
 	buildResult, err := build.ReadSourceBuildResult(c, tektonController, pr)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	var baseImagesDigests []string
 	if IsDockerBuildGitURL(gitUrl) {
 		parsedDockerfile := parseDockerfileUsedForBuild(c, tektonController, pr)
 		if parsedDockerfile.IsBuildFromScratch() {
-			Expect(buildResult.BaseImageSourceIncluded).Should(BeFalse())
+			gomega.Expect(buildResult.BaseImageSourceIncluded).Should(gomega.BeFalse())
 			return
 		}
 		baseImagesDigests, err = parsedDockerfile.ConvertParentImagesToBuildahOutputForm()
-		Expect(err).ShouldNot(HaveOccurred())
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	} else {
-		Fail("CheckParentSources only works for docker-build pipelines")
+		ginkgo.Fail("CheckParentSources only works for docker-build pipelines")
 	}
 
 	lastBaseImage := baseImagesDigests[len(baseImagesDigests)-1]
 	// Remove <none> part if there is. Otherwise, reference.Parse will fail.
 	imageWithoutTag := strings.Replace(lastBaseImage, ":<none>", "", 1)
 	ref, err := reference.Parse(imageWithoutTag)
-	Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("can't parse image reference %s", imageWithoutTag))
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred(), fmt.Sprintf("can't parse image reference %s", imageWithoutTag))
 	imageWithoutTag = ref.Exact() // drop the tag
 
 	allowed, err := build.IsImagePulledFromAllowedRegistry(imageWithoutTag)
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	var parentSourceImage string
 
@@ -63,7 +63,7 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 	} else {
 		parentSourceImage, err = build.ResolveKonfluxSourceImage(imageWithoutTag)
 	}
-	Expect(err).ShouldNot(HaveOccurred())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	allIncluded, err := build.AllParentSourcesIncluded(parentSourceImage, buildResult.ImageUrl)
 
@@ -72,27 +72,27 @@ func CheckParentSources(c client.Client, tektonController *tekton.TektonControll
 		if strings.Contains(msg, "parent source image manifest") && strings.Contains(msg, "MANIFEST_UNKNOWN:") {
 			return
 		} else {
-			Fail(fmt.Sprintf("failed to check parent sources: %v", err))
+			ginkgo.Fail(fmt.Sprintf("failed to check parent sources: %v", err))
 		}
 	}
 
-	Expect(allIncluded).Should(BeTrue())
-	Expect(buildResult.BaseImageSourceIncluded).Should(BeTrue())
+	gomega.Expect(allIncluded).Should(gomega.BeTrue())
+	gomega.Expect(buildResult.BaseImageSourceIncluded).Should(gomega.BeTrue())
 }
 
 func CheckSourceImage(srcImage, gitUrl string, hub *framework.ControllerHub, pr *pipeline.PipelineRun) {
 	//Check if hermetic enabled
 	isHermeticBuildEnabled := build.IsHermeticBuildEnabled(pr)
-	GinkgoWriter.Printf("HERMETIC STATUS: %v\n", isHermeticBuildEnabled)
+	ginkgo.GinkgoWriter.Printf("HERMETIC STATUS: %v\n", isHermeticBuildEnabled)
 
 	//Get prefetch input value
 	prefetchInputValue := build.GetPrefetchValue(pr)
-	GinkgoWriter.Printf("PRE-FETCH VALUE: %v\n", prefetchInputValue)
+	ginkgo.GinkgoWriter.Printf("PRE-FETCH VALUE: %v\n", prefetchInputValue)
 
 	filesExists, err := build.IsSourceFilesExistsInSourceImage(
 		srcImage, gitUrl, isHermeticBuildEnabled, prefetchInputValue)
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(filesExists).To(BeTrue())
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+	gomega.Expect(filesExists).To(gomega.BeTrue())
 
 	c := hub.CommonController.KubeRest()
 	CheckParentSources(c, hub.TektonController, pr, gitUrl)

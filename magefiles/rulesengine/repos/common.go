@@ -48,7 +48,7 @@ func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
 		if err != nil {
 			return fmt.Errorf("can't convert %q to an int to configure the amount of ginkgo procs", procs)
 		}
-		rctx.CLIConfig.Procs = procsInt
+		rctx.Procs = procsInt
 		rctx.NoColor = true
 	}
 
