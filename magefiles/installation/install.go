@@ -16,7 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 
-	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
+	appclientset "github.com/argoproj/argo-cd/v3/pkg/client/clientset/versioned"
 	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
