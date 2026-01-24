@@ -134,7 +134,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
-	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
+	github.com/bombsimon/logrusr/v4 v4.1.0 // indirect
 	github.com/bradleyfalzon/ghinstallation/v2 v2.17.0 // indirect
 	github.com/casbin/casbin/v2 v2.102.0 // indirect
 	github.com/casbin/govaluate v1.2.0 // indirect
