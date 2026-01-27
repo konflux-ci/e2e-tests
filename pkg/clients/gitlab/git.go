@@ -425,6 +425,20 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 	return forkedProject, nil
 }
 
+// EnsureBranchExists checks if a branch exists in the repository and creates one from
+// fallback branch if not.
+func (gc *GitlabClient) EnsureBranchExists(projectID, branchName, fallbackBranch string) error {
+	exists, err := gc.ExistsBranch(projectID, branchName)
+	if err != nil {
+		return fmt.Errorf("error checking if branch '%s' exists: %w", branchName, err)
+	}
+	if exists {
+		return nil
+	}
+	// Branch doesn't exist, create it from fallback branch
+	return gc.CreateBranch(projectID, branchName, fallbackBranch)
+}
+
 func (gc *GitlabClient) GetAllProjects() ([]*gitlab.Project, error) {
 	listProjectsOptions := &gitlab.ListProjectsOptions{
 		Membership: gitlab.Ptr(true),
