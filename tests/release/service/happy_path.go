@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,13 +21,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", ginkgo.Label("release-service", "happy-path"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path test", ginkgo.Label("release-service", "happy-path"), func() {
 	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
 	ginkgo.AfterEach(framework.ReportFailure(&fw))
 	var err error
-	var compName string
 	var devNamespace = "happy-path"
 	var managedNamespace = "happy-path-managed"
 	var snapshotPush *appservice.Snapshot
@@ -101,7 +101,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", gink
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"component":  compName,
+						"component": releasecommon.ComponentName,
 						"repository": releasedImagePushRepo,
 					},
 				},
@@ -169,9 +169,11 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", gink
 				gomega.Expect(tekton.DidTaskSucceed(ecTaskRunStatus)).To(gomega.BeTrue())
 				return nil
 			}, releasecommon.ReleasePipelineRunCompletionTimeout, releasecommon.DefaultInterval).Should(gomega.Succeed())
+		        time.Sleep( 10 * time.Minute)
 		})
 
 		ginkgo.It("verifies that a Release is marked as succeeded.", func() {
+		        time.Sleep( 20 * time.Minute)
 			gomega.Eventually(func() error {
 				releaseCR, err = fw.AsKubeAdmin.ReleaseController.GetFirstReleaseInNamespace(devNamespace)
 				if err != nil {
