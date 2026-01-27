@@ -20,13 +20,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", ginkgo.Label("release-service", "happy-path"), func() {
+var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path test", ginkgo.Label("release-service", "happy-path"), func() {
 	defer ginkgo.GinkgoRecover()
 
 	var fw *framework.Framework
 	ginkgo.AfterEach(framework.ReportFailure(&fw))
 	var err error
-	var compName string
 	var devNamespace = "happy-path"
 	var managedNamespace = "happy-path-managed"
 	var snapshotPush *appservice.Snapshot
@@ -101,7 +100,7 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service happy path", gink
 			"mapping": map[string]interface{}{
 				"components": []map[string]interface{}{
 					{
-						"component":  compName,
+						"component": releasecommon.ComponentName,
 						"repository": releasedImagePushRepo,
 					},
 				},
