@@ -296,18 +296,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
 				}
 			}
-			// Skip removing the branches, to help debug the issue: https://issues.redhat.com/browse/STONEBLD-2981
+
 			//Cleanup pac and base branches
-			// for _, branches := range pacAndBaseBranches {
-			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
-			// 	if err != nil {
-			// 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
-			// 	}
-			// 	err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
-			// 	if err != nil {
-			// 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
-			// 	}
-			// }
+			for _, branches := range pacAndBaseBranches {
+				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.PacBranchName)
+				if err != nil {
+					gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
+				}
+				err = f.AsKubeAdmin.CommonController.Github.DeleteRef(branches.RepoName, branches.BaseBranchName)
+				if err != nil {
+					gomega.Expect(err.Error()).To(gomega.ContainSubstring("Reference does not exist"))
+				}
+			}
 			//Cleanup webhook when not running for build-definitions CI
 			if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) == "" {
 				for _, branches := range pacAndBaseBranches {
