@@ -563,3 +563,15 @@
   regexp: 'Error response from registry: recognizable error message not found: POST .* response status code 200: OK'
   test_dir:
   - run-kfluxfedorap01-2026_01_20T05_56_20_267000000_00_00
+- id: git_clone_failed_due_to_github_500_internal_server_error
+  note: ''
+  reason: Git clone failed due to GitHub 500 Internal Server Error
+  regexp: 'Error: error cloning repository: unexpected client error: unexpected requesting .* status code: 500'
+  test_dir:
+  - run-kflux-ocp-p01-2026_01_22T14_15_24_671000000_00_00
+- id: build_failed_because_ssh_secret_provisioning_failed
+  note: ''
+  reason: Build failed because SSH secret provisioning failed
+  regexp: provision task failed to create a secret
+  test_dir:
+  - run-kflux-rhel-p01-2026_01_25T07_59_56_310000000_00_00

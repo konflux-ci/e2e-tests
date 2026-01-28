@@ -548,3 +548,9 @@
   regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 502 Server Error'
   test_dir:
   - run-stone-stg-rh01-2026_01_15T16_09_21_945000000_00_00
+- id: repo_forking_failed_due_to_401_requires_authentication_from_github
+  note: ''
+  reason: Repo forking failed due to 401 Requires authentication from GitHub
+  regexp: 'Repo forking failed: .* 401 Requires authentication'
+  test_dir:
+  - run-stone-prd-rh02-2026_01_22T14_18_19_965000000_00_00
