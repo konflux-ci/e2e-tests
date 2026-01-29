@@ -575,3 +575,9 @@
   regexp: provision task failed to create a secret
   test_dir:
   - run-kflux-rhel-p01-2026_01_25T07_59_56_310000000_00_00
+- id: build_image_pull_failed_due_to_quay_cdn_tls_internal_error
+  note: ''
+  reason: Build image pull failed due to Quay/CDN TLS internal error
+  regexp: 'Error: copying system image from manifest list: reading blob .*: Get .*cdn.*quay.io.*: remote error: tls: internal error'
+  test_dir:
+  - run-kflux-rhel-p01-2026_01_25T15_58_55_139000000_00_00
