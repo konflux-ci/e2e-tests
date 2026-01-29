@@ -108,6 +108,20 @@ var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel), func()
 
 				createReleaseConfig(fw.AsKubeAdmin, managedNamespace, userNamespace, appSpec.ComponentSpec.Name, appSpec.ApplicationName, sharedSecret.Data[".dockerconfigjson"])
 
+				// When RELEASE_CATALOG_TA_QUAY_TOKEN is set, create and link the TA Quay secret so the release
+				// pipeline can push to quay.io/konflux-ci/release-service-trusted-artifacts (same as happy_path
+				// and push_to_external_registry). Aligns with openshift/release and infra-deployments e2e flow.
+				taToken := utils.GetEnv("RELEASE_CATALOG_TA_QUAY_TOKEN", "")
+				if taToken != "" {
+					_, err = fw.AsKubeAdmin.CommonController.CreateRegistryAuthSecret(releasecommon.ReleaseCatalogTAQuaySecret, managedNamespace, taToken)
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					err = fw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.ReleaseCatalogTAQuaySecret, "release-service-account", true)
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					ginkgo.GinkgoWriter.Printf("created and linked release-catalog-trusted-artifacts-quay-secret in namespace %q\n", managedNamespace)
+				} else {
+					ginkgo.GinkgoWriter.Printf("RELEASE_CATALOG_TA_QUAY_TOKEN not set, skipping TA Quay secret (release pipeline may fail on trusted-artifact push)\n")
+				}
+
 				// get the build pipeline bundle annotation
 				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(appSpec.ComponentSpec.BuildPipelineType)
 
