@@ -69,3 +69,17 @@ func (g *Github) ExistsRef(repository, branchName string) (bool, error) {
 func (g *Github) UpdateGithubOrg(githubOrg string) {
 	g.organization = githubOrg
 }
+
+// EnsureBranchExists checks if a branch exists in the repository and creates one from
+// fallback branch if not.
+func (g *Github) EnsureBranchExists(repository, branchName, fallbackBranch string) error {
+	exists, err := g.ExistsRef(repository, branchName)
+	if err != nil {
+		return fmt.Errorf("error checking if branch '%s' exists: %w", branchName, err)
+	}
+	if exists {
+		return nil
+	}
+	// Branch doesn't exist, create it from fallback branch
+	return g.CreateRef(repository, fallbackBranch, "", branchName)
+}

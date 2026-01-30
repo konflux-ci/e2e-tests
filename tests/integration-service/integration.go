@@ -433,7 +433,10 @@ func createComponent(f framework.Framework, testNamespace, applicationName, comp
 	pacBranchName := constants.PaCPullRequestBranchPrefix + componentName
 	componentBaseBranchName := fmt.Sprintf("base-%s", util.GenerateRandomString(6))
 
-	err := f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
+	err := f.AsKubeAdmin.CommonController.Github.EnsureBranchExists(componentRepoName, componentDefaultBranch, fallbackBranchName)
+	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = f.AsKubeAdmin.CommonController.Github.CreateRef(componentRepoName, componentDefaultBranch, componentRevision, componentBaseBranchName)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// get the build pipeline bundle annotation

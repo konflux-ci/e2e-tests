@@ -61,6 +61,12 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 
 			applicationName = createApp(*f, testNamespace)
 
+			err = f.AsKubeAdmin.CommonController.Github.EnsureBranchExists(multiComponentRepoNameForGroupSnapshot, multiComponentDefaultBranch, fallbackBranchName)
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+			err = f.AsKubeAdmin.CommonController.Github.EnsureBranchExists(componentRepoNameForGroupIntegration, multiComponentDefaultBranch, fallbackBranchName)
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 			// The base branch or a ToBranch where all multi-component definitions will live
 			multiComponentBaseBranchName = fmt.Sprintf("love-triangle-%s", util.GenerateRandomString(6))
 			err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentRepoNameForGroupSnapshot, multiComponentDefaultBranch, multiComponentGitRevision, multiComponentBaseBranchName)
@@ -719,7 +725,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 				}
 			})
 		})
-
 
 		ginkgo.When("IntegrationTestScenario reference to task as pipelinerun resolution", func() {
 			ginkgo.BeforeAll(func() {

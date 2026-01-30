@@ -73,6 +73,9 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			gitlabToken = utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 			gomega.Expect(gitlabToken).ShouldNot(gomega.BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.GITLAB_BOT_TOKEN_ENV))
 
+			err = f.AsKubeAdmin.CommonController.Gitlab.EnsureBranchExists(projectID, componentDefaultBranch, fallbackBranchName)
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 			err = f.AsKubeAdmin.CommonController.Gitlab.CreateGitlabNewBranch(projectID, componentBaseBranchName, componentRevision, componentDefaultBranch)
 			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
