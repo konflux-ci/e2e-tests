@@ -16,7 +16,7 @@ require (
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/conforma/crds/api v0.1.7
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
-	github.com/docker/cli v29.0.3+incompatible
+	github.com/docker/cli v29.2.1+incompatible
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
