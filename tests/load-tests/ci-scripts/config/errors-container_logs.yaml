@@ -581,3 +581,15 @@
   regexp: 'Error: copying system image from manifest list: reading blob .*: Get .*cdn.*quay.io.*: remote error: tls: internal error'
   test_dir:
   - run-kflux-rhel-p01-2026_01_25T15_58_55_139000000_00_00
+- id: mock_build_failed_because_of_broken_connection
+  note: ''
+  reason: Mock build failed because of broken connection
+  regexp: 'urllib3.exceptions.ProtocolError: .''Connection broken: IncompleteRead.*'
+  test_dir:
+  - run-stone-prod-p02-2026_01_28T16_03_43_020000000_00_00
+- id: image_index_build_failed_because_the_downloaded_config_blob_digest_did_not_match_the_expected_one_on_quay_io
+  note: ''
+  reason: Image index build failed because the downloaded config blob digest did not match the expected one on Quay.io
+  regexp: 'Error: reading info about config blob from .*: Download config.json digest .* does not match expected'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_29T07_07_38_204000000_00_00
