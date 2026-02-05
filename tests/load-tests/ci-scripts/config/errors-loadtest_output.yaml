@@ -63,7 +63,7 @@
   test_dir: []
 - id: repo_forking_failed_as_the_target_is_still_being_deleted
   note: ''
-  reason: Repo forking failed as the target is still being deleted
+  reason: Repo forking failed as the target is still being deleted on gitlab.cee.redhat.com
   regexp: 'Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted'
   test_dir: []
 - id: gitlab_token_used_by_test_expired
@@ -306,7 +306,7 @@
 - id: failed_creating_integration_test_scenario_because_of_timeout
   note: ''
   reason: Failed creating integration test scenario because of timeout
-  regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario [^ ]+ in namespace jhutar-tenant: context deadline exceeded'
+  regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario [^ ]+ in namespace [^ ]+: context deadline exceeded'
   test_dir: []
 - id: couldnt_get_task_via_buldles_resolver_from_quay_io_due_to_404
   note: ''
