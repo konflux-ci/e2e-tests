@@ -324,12 +324,12 @@ def process_csv_mode(
                 if reason == "Pipeline failed":
                     sub_errors = analyzer.investigate_plr("build")
                     reason += ": " + ", ".join(r[0] for r in sub_errors)
-                    current_causes.extend(r[1] for r in sub_errors)
+                    current_causes = [r[1] for r in sub_errors]
 
                 elif reason == "Release Pipeline failed":
                     sub_errors = analyzer.investigate_plr("release")
                     reason += ": " + ", ".join(r[0] for r in sub_errors)
-                    current_causes.extend(r[1] for r in sub_errors)
+                    current_causes = [r[1] for r in sub_errors]
 
                 stats.add(message, reason, current_causes, code)
     else:
