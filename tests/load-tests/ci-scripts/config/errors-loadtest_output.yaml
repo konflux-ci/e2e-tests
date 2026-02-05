@@ -381,7 +381,7 @@
   reason: Repo forking failed because gitlab.com returned 503
   regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 503 No server is currently available to service your request. Sorry about that. Please try resubmitting your request and contact us if the problem persists.*'
   test_dir: []
-- caused_by: infra
+- caused_by: SKIP
   id: post_test_data_collection_failed_1
   note: ''
   reason: Post-test data collection failed

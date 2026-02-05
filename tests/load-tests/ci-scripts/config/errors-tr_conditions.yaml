@@ -71,7 +71,7 @@
   reason: Pod creation failed because ETCD timeouted
   regexp: '.message.: .failed to create task run pod [^ ]+: etcdserver: request timed out. Maybe missing or invalid Task [^ ]+., .reason.: .PodCreationFailed.'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: SKIP
   id: pod_creation_failed_with_reason_error
   note: ''
   reason: Pod creation failed with reason error
@@ -83,7 +83,7 @@
   reason: TaskRun resolution failed because validation.webhook.pipeline.tekton.dev returned EOF
   regexp: '.message.: .error requesting remote resource: error updating resource request [^ ]+ with data: Internal error occurred: failed calling webhook .*validation.webhook.pipeline.tekton.dev.*: failed to call webhook: Post .*https://tekton-pipelines-webhook.openshift-pipelines.svc:443/resource-validation.timeout=10s.*: EOF., .reason.: .TaskRunResolutionFailed.'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: SKIP
   id: missing_expected_taskrun_file
   note: This is special error, meaning everithing failed basically
   reason: Missing expected TaskRun file
