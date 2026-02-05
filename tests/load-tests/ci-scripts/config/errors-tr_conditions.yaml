@@ -41,7 +41,7 @@
   reason: TaskRun was cancelled because it timeouted
   regexp: '.message.: .TaskRun [^ ]+ failed to finish within [^ ]+., .reason.: .TaskRunTimeout.'
   test_dir: []
-- caused_by: infra
+- caused_by: ApiServer
   id: pod_stuck_in_incorrect_status
   note: ''
   reason: Pod stuck in incorrect status
@@ -53,7 +53,7 @@
   reason: TaskRun was cancelled as its PipelineRun timeouted
   regexp: '.message.: .TaskRun [^ ]+ was cancelled. TaskRun cancelled as the PipelineRun it belongs to has timed out.., .reason.: .TaskRunCancelled.'
   test_dir: []
-- caused_by: infra
+- caused_by: ApiServer
   id: not_enough_nodes_to_schedule_pod
   note: ''
   reason: Not enough nodes to schedule pod
@@ -169,7 +169,7 @@
   regexp: 'translating TaskSpec to Pod: manifest digest: .* does not match requested digest'
   test_dir:
   - run-stone-prod-p01-2026_01_20T03_42_20_461000000_00_00
-- caused_by: infra
+- caused_by: dynatrace-operator
   id: pod_creation_failed_because_dynatrace_operator_sidecar_injection_failed
   note: ''
   reason: Pod creation failed because Dynatrace operator sidecar injection failed

@@ -282,12 +282,6 @@
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git clone error: Cloning into .* error: RPC failed; HTTP 429 curl 22 The requested URL returned error: 429'
   test_dir: []
-- caused_by: infra
-  id: unable_to_connect_to_server
-  note: ''
-  reason: Unable to connect to server
-  regexp: 'Error: Unable to connect to server'
-  test_dir: []
 - caused_by: gitlab.cee.redhat.com
   id: couldnt_get_task_via_git_resolver_from_gitlab_cee_due_to_429_4
   note: ''
@@ -343,12 +337,13 @@
   reason: Timeout waiting for integration test scenario to validate
   regexp: 'Integration test scenario failed validation: context deadline exceeded'
   test_dir: []
-- caused_by: infra
+- caused_by: image-controller
   id: timeout_onboarding_component
   note: ''
-  reason: Timeout onboarding component
+  reason: Timeout onboarding component (waiting for image-controller)
   regexp: 'Component failed onboarding: context deadline exceeded'
-  test_dir: []
+  test_dir:
+  - run-stone-prod-p02-2026_01_15T17_56_35_886000000_00_00
 - caused_by: integration-controller
   id: timeout_waiting_for_snapshot_to_be_created
   note: ''
@@ -491,7 +486,7 @@
   regexp: 'Test Pipeline Run failed run: context deadline exceeded'
   test_dir:
   - run-stone-stg-rh01-2026_01_07T21_09_17_455000000_00_00
-- caused_by: infra
+- caused_by: release-controller
   id: timeout_waiting_for_release_to_succeed
   note: ''
   reason: Timeout waiting for release to succeed
@@ -590,7 +585,7 @@
   regexp: 'Release pipeline run failed: context deadline exceeded'
   test_dir:
   - run-stone-prd-rh01-2025_12_22T21_02_42_241000000_00_00
-- caused_by: infra
+- caused_by: release-controller
   id: release_creation_failed_due_to_context_deadline_exceeded
   note: ''
   reason: Release creation failed due to context deadline exceeded
@@ -604,11 +599,11 @@
   regexp: 'Build Pipeline Run failed run: PipelineRun .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .* invalid runtime object: Object ''Kind'' is missing in '''''
   test_dir:
   - run-stone-prd-rh02-2026_01_05T18_33_24_765000000_00_00
-- caused_by: infra
+- caused_by: gitlab.com
   id: pipeline_task_retrieval_failed_due_to_git_clone_disconnect
   note: Git clone failed due to unexpected disconnect during fetch-pack
   reason: Pipeline Task retrieval failed due to git clone disconnect
-  regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .* fetch-pack: unexpected disconnect'
+  regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .*https://gitlab.com/.* fetch-pack: unexpected disconnect'
   test_dir:
   - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
 - caused_by: Pipelines
