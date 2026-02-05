@@ -20,40 +20,67 @@ COLUMN_MESSAGE = 2
 # Errors patterns we recognize (when newlines were removed)
 # Generic guideline on constructing error reasons: <who - which tool failed> <what - what action failed> <why - why it failed>
 dir_path = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(dir_path, "ci-scripts/config/errors-loadtest_output.yaml"), "r") as fd:
-    ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
-with open(os.path.join(dir_path, "ci-scripts/config/errors-container_logs.yaml"), "r") as fd:
-    FAILED_PLR_ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
-with open(os.path.join(dir_path, "ci-scripts/config/errors-tr_conditions.yaml"), "r") as fd:
-    FAILED_TR_ERRORS = [(e["reason"], re.compile(e["regexp"])) for e in yaml.load(fd, Loader=yaml.SafeLoader)]
 
 
-def message_to_reason(reasons_and_errors: set, msg: str) -> str:
+def load_config(filename):
+    with open(os.path.join(dir_path, filename), "r") as fd:
+        return [
+            (e["reason"], re.compile(e["regexp"]), e.get("caused_by", "UNKNOWN"))
+            for e in yaml.load(fd, Loader=yaml.SafeLoader)
+        ]
+
+
+ERRORS = load_config("ci-scripts/config/errors-loadtest_output.yaml")
+FAILED_PLR_ERRORS = load_config("ci-scripts/config/errors-container_logs.yaml")
+FAILED_TR_ERRORS = load_config("ci-scripts/config/errors-tr_conditions.yaml")
+
+
+def message_to_reason(reasons_and_errors: list, msg: str) -> tuple:
     """
-    Classifies an error message using regular expressions and returns the error name.
+    Classifies an error message using regular expressions and returns the error name and caused_by.
 
     Args:
       msg: The input error message string.
 
     Returns:
-      The name of the error if a pattern matches, otherwise string "UNKNOWN".
+      A tuple (error_name, caused_by) if a pattern matches, otherwise ("UNKNOWN", "UNKNOWN").
     """
     msg = msg.replace("\n", " ")  # Remove newlines
-    msg = msg[-250000:]   # Just look at last 250k bytes
-    for error_name, pattern in reasons_and_errors:
+    msg = msg[-250000:]  # Just look at last 250k bytes
+    for error_name, pattern, caused_by in reasons_and_errors:
         if re.search(pattern, msg):
             print(f"Matched error pattern: {pattern}")
-            return error_name
+            return error_name, caused_by
     print(f"Unknown error: {msg}")
-    return "UNKNOWN"
+    return "UNKNOWN", "UNKNOWN"
 
 
-def add_reason(error_messages, error_by_code, error_by_reason, message, reason="", code=0):
+def add_reason(
+    error_messages,
+    error_by_code,
+    error_by_reason,
+    error_caused_by_list,
+    message,
+    reason="",
+    caused_by=None,
+    code=0,
+):
     if reason == "":
         reason = message
     error_messages.append(message)
     error_by_code[code] += 1
     error_by_reason[reason] += 1
+
+    if caused_by:
+        to_add = []
+        if isinstance(caused_by, list):
+            to_add = caused_by
+        else:
+            to_add = [caused_by]
+
+        for cb in to_add:
+            if cb != "SKIP":
+                error_caused_by_list.append(cb)
 
 
 def load(datafile):
@@ -89,7 +116,9 @@ def find_all_failed_plrs(data_dir):
                 succeeded = True
                 for c in data["status"]["conditions"]:
                     if c["type"] == "Succeeded":
-                        if c["status"] == "False":   # possibly switch this to `!= "True"` but that might be too big change for normal runs
+                        if (
+                            c["status"] == "False"
+                        ):  # possibly switch this to `!= "True"` but that might be too big change for normal runs
                             succeeded = False
                             break
                 if succeeded:
@@ -101,7 +130,7 @@ def find_all_failed_plrs(data_dir):
 
 
 def find_first_failed_build_plr(data_dir, plr_type):
-    """ This function is intended for jobs where we only run one concurrent
+    """This function is intended for jobs where we only run one concurrent
     builds, so no more than one can failed: our load test probes.
 
     This is executed when test hits "Pipeline failed" error and this is
@@ -123,7 +152,10 @@ def find_first_failed_build_plr(data_dir, plr_type):
 
         # Skip PLRs that do not have expected type
         try:
-            if plr["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"] != plr_type_label:
+            if (
+                plr["metadata"]["labels"]["pipelines.appstudio.openshift.io/type"]
+                != plr_type_label
+            ):
                 continue
         except KeyError:
             continue
@@ -178,7 +210,9 @@ def find_failed_containers(data_dir, ns, tr_name):
 
 
 def load_container_log(data_dir, ns, pod_name, cont_name):
-    datafile = os.path.join(data_dir, ns, "0", "pod-" + pod_name + "-" + cont_name + ".log")
+    datafile = os.path.join(
+        data_dir, ns, "0", "pod-" + pod_name + "-" + cont_name + ".log"
+    )
     print(f"Checking errors in {datafile}")
     with open(datafile, "r") as fd:
         return fd.read()
@@ -190,7 +224,7 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
     try:
         plr = find_first_failed_build_plr(dump_dir, plr_type)
         if plr is None:
-            return ["SORRY PLR not found"]
+            return [("SORRY PLR not found", "UNKNOWN")]
 
         plr_ns = plr["metadata"]["namespace"]
 
@@ -199,27 +233,33 @@ def investigate_failed_plr(dump_dir, plr_type="build"):
 
             if tr_ok:
                 try:
-                    for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
-                        log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
-                        reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+                    for pod_name, cont_name in find_failed_containers(
+                        dump_dir, plr_ns, tr_name
+                    ):
+                        log_lines = load_container_log(
+                            dump_dir, plr_ns, pod_name, cont_name
+                        )
+                        reason, caused_by = message_to_reason(
+                            FAILED_PLR_ERRORS, log_lines
+                        )
 
                         if reason == "SKIP":
                             continue
 
-                        reasons.append(reason)
+                        reasons.append((reason, caused_by))
                 except FileNotFoundError as e:
                     print(f"Failed to locate required files: {e}")
 
             print(f"Checking errors in condition message of {tr_file}")
-            reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
+            reason, caused_by = message_to_reason(FAILED_TR_ERRORS, tr_message)
             if reason != "SKIP":
-                reasons.append(reason)
+                reasons.append((reason, caused_by))
     except Exception as e:
         logging.exception("Investigating PLR failed")
-        return ["SORRY " + str(e)]
+        return [("SORRY " + str(e), "UNKNOWN")]
 
-    reasons = list(set(reasons))   # get unique reasons only
-    reasons.sort()   # sort reasons
+    reasons = list(set(reasons))  # get unique reasons only
+    reasons.sort()  # sort reasons
     return reasons
 
 
@@ -236,6 +276,7 @@ def main():
     error_by_reason = collections.defaultdict(
         lambda: 0
     )  # key: textual error reason, value: number of such errors
+    error_caused_by_list = []
 
     try:
         with open(input_file, "r") as fp:
@@ -247,17 +288,30 @@ def main():
                 code = row[COLUMN_CODE]
                 message = row[COLUMN_MESSAGE]
 
-                reason = message_to_reason(ERRORS, message)
+                reason, caused_by = message_to_reason(ERRORS, message)
+                current_caused_bys = [caused_by]
 
                 if reason == "Pipeline failed":
                     reasons2 = investigate_failed_plr(dump_dir, "build")
-                    reason = reason + ": " + ", ".join(reasons2)
+                    # reasons2 is list of (reason_str, caused_by_str)
+                    reason = reason + ": " + ", ".join([r[0] for r in reasons2])
+                    current_caused_bys.extend([r[1] for r in reasons2])
 
                 if reason == "Release Pipeline failed":
                     reasons2 = investigate_failed_plr(dump_dir, "release")
-                    reason = reason + ": " + ", ".join(reasons2)
+                    reason = reason + ": " + ", ".join([r[0] for r in reasons2])
+                    current_caused_bys.extend([r[1] for r in reasons2])
 
-                add_reason(error_messages, error_by_code, error_by_reason, message, reason, code)
+                add_reason(
+                    error_messages,
+                    error_by_code,
+                    error_by_reason,
+                    error_caused_by_list,
+                    message,
+                    reason,
+                    current_caused_bys,
+                    code,
+                )
     except FileNotFoundError:
         print("No errors file found, good :-D")
 
@@ -268,21 +322,47 @@ def main():
     except FileNotFoundError:
         print("No timings file found, strange :-/")
         error_messages.append("No timings file found")
-        add_reason(error_messages, error_by_code, error_by_reason, "No timings file found")
+        add_reason(
+            error_messages,
+            error_by_code,
+            error_by_reason,
+            error_caused_by_list,
+            "No timings file found",
+        )
 
     try:
         if timings["KPI"]["mean"] == -1:
             if len(error_messages) == 0:
-                add_reason(error_messages, error_by_code, error_by_reason, "No test run finished")
+                add_reason(
+                    error_messages,
+                    error_by_code,
+                    error_by_reason,
+                    error_caused_by_list,
+                    "No test run finished",
+                )
     except KeyError:
         print("No KPI metrics in timings data, strange :-(")
-        add_reason(error_messages, error_by_code, error_by_reason, "No KPI metrics in timings data")
+        add_reason(
+            error_messages,
+            error_by_code,
+            error_by_reason,
+            error_caused_by_list,
+            "No KPI metrics in timings data",
+        )
 
     data = {
         "error_by_code": error_by_code,
         "error_by_reason": error_by_reason,
-        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items() if k != "Post-test data collection failed"]),
+        "error_reasons_simple": "; ".join(
+            [
+                f"{v}x {k}"
+                for k, v in error_by_reason.items()
+                if k != "Post-test data collection failed"
+            ]
+        ),
         "error_messages": error_messages,
+        "error_caused_by": error_caused_by_list,
+        "error_caused_by_simple": ", ".join(error_caused_by_list),
     }
 
     print(f"Errors detected: {len(error_messages)}")
@@ -306,21 +386,27 @@ def investigate_all_failed_plr(dump_dir):
 
             if tr_ok:
                 try:
-                    for pod_name, cont_name in find_failed_containers(dump_dir, plr_ns, tr_name):
-                        log_lines = load_container_log(dump_dir, plr_ns, pod_name, cont_name)
-                        reason = message_to_reason(FAILED_PLR_ERRORS, log_lines)
+                    for pod_name, cont_name in find_failed_containers(
+                        dump_dir, plr_ns, tr_name
+                    ):
+                        log_lines = load_container_log(
+                            dump_dir, plr_ns, pod_name, cont_name
+                        )
+                        reason, caused_by = message_to_reason(
+                            FAILED_PLR_ERRORS, log_lines
+                        )
 
                         if reason == "SKIP":
                             continue
 
-                        reasons.append(reason)
+                        reasons.append((reason, caused_by))
                 except FileNotFoundError as e:
                     print(f"Failed to locate required files: {e}")
 
             print(f"Checking errors in condition message of {tr_file}")
-            reason = message_to_reason(FAILED_TR_ERRORS, tr_message)
+            reason, caused_by = message_to_reason(FAILED_TR_ERRORS, tr_message)
             if reason != "SKIP":
-                reasons.append(reason)
+                reasons.append((reason, caused_by))
 
     return sorted(reasons)
 
@@ -336,16 +422,32 @@ def main_custom():
     error_by_reason = collections.defaultdict(
         lambda: 0
     )  # key: textual error reason, value: number of such errors
+    error_caused_by_list = []
 
     reasons = investigate_all_failed_plr(dump_dir)
-    for r in reasons:
-        add_reason(error_messages, error_by_code, error_by_reason, r)
+    for r, caused_by in reasons:
+        add_reason(
+            error_messages,
+            error_by_code,
+            error_by_reason,
+            error_caused_by_list,
+            r,
+            caused_by=caused_by,
+        )
 
     data = {
         "error_by_code": error_by_code,
         "error_by_reason": error_by_reason,
-        "error_reasons_simple": "; ".join([f"{v}x {k}" for k, v in error_by_reason.items() if k != "Post-test data collection failed"]),
+        "error_reasons_simple": "; ".join(
+            [
+                f"{v}x {k}"
+                for k, v in error_by_reason.items()
+                if k != "Post-test data collection failed"
+            ]
+        ),
         "error_messages": error_messages,
+        "error_caused_by": error_caused_by_list,
+        "error_caused_by_simple": ", ".join(error_caused_by_list),
     }
 
     print(f"Errors detected: {len(error_messages)}")
