@@ -5101,6 +5101,22 @@
       "filtering": false,
       "metrics": true,
       "schemaId": 169
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "hybrid-cloud-experience-perfscale-team",
+      "name": "__results_errors_error_caused_by_simple",
+      "extractors": [
+        {
+          "name": "__results_errors_error_caused_by_simple",
+          "jsonpath": "$.results.errors.error_caused_by_simple",
+          "isarray": false
+        }
+      ],
+      "_function": "",
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 169
     }
   ],
   "transformers": []
