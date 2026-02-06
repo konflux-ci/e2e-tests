@@ -5,7 +5,7 @@
   regexp: 'Repo forking failed: context deadline exceeded'
   test_dir:
   - run-kflux-prd-rh03-2026_01_11T07_45_19_281000000_00_00
-- caused_by: ApiServer
+- caused_by: cluster
   id: application_creation_timed_out_waiting_for_quota_evaluation
   note: ''
   reason: Application creation timed out waiting for quota evaluation
@@ -54,7 +54,7 @@
   reason: Failed application creation when calling mapplication.kb.io webhook
   regexp: 'Application failed creation: Unable to create the Application .*: Internal error occurred: failed calling webhook .*mapplication.kb.io.*: failed to call webhook: Post .*https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application.* no endpoints available for service .*application-service-webhook-service'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: couldnt_get_task_via_bundles_resolver_because_control_characters_in_yaml
   note: ''
   reason: Couldnt get task via bundles resolver because control characters in yaml
@@ -121,7 +121,7 @@
   reason: Timeout creating application calling mapplication.kb.io webhook
   regexp: 'Application failed creation: Unable to create the Application [^ ]+: Internal error occurred: failed calling webhook .mapplication.kb.io.: failed to call webhook: Post .https://application-service-webhook-service.application-service.svc:443/mutate-appstudio-redhat-com-v1alpha1-application[^ ]+.: context deadline exceeded'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_getting_pipeline
   note: ''
   reason: Timeout getting pipeline
@@ -139,7 +139,7 @@
   reason: Failed creating integration test scenario because it already exists
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* already exists'
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: couldnt_get_pipeline_because_etcd_timeouted
   note: ''
   reason: Couldnt get pipeline because ETCD timeouted
@@ -157,7 +157,7 @@
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: git fetch error: remote: Retry later fatal: unable to access .*: The requested URL returned error: 429: exit status 128'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_waiting_for_build_pipeline_to_be_created
   note: ''
   reason: Timeout waiting for build pipeline to be created
@@ -175,7 +175,7 @@
   reason: Couldnt get pipeline via git resolver from gitlab.cee due to 429
   regexp: 'Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Git.*https://gitlab.cee.redhat.com/.* (status code: 429|The requested URL returned error: 429)'
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: timeout_listing_pipeline_runs
   note: "Last time I seen this we discussed it here:\n\n  https://redhat-internal.slack.com/archives/C04PZ7H0VA8/p1751530663606749\n\nAnd it manifested itself by check on initial PR failing with:\n\n  the namespace of the provided object does not match the namespace sent on the request\n\nAnd folks noticed this in the PaC controller logs:\n\n  There was an error starting the PipelineRun test-rhtap-1-app-ryliu-comp-0-on-pull-request-, creating pipelinerun\n  test-rhtap-1-app-ryliu-comp-0-on-pull-request- in namespace test-rhtap-1-tenant has failed. Tekton Controller has\n  reported this error: ```Internal error occurred: failed calling webhook \"vpipelineruns.konflux-ci.dev\": failed\n  to call webhook: Post \"https://etcd-shield.etcd-shield.svc:443/validate-tekton-dev-v1-pipelinerun?timeout=10s\":\n  context deadline exceeded```\n"
   reason: Timeout listing pipeline runs
@@ -202,7 +202,7 @@
   reason: Couldnt get task via buldles resolver from quay.io due to manifest unknown
   regexp: 'Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .* Reason:CouldntGetTask Message:Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .* cannot retrieve the oci image: GET https://quay.io/[^ ]+: MANIFEST_UNKNOWN: manifest unknown'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_getting_pac_pull_number_when_validating_component
   note: ''
   reason: Timeout getting PaC pull number when validating component
@@ -222,7 +222,7 @@
   reason: Test Pipeline failed
   regexp: 'Test Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: failed_getting_pac_pull_number_because_pac_public_route_does_not_exist
   note: ''
   reason: Failed getting PaC pull number because PaC public route does not exist
@@ -240,7 +240,7 @@
   reason: Release failed in progress without error given
   regexp: 'Release failed: Release .* in namespace .* failed: .Type:Released Status:False .* Reason:Progressing Message:.$'
   test_dir: []
-- caused_by: ApiServer
+- caused_by: cluster
   id: application_creation_failed_because_resourcequota_object_has_been_modified
   note: ''
   reason: Application creation failed because resourcequota object has been modified
@@ -288,14 +288,14 @@
   reason: Couldnt get task via git resolver from gitlab.cee due to 429
   regexp: 'Reason:CouldntGetTask Message:.*Couldn''t retrieve Task .resolver type git.*https://gitlab.cee.redhat.com/.* error requesting remote resource: error getting .Git. .*: error resolving repository: git clone error: Cloning into .* remote: Retry later fatal: unable to access ''https://gitlab.cee.redhat.com/.*'': The requested URL returned error: 429: exit status 128'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_waiting_for_release_pipeline_to_be_created
   note: ''
   reason: Timeout waiting for release pipeline to be created
   regexp: 'Release pipeline run failed creation: context deadline exceeded'
   test_dir:
   - run-stone-prod-p02-2026_01_08T17_01_20_554000000_00_00
-- caused_by: ApiServer
+- caused_by: cluster
   id: failed_component_creation_because_resource_quota_evaluation_timed_out
   note: ''
   reason: Failed component creation because resource quota evaluation timed out
@@ -313,7 +313,7 @@
   reason: Repo templating failed when updating file on github.com because 502
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+.yaml in repo [^ ]+ revision main: error when updating a file on github: PUT https://api.github.com/repos/[^ ]+: 502 Server Error'
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: couldnt_get_pipeline_because_etcd_timeouted_0
   note: ''
   reason: Couldnt get pipeline because ETCD timeouted
@@ -369,7 +369,7 @@
   reason: Couldnt get task via buldles resolver from quay.io due to 404
   regexp: Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 404 Not Found
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: couldnt_get_task_via_bundles_resolver_because_etcd_timeouted
   note: ''
   reason: Couldnt get task via bundles resolver because ETCD timeouted
@@ -417,7 +417,7 @@
   reason: Repo templating failed when updating file on github.com because 504
   regexp: 'Repo-templating workflow component cleanup failed: Error templating PaC files: Failed to update file .tekton/[^ ]+.yaml in repo [^ ]+ revision main: error when updating a file on github: PUT https://api.github.com/repos/[^ ]+: 504 We couldn''t respond to your request in time. Sorry about that. Please try resubmitting your request and contact us if the problem persists.'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: build_pipeline_run_was_cancelled
   note: ''
   reason: Build Pipeline Run was cancelled
@@ -447,14 +447,14 @@
   reason: Failed validating release condition
   regexp: 'Release .* in namespace .* failed: .*Message:Release validation failed.*'
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: error_deleting_on_pull_request_default_pipelinerun
   note: ''
   reason: Error deleting on-pull-request default PipelineRun
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-pull-request default PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   test_dir:
   - run-stone-prd-rh01-2026_01_08T17_44_36_778000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_waiting_for_test_pipeline_to_create
   note: ''
   reason: Timeout waiting for test pipeline to create
@@ -479,7 +479,7 @@
   reason: Couldnt get pipeline via http resolver from gitlab.cee
   regexp: Message:.*resolver failed to get Pipeline.*error requesting remote resource.*Http.*https://gitlab.cee.redhat.com/.* is not found
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_waiting_for_test_pipeline_to_finish
   note: ''
   reason: Timeout waiting for test pipeline to finish
@@ -492,7 +492,7 @@
   reason: Timeout waiting for release to succeed
   regexp: 'Release failed: context deadline exceeded'
   test_dir: []
-- caused_by: ApiServer
+- caused_by: cluster
   id: component_creation_failed_because_resourcequota_object_has_been_modified
   note: ''
   reason: Component creation failed because resourcequota object has been modified
@@ -528,7 +528,7 @@
   reason: Pipeline failed
   regexp: 'Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
   test_dir: []
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: couldnt_get_task_via_bundles_resolver_because_can_not_validate_referenced_object
   note: ''
   reason: Couldnt get task via bundles resolver because can not validate referenced object
@@ -578,7 +578,7 @@
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 502 Server Error'
   test_dir:
   - run-stone-prd-rh02-2025_12_20T05_44_30_733000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: timeout_waiting_for_release_pipeline_run_to_finish
   note: ''
   reason: Timeout waiting for release pipeline run to finish
@@ -592,7 +592,7 @@
   regexp: 'Release failed creation: context deadline exceeded'
   test_dir:
   - run-stone-prd-rh01-2026_01_06T10_03_22_218000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: pipeline_failed_to_retrieve_task_due_to_invalid_runtime_object_missing_kind
   note: ''
   reason: Pipeline failed to retrieve task due to invalid runtime object (missing Kind)
@@ -606,7 +606,7 @@
   regexp: 'Pipeline .* can''t be Run; it contains Tasks that don''t exist: .*https://gitlab.com/.* fetch-pack: unexpected disconnect'
   test_dir:
   - run-kfluxfedorap01-2026_01_07T01_56_17_960000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: repo_templating_failed_because_file_not_found_404
   note: ''
   reason: Repo-templating failed because file not found (404)
@@ -621,7 +621,7 @@
   regexp: 'FAIL\(30\): Application failed creation: Unable to create the Application [^:]+: applications.appstudio.redhat.com is forbidden: User "system:serviceaccount:[^:]+:loadtest-probe-serviceaccount" cannot create resource "applications" in API group "appstudio.redhat.com" in the namespace "[^"]+"'
   test_dir:
   - run-stone-stg-rh01-2026_01_11T09_09_18_354000000_00_00
-- caused_by: etcd
+- caused_by: cluster
   id: pipelinerun_failed_due_to_etcd_request_timeout
   note: ''
   reason: PipelineRun failed due to etcd request timeout
@@ -635,7 +635,7 @@
   regexp: 'Repo-templating workflow component cleanup failed: Merging [0-9]+ failed: .*PUT https://api.github.com/repos/.*/merge: 500'
   test_dir:
   - run-stone-prd-rh01-2026_01_12T12_24_17_497000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: release_pipeline_run_failed_because_git_clone_authentication_required
   note: ''
   reason: Release pipeline run failed because git clone authentication required
@@ -656,7 +656,7 @@
   regexp: 'Repo forking failed: .* 401 Requires authentication'
   test_dir:
   - run-stone-prd-rh02-2026_01_22T14_18_19_965000000_00_00
-- caused_by: Pipelines
+- caused_by: pipelines-controller
   id: repo_templating_cleanup_timeout_listing_deleting
   note: ''
   reason: Repo templating cleanup timeout (listing/deleting)

@@ -22,7 +22,7 @@
   reason: Release failed because unauthorized when pushing artifact
   regexp: 'Prepared artifact from /var/workdir/release .* Token not found for quay.io/konflux-ci/release-service-trusted-artifacts Uploading [0-9a-z]+ sourceDataArtifact Error response from registry: unauthorized: access to the requested resource is not authorized: map.. Command exited with non-zero status 1'
   test_dir: []
-- caused_by: etcd
+- caused_by: cluster
   id: error_allocating_host_because_etcd_timeouted
   note: ''
   reason: Error allocating host because ETCD timeouted
@@ -319,7 +319,7 @@
   reason: DNF failed to download package from Koji
   regexp: '.librepo. Error during transfer: Status code: 503 for https://kojipkgs.fedoraproject.org/repos/[^ ]+.rpm.*ERROR Command returned error: Failed to download packages'
   test_dir: []
-- caused_by: ApiServer
+- caused_by: cluster
   id: failed_to_provision_mpc_vm_due_to_resource_quota_evaluation_timed_out
   note: ''
   reason: Failed to provision MPC VM due to resource quota evaluation timed out
