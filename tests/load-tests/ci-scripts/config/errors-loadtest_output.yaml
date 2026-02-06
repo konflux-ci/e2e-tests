@@ -67,7 +67,7 @@
   reason: Couldnt get task via buldles resolver from quay.io due to 429
   regexp: Message:.*Couldn't retrieve Task .*resolver type bundles.*https://quay.io/.* status code 429 Too Many Requests
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: timeout_getting_build_service_account
   note: ''
   reason: Timeout getting build service account
@@ -79,7 +79,7 @@
   reason: Repo forking failed as the target is still being deleted on gitlab.cee.redhat.com
   regexp: 'Repo forking failed: Error forking project .* POST https://gitlab.cee.redhat.com.* 409 .*Project namespace name has already been taken, The project is still being deleted'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: gitlab_token_used_by_test_expired
   note: ''
   reason: GitLab token used by test expired
@@ -103,7 +103,7 @@
   reason: Failed creating integration test scenario because cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on
   regexp: 'Integration test scenario failed creation: Unable to create the Integration Test Scenario .* integrationtestscenarios.appstudio.redhat.com .* is forbidden: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can''t set finalizers on'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: post_test_data_collection_failed
   note: ''
   reason: Post-test data collection failed
@@ -182,7 +182,7 @@
   regexp: 'Repo-templating workflow component cleanup failed: Error deleting on-push merged PipelineRun in namespace .*: Unable to list PipelineRuns for component .* in namespace .*: context deadline exceeded'
   test_dir:
   - run-stone-stage-p01-2026_01_07T12_33_19_547000000_00_00
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_because_github_token_expired
   note: ''
   reason: Repo forking failed because GitHub token expired
@@ -234,7 +234,7 @@
   reason: Couldnt get task via bundles resolver from quay.io due to unexpected end of JSON input
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type bundles.*name = .*: error requesting remote resource: error getting \"bundleresolver\" .*: cannot retrieve the oci image: unexpected end of JSON input'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: release_failed_in_progress_without_error_given
   note: ''
   reason: Release failed in progress without error given
@@ -246,19 +246,19 @@
   reason: Application creation failed because resourcequota object has been modified
   regexp: 'Application failed creation: Unable to create the Application [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified; please apply your changes to the latest version and try again'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_as_gitlab_cee_says_401_unauthorized
   note: ''
   reason: Repo forking failed as GitLab CEE says 401 Unauthorized
   regexp: 'Repo forking failed: Error deleting project .*: DELETE https://gitlab.cee.redhat.com/.*: 401 .*message: 401 Unauthorized.*'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: post_test_data_collection_failed_0
   note: ''
   reason: Post-test data collection failed
   regexp: Failed to collect application JSONs
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_on_gitlab_com_because_401_unauthorized
   note: ''
   reason: Repo forking failed on gitlab.com because 401 Unauthorized
@@ -301,7 +301,7 @@
   reason: Failed component creation because resource quota evaluation timed out
   regexp: 'Component failed creation: Unable to create the Component .*: Internal error occurred: resource quota evaluation timed out'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_to_add_imagepullsecrets_to_build_sa
   note: ''
   reason: Failed to add imagePullSecrets to build SA
@@ -319,13 +319,13 @@
   reason: Couldnt get pipeline because ETCD timeouted
   regexp: 'Build Pipeline Run failed run: PipelineRun for component .* in namespace .* failed: .* Reason:CouldntGetPipeline Message:Error retrieving pipeline for pipelinerun .*: resolver failed to get Pipeline : error requesting remote resource: etcdserver: request timed out'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: release_failure_pipelinerun_not_created
   note: ''
   reason: 'Release failure: PipelineRun not created'
   regexp: couldn't find PipelineRun in managed namespace '%s' for a release '%s' in '%s' namespace
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_when_deleting_target_repo_on_gitlab_com_not_cee_due_unathorized
   note: ''
   reason: Repo forking failed when deleting target repo on gitlab.com (not CEE!) due unathorized
@@ -350,7 +350,7 @@
   reason: Timeout waiting for snapshot to be created
   regexp: 'Snapshot failed creation: context deadline exceeded'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: repo_templating_failed_because_token_expired
   note: ''
   reason: Repo templating failed because token expired
@@ -441,7 +441,7 @@
   reason: Couldnt get task via git resolver because ETCD timeouted
   regexp: 'PipelineRun .* in namespace .* failed: .* Reason:CouldntGetTask Message:Pipeline .* can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .resolver type git.*url = https://github.com/.*: error requesting remote resource: error updating resource request .* with data: etcdserver: request timed out'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_validating_release_condition
   note: ''
   reason: Failed validating release condition
@@ -516,7 +516,7 @@
   reason: Repo forking failed because import failed
   regexp: 'Repo forking failed: Error waiting for project [^ ]+ .ID: [0-9]+. fork to complete: Forking of project [^ ]+ .ID: [0-9]+. failed with import status: failed'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_to_link_pipeline_image_pull_secret_to_build_service_account_because_sa_was_not_found
   note: ''
   reason: Failed to link pipeline image pull secret to build service account because SA was not found
@@ -540,13 +540,13 @@
   reason: Repo forking failed as GitLab CEE says 500 Internal Server Error
   regexp: 'Repo forking failed: Error deleting project .*: GET https://gitlab.cee.redhat.com/.*: 500 failed to parse unknown error format.*500: We''re sorry, something went wrong on our end'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_because_gitlab_cee_certificate_did_not_verified
   note: ''
   reason: Repo forking failed because GitLab CEE certificate did not verified
   regexp: 'Repo forking failed: Error getting project [^ ]+: Get .https://gitlab.cee.redhat.com/[^ ]+.: tls: failed to verify certificate: x509: certificate signed by unknown authority'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: application_creation_failed_because_of_tls_handshake_timeout
   note: ''
   reason: Application creation failed because of TLS handshake timeout
@@ -614,7 +614,7 @@
   test_dir:
   - run-kflux-ocp-p01-2025_12_30T03_50_17_869000000_00_00
   - run-stone-prod-p02-2026_02_05T13_07_40_469000000_00_00
-- caused_by: infra
+- caused_by: test
   id: loadtest_probe_failed_to_create_application_because_service_account_permissions_forbidden
   note: Happening on Staging clusters since 2026-01-08
   reason: Loadtest probe failed to create Application because service account permissions forbidden
@@ -649,7 +649,7 @@
   regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 502 Server Error'
   test_dir:
   - run-stone-stg-rh01-2026_01_15T16_09_21_945000000_00_00
-- caused_by: infra
+- caused_by: test
   id: repo_forking_failed_due_to_401_requires_authentication_from_github
   note: ''
   reason: Repo forking failed due to 401 Requires authentication from GitHub

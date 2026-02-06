@@ -114,7 +114,7 @@
   reason: SKIP
   regexp: '\"message\": \".* exited with code 255.*\"'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: pod_creation_failed_because_serviceaccounts_not_found
   note: ''
   reason: Pod creation failed because serviceaccounts not found
@@ -148,7 +148,7 @@
   regexp: '.message.: .pod status ..Initialized..:..False..; message: ..containers with incomplete status: \[.*place-scripts.*\].'
   test_dir:
   - run-stone-prd-rh02-2026_01_08T15_08_01_609000000_00_00
-- caused_by: infra
+- caused_by: test
   id: init_container_prepare_failed_with_code_137
   note: Likely OOMKilled
   reason: Init container prepare failed with code 137

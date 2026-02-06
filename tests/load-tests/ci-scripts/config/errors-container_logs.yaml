@@ -1,4 +1,4 @@
-- caused_by: infra
+- caused_by: test
   id: buildah_failed_to_pull_image_from_quay_io_because_unauthorized
   note: ''
   reason: buildah failed to pull image from Quay.io because unauthorized
@@ -16,7 +16,7 @@
   reason: Failed because of quay.io returned 502
   regexp: 'level=fatal msg=.Error parsing image name .*docker://quay.io/.* Requesting bearer token: invalid status code from registry 502 .Bad Gateway.'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: release_failed_because_unauthorized_when_pushing_artifact
   note: ''
   reason: Release failed because unauthorized when pushing artifact
@@ -29,7 +29,7 @@
   regexp: 'Error allocating host: etcdserver: request timed out'
   test_dir:
   - run-stone-prod-p02-2026_01_08T02_13_52_792000000_00_00
-- caused_by: infra
+- caused_by: test
   id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
@@ -47,7 +47,7 @@
   reason: Failed to prefetch dependencies due to go env error
   regexp: 'ERROR PackageManagerError: Go execution failed: .go env GOWORK. failed with rc=1'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_to_prefetch_dependencies_due_to_invalid_input_when_fetching_tags
   note: ''
   reason: Failed to prefetch dependencies due to invalid input when fetching tags
@@ -217,7 +217,7 @@
   reason: Failed to compile with clang
   regexp: 'ERROR: [^ ]+: Compiling [^ ]+.cc .for tool. failed: .Exit 1.: clang-[0-9]+ failed: error executing CppCompile command'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: introspection_failed_because_of_incomplete_docker_config_json
   note: ''
   reason: Introspection failed because of incomplete .docker/config.json
@@ -271,7 +271,7 @@
   reason: Failed to pull container from access.redhat.com because of DNS error
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/.*: copying system image from manifest list: reading signatures: Get \"https://access.redhat.com/.*\": dial tcp: lookup access.redhat.com: Temporary failure in name resolution'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized_0
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
@@ -325,7 +325,7 @@
   reason: Failed to provision MPC VM due to resource quota evaluation timed out
   regexp: 'cat /ssh/error Error allocating host: Internal error occurred: resource quota evaluation timed out'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: release_failed_because_unauthorized_when_pulling_policy
   note: ''
   reason: Release failed because unauthorized when pulling policy
@@ -385,7 +385,7 @@
   reason: Failed to compile with clang
   regexp: 'ERROR: [^ ]+: Compiling [^ ]+.c failed: .Exit 1.: clang-[0-9]+ failed: error executing CppCompile command'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: failed_to_prefetch_dependencies_due_to_download_timeout
   note: ''
   reason: Failed to prefetch dependencies due to download timeout
@@ -404,7 +404,7 @@
   reason: Error from GitHub API when getting release-service-catalog last commit SHA
   regexp: '\+\+ curl -s https://api.github.com/repos/rhtap-test-local/release-service-catalog/commits/production \+\+ jq -r ''.sha // ..'' parse error: Invalid numeric literal at line [0-9]+, column [0-9]+ \+ sha= ?$'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: dnf_failed_to_install_package_because_gpg_check_failed
   note: ''
   reason: DNF failed to install package because GPG check failed
@@ -441,13 +441,13 @@
   regexp: 'Error: copying system image from manifest list: writing blob: storing blob to file ./var/tmp/[^ ]+.: write /var/tmp/[^ ]+: no space left on device'
   test_dir:
   - run-stone-stg-rh01-2026_01_21T21_09_18_965000000_00_00
-- caused_by: infra
+- caused_by: test
   id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized_1
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
   regexp: 'Error: creating build container: internal error: unable to copy from source docker://registry.access.redhat.com/[^ ]+: initializing source docker://registry.access.redhat.com/[^ ]+: unable to retrieve auth token: invalid username/password: unauthorized: Please login to the Red Hat Registry using your Customer Portal credentials.'
   test_dir: []
-- caused_by: infra
+- caused_by: test
   id: error_allocating_host_as_provision_tr_already_exists
   note: ''
   reason: Error allocating host as provision TR already exists
@@ -651,7 +651,7 @@
   regexp: 'unsupported transport \\"docker\\" for looking up local images.*quay.io.*received unexpected HTTP status: 502 Bad Gateway'
   test_dir:
   - run-stone-prod-p01-2026_01_16T17_17_21_058000000_00_00
-- caused_by: infra
+- caused_by: test
   id: ssh_connection_reset_during_build
   note: ''
   reason: SSH connection reset during build
@@ -679,7 +679,7 @@
   regexp: 'Error: error cloning repository: unexpected client error: unexpected requesting .* status code: 500'
   test_dir:
   - run-kflux-ocp-p01-2026_01_22T14_15_24_671000000_00_00
-- caused_by: infra
+- caused_by: test
   id: build_failed_because_ssh_secret_provisioning_failed
   note: ''
   reason: Build failed because SSH secret provisioning failed
@@ -693,7 +693,7 @@
   regexp: 'Error: copying system image from manifest list: reading blob .*: Get .*cdn.*quay.io.*: remote error: tls: internal error'
   test_dir:
   - run-kflux-rhel-p01-2026_01_25T15_58_55_139000000_00_00
-- caused_by: infra
+- caused_by: test
   id: mock_build_failed_because_of_broken_connection
   note: ''
   reason: Mock build failed because of broken connection
