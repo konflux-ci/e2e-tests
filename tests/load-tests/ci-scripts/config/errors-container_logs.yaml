@@ -742,3 +742,10 @@
   regexp: 'pulling policy: failed to perform .FetchReference. on source: GET .https://quay.io/v2/konflux-ci/tekton-catalog/data-acceptable-bundles/[^ ]+.: invalid response; digest mismatch in Docker-Content-Digest'
   test_dir:
   - run-kflux-prd-rh03-2026_02_05T03_45_19_664000000_00_00
+- caused_by: koji.fedoraproject.org
+  id: koji_hub_returned_503_service_unavailable
+  note: ''
+  reason: Koji Hub returned 503 Service Unavailable
+  regexp: 'HTTPError: 503 Server Error: Service Unavailable for url: https://koji.fedoraproject.org/kojihub'
+  test_dir:
+  - run-kfluxfedorap01-2026_02_05T18_56_19_547000000_00_00
