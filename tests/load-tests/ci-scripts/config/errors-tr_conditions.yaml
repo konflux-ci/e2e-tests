@@ -176,14 +176,14 @@
   regexp: 'containers with incomplete status: .dynatrace-operator'
   test_dir:
   - run-stone-stg-rh01-2026_01_23T20_39_19_472000000_00_00
-- caused_by: infra
+- caused_by: ApiServer
   id: pod_creation_failed_because_kyverno_policy_execution_failed
   note: ''
   reason: Pod creation failed because Kyverno policy execution failed
   regexp: 'failed to create task run pod .*: admission webhook .* denied the request: mutation policy tekton-pod-adjust-resources-by-platform error: .* JMESPath query failed: unknown function: default'
   test_dir:
   - run-stone-stg-rh01-2026_02_05T19_09_27_251000000_00_00
-- caused_by: infra
+- caused_by: ApiServer
   id: pipelinerun_failed_because_pod_stuck_in_pending
   note: ''
   reason: PipelineRun failed because pod stuck in Pending
