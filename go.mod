@@ -1,6 +1,6 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
@@ -51,9 +51,9 @@ require (
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/tools v0.40.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.34.3
-	k8s.io/apiextensions-apiserver v0.34.3
-	k8s.io/apimachinery v0.34.3
+	k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery v0.35.0
 	k8s.io/cli-runtime v0.34.2
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
@@ -62,7 +62,7 @@ require (
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	knative.dev/pkg v0.0.0-20250415155312-ed3e2158b883
 	oras.land/oras-go/v2 v2.5.0
-	sigs.k8s.io/controller-runtime v0.22.4
+	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -98,7 +98,7 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.34.2
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.2
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.23.1
 	vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
 )
 
@@ -312,8 +312,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.34.3 // indirect
-	k8s.io/component-base v0.34.3 // indirect
+	k8s.io/apiserver v0.35.0 // indirect
+	k8s.io/component-base v0.35.0 // indirect
 	k8s.io/component-helpers v0.34.2 // indirect
 	k8s.io/controller-manager v0.34.0 // indirect
 	k8s.io/kube-aggregator v0.34.0 // indirect
@@ -324,7 +324,7 @@ require (
 	sigs.k8s.io/kustomize/api v0.20.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 )
 
 replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.3.6
