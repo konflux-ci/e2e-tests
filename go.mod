@@ -48,7 +48,7 @@ require (
 	github.com/tektoncd/pipeline v1.7.0
 	github.com/xanzy/go-gitlab v0.114.0
 	golang.org/x/crypto v0.47.0
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/oauth2 v0.35.0
 	golang.org/x/tools v0.40.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.34.3
