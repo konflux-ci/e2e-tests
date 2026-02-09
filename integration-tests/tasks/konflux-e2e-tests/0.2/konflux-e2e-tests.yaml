@@ -170,8 +170,9 @@ spec:
         git config --global credential.helper "store --file $git_creds_path"
         echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "$git_creds_path"
 
-        git clone --origin upstream --branch main "https://github.com/konflux-ci/e2e-tests.git" .
-        make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
+        git clone --origin upstream --branch separate_build_service_suite "https://github.com/flacatus/e2e-tests.git" .
+        # Skip branch pairing since we are already on the correct branch
+        # make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
         /bin/bash -c "integration-tests/scripts/konflux-e2e/0.2/konflux-e2e.sh"
     - name: secure-push-oci
