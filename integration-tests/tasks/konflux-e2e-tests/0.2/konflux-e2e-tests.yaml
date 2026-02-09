@@ -54,6 +54,14 @@ spec:
       type: string
       description: "Name of the environment the testing should be performed in. Use 'downstream' for testing in OpenShift CI, or 'upstream' for testing in Kind cluster."
       default: "downstream"
+    - name: e2e-extra-label-filter
+      type: string
+      description: |
+        Additional Ginkgo label expression to narrow down which tests to run.
+        Combined with the base label filter using '&&'. Accepts any valid Ginkgo label expression.
+        Examples: "github", "gitlab", "multi-component", "github && pac-build", "github || gitlab".
+        Leave empty to run all tests matching the base filter.
+      default: ""
   volumes:
     - name: konflux-ci-secrets-volume
       secret:
@@ -115,6 +123,8 @@ spec:
           value: "true"
         - name: IMAGE_TAG_EXPIRATION
           value: "5d"
+        - name: E2E_EXTRA_LABEL_FILTER
+          value: $(params.e2e-extra-label-filter)
       onError: continue
       script: |
         #!/bin/bash
