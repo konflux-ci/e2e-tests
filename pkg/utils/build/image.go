@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 
 	"github.com/openshift/library-go/pkg/image/reference"
 	"github.com/openshift/oc/pkg/cli/image/extract"
@@ -29,7 +29,7 @@ func ExtractImage(image string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
 	}
-	GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
+	ginkgo.GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
 	eMapping := extract.Mapping{
 		ImageRef: imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef},
 		To:       tmpDir,

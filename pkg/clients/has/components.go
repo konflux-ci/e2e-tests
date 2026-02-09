@@ -14,7 +14,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	imagecontroller "github.com/konflux-ci/image-controller/api/v1alpha1"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -211,11 +211,11 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			pr, err = h.GetComponentPipelineRunWithType(component.GetName(), app, component.GetNamespace(), pipelineType, sha, eventType)
 
 			if err != nil {
-				GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
+				ginkgo.GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
 				return false, nil
 			}
 
-			GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
+			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
 
 			if !pr.IsDone() {
 				return false, nil
@@ -227,10 +227,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 
 			var prLogs string
 			if err = t.StorePipelineRun(component.GetName(), pr); err != nil {
-				GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to store PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
 			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
-				GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
+				ginkgo.GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
 			return false, fmt.Errorf("%s", prLogs)
 		})
@@ -239,7 +239,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if pr == nil {
 				return fmt.Errorf("PipelineRun cannot be created for the Component %s/%s", component.GetNamespace(), component.GetName())
 			}
-			GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, r.Retries+1, pr.GetName(), err)
+			ginkgo.GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, r.Retries+1, pr.GetName(), err)
 			// CouldntGetTask: Retry the PipelineRun only in case we hit the known issue https://issues.redhat.com/browse/SRVKP-2749
 			// TaskRunImagePullFailed: Retry in case of https://issues.redhat.com/browse/RHTAPBUGS-985 and https://github.com/tektoncd/pipeline/issues/7184
 			if attempts == r.Retries+1 || (!r.Always && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetTask" && pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "TaskRunImagePullFailed") {
@@ -546,7 +546,7 @@ func (h *HasController) CheckImageRepositoryExists(namespace, componentName stri
 			return false, fmt.Errorf("more than one image repositories found for component %s", componentName)
 		}
 		if imageRepositoryList.Items[0].Status.State != "ready" {
-			GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet but it has status %v.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State, imageRepositoryList.Items[0].Status)
+			ginkgo.GinkgoWriter.Printf("Image repository for component %s in namespace %s do not have right state ('%s' != 'ready') yet but it has status %v.\n", componentName, namespace, imageRepositoryList.Items[0].Status.State, imageRepositoryList.Items[0].Status)
 			return false, nil
 		}
 		return true, nil

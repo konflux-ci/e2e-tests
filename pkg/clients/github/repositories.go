@@ -8,7 +8,7 @@ import (
 
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/google/go-github/v44/github"
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 )
 
 func (g *Github) CheckIfReleaseExist(owner, repositoryName, releaseURL string) bool {
@@ -16,10 +16,10 @@ func (g *Github) CheckIfReleaseExist(owner, repositoryName, releaseURL string) b
 	tagName := urlParts[len(urlParts)-1]
 	_, _, err := g.client.Repositories.GetReleaseByTag(context.Background(), owner, repositoryName, tagName)
 	if err != nil {
-		GinkgoWriter.Printf("GetReleaseByTag %s returned error in repo %s : %v\n", tagName, repositoryName, err)
+		ginkgo.GinkgoWriter.Printf("GetReleaseByTag %s returned error in repo %s : %v\n", tagName, repositoryName, err)
 		return false
 	}
-	GinkgoWriter.Printf("Release tag %s is found in repository %s \n", tagName, repositoryName)
+	ginkgo.GinkgoWriter.Printf("Release tag %s is found in repository %s \n", tagName, repositoryName)
 	return true
 }
 
@@ -28,25 +28,25 @@ func (g *Github) DeleteRelease(owner, repositoryName, releaseURL string) bool {
 	tagName := urlParts[len(urlParts)-1]
 	release, _, err := g.client.Repositories.GetReleaseByTag(context.Background(), owner, repositoryName, tagName)
 	if err != nil {
-		GinkgoWriter.Printf("GetReleaseByTag returned error in repo %s : %v\n", repositoryName, err)
+		ginkgo.GinkgoWriter.Printf("GetReleaseByTag returned error in repo %s : %v\n", repositoryName, err)
 		return false
 	}
 
 	_, err = g.client.Repositories.DeleteRelease(context.Background(), owner, repositoryName, *release.ID)
 	if err != nil {
-		GinkgoWriter.Printf("DeleteRelease returned error: %v", err)
+		ginkgo.GinkgoWriter.Printf("DeleteRelease returned error: %v", err)
 	}
-	GinkgoWriter.Printf("Release tag %s is deleted in repository %s \n", tagName, repositoryName)
+	ginkgo.GinkgoWriter.Printf("Release tag %s is deleted in repository %s \n", tagName, repositoryName)
 	return true
 }
 
 func (g *Github) CheckIfRepositoryExist(repository string) bool {
 	_, resp, err := g.client.Repositories.Get(context.Background(), g.organization, repository)
 	if err != nil {
-		GinkgoWriter.Printf("error when sending request to Github API: %v\n", err)
+		ginkgo.GinkgoWriter.Printf("error when sending request to Github API: %v\n", err)
 		return false
 	}
-	GinkgoWriter.Printf("repository %s status request to github: %d\n", repository, resp.StatusCode)
+	ginkgo.GinkgoWriter.Printf("repository %s status request to github: %d\n", repository, resp.StatusCode)
 	return resp.StatusCode == 200
 }
 
@@ -149,7 +149,7 @@ func (g *Github) GetAllRepositories() ([]*github.Repository, error) {
 }
 
 func (g *Github) DeleteRepository(repository *github.Repository) error {
-	GinkgoWriter.Printf("Deleting repository %s\n", *repository.Name)
+	ginkgo.GinkgoWriter.Printf("Deleting repository %s\n", *repository.Name)
 	_, err := g.client.Repositories.Delete(context.Background(), g.organization, *repository.Name)
 	if err != nil {
 		return err
@@ -165,12 +165,12 @@ func (g *Github) DeleteRepositoryIfExists(name string) error {
 		if resp != nil && resp.StatusCode == 404 {
 			return nil
 		}
-		return fmt.Errorf("Error checking repository %s/%s: %v", g.organization, name, err)
+		return fmt.Errorf("error checking repository %s/%s: %v", g.organization, name, err)
 	}
 
 	_, deleteErr := g.client.Repositories.Delete(ctx, g.organization, name)
 	if deleteErr != nil {
-		return fmt.Errorf("Error deleting repository %s/%s: %v", g.organization, name, deleteErr)
+		return fmt.Errorf("error deleting repository %s/%s: %v", g.organization, name, deleteErr)
 	}
 
 	return nil
@@ -205,12 +205,12 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 				fmt.Printf("Warning, got 500: %s\n", resp.Body)
 				return false, nil
 			}
-			return false, fmt.Errorf("Error forking %s/%s: %v", sourceOrgName, sourceName, err)
+			return false, fmt.Errorf("error forking %s/%s: %v", sourceOrgName, sourceName, err)
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 1)
 	if err1 != nil {
-		return nil, fmt.Errorf("Failed waiting for fork %s/%s: %v", sourceOrgName, sourceName, err1)
+		return nil, fmt.Errorf("failed waiting for fork %s/%s: %v", sourceOrgName, sourceName, err1)
 	}
 
 	err2 := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -224,7 +224,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 		return true, nil
 	}, time.Second * 10, time.Minute * 1)
 	if err2 != nil {
-		return nil, fmt.Errorf("Failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
+		return nil, fmt.Errorf("failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
 	}
 
 	editedRepo := &github.Repository{
@@ -239,12 +239,12 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 				// Error we are getting: "422 Validation Failed [{Resource:Repository Field:name Code:custom Message:name a repository operation is already in progress}]"
 				return false, nil
 			}
-			return false, fmt.Errorf("Error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
+			return false, fmt.Errorf("error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
 		}
 		return true, nil
 	}, time.Second * 10, time.Minute * 1)
 	if err3 != nil {
-		return nil, fmt.Errorf("Failed waiting for renaming %s/%s: %v", targetOrgName, targetName, err3)
+		return nil, fmt.Errorf("failed waiting for renaming %s/%s: %v", targetOrgName, targetName, err3)
 	}
 
 	return repo, nil

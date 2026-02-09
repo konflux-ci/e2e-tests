@@ -542,3 +542,9 @@
   regexp: 'Release pipeline run failed: PipelineRun .* failed: .* Reason:CouldntGetPipeline Message:Error retrieving pipeline for pipelinerun .*: resolver failed to get Pipeline : error requesting remote resource: error getting "Git" ".*": error resolving repository: clone error: authentication required'
   test_dir:
   - run-stone-prod-p02-2026_01_13T17_05_43_269000000_00_00
+- id: github_repo_forking_failed_due_to_502_server_error
+  note: ''
+  reason: GitHub repo forking failed due to 502 Server Error
+  regexp: 'Repo forking failed: Error checking repository .*: GET https://api.github.com/repos/.*: 502 Server Error'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_15T16_09_21_945000000_00_00

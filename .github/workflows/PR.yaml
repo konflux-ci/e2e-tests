@@ -6,24 +6,28 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup Golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - run: go version
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           args: --timeout=10m
-          version: v1.64.5
+          version: v2.8.0
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.20.0
+        uses: securego/gosec@v2.22.11
         with:
           # we let the report trigger content trigger a failure using the GitHub Security features.
           args: "-no-fail -fmt sarif -out results.sarif ./..."
+      - name: Cleanup results.sarif file
+        # This is workaround for https://github.com/securego/gosec/issues/1482
+        run: |
+          jq '(.runs[].results[].fixes[]? | select(.artifactChanges == null)).artifactChanges = [{"artifactLocation": {"uri": "unknown"}, "replacements": [{"deletedRegion": {"startLine": 1}}]}]' results.sarif > results.sarif.tmp && mv results.sarif.tmp results.sarif
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           # Path to SARIF file relative to the root of the repository
           sarif_file: results.sarif
@@ -32,8 +36,10 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup Golang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
       - name: Run unit tests
         run: make test/unit

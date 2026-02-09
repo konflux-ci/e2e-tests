@@ -206,12 +206,6 @@
   reason: Prefetch dependencies failed to download from rhsm-pulp.corp.redhat.com because not whole content was fetched
   regexp: 'Reading RPM lockfile: [^ ]+ .* Unsuccessful download: https://rhsm-pulp.corp.redhat.com/content/[^ ]+ .* ERROR FetchError: exception_name: ClientPayloadError, details: Response payload is not completed: .ContentLengthError: 400, message=''Not enough data to satisfy content length header.''.'
   test_dir: []
-- id: can_not_find_dockerfile
-  note: ''
-  reason: Can not find Dockerfile
-  regexp: Cannot find Dockerfile [^ ]+
-  test_dir:
-  - run-stone-stg-rh01-2026_01_12T01_09_18_556000000_00_00
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_500_internal_server_error
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of 500 Internal Server Error
@@ -368,6 +362,12 @@
   reason: Failed to pull container from quay.io because of DNS error
   regexp: 'Error: copying system image from manifest list: reading blob .*: Get \"https://cdn[0-9]+.quay.io/.*\": dial tcp: lookup cdn[0-9]+.quay.io: Temporary failure in name resolution'
   test_dir: []
+- id: failed_to_write_container_because_no_space_left_on_device
+  note: ''
+  reason: Failed to write container because no space left on device
+  regexp: 'Error: copying system image from manifest list: writing blob: storing blob to file ./var/tmp/[^ ]+.: write /var/tmp/[^ ]+: no space left on device'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_21T21_09_18_965000000_00_00
 - id: failed_to_pull_container_from_registry_access_redhat_com_because_of_unauthorized_1
   note: ''
   reason: Failed to pull container from registry.access.redhat.com because of unauthorized
@@ -533,3 +533,33 @@
   regexp: \+ curl -s https://api\.github\.com/repos/.* \+\+ jq -r '\.sha // ""' \+ sha= *$
   test_dir:
   - run-stone-prd-rh01-2026_01_14T09_03_00_254000000_00_00
+- id: release_pipeline_failed_collecting_data_from_github
+  note: ''
+  reason: Release pipeline failed collecting data from github
+  regexp: 'curl -s https://api.github.com/repos/.*/commits/.* parse error: Invalid numeric literal at line 1, column 10'
+  test_dir:
+  - run-stone-prd-rh01-2026_01_15T17_01_45_403000000_00_00
+- id: build_failed_to_find_local_image_and_pull_from_remote_registry
+  note: ''
+  reason: Build failed to find local image and pull from remote registry
+  regexp: 'unsupported transport \\"docker\\" for looking up local images.*received unexpected HTTP status: 502 Bad Gateway'
+  test_dir:
+  - run-stone-prod-p01-2026_01_16T17_17_21_058000000_00_00
+- id: ssh_connection_reset_during_build
+  note: ''
+  reason: SSH connection reset during build
+  regexp: 'kex_exchange_identification: read: Connection reset by peer Connection reset by'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_17T16_09_19_569000000_00_00
+- id: rpm_signature_scan_failed_due_to_quay_503_service_unavailable
+  note: ''
+  reason: RPM signature scan failed due to Quay 503 Service Unavailable
+  regexp: 'error: unable to parse image .*: cannot retrieve image configuration for manifest .* received unexpected HTTP status: 503 Service Unavailable'
+  test_dir:
+  - run-stone-stg-rh01-2026_01_21T10_09_22_173000000_00_00
+- id: rpm_build_artifact_upload_to_quay_failed_with_unexpected_success_message
+  note: ''
+  reason: RPM build artifact upload to Quay failed with unexpected success message
+  regexp: 'Error response from registry: recognizable error message not found: POST .* response status code 200: OK'
+  test_dir:
+  - run-kfluxfedorap01-2026_01_20T05_56_20_267000000_00_00

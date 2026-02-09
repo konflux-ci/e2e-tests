@@ -30,6 +30,7 @@ const (
 	multiRepoComponentGitRevision             = "79402df023e646c5ad108abc879ad1b28799cbc4"
 	gitlabComponentRepoName                   = "hacbs-test-project-integration"
 	componentDefaultBranch                    = "onboarding"
+	fallbackBranchName                        = "main"
 	componentRevision                         = "79402df023e646c5ad108abc879ad1b28799cbc4"
 	referenceDoesntExist                      = "Reference does not exist"
 	checkrunStatusCompleted                   = "completed"

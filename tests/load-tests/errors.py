@@ -42,6 +42,7 @@ def message_to_reason(reasons_and_errors: set, msg: str) -> str:
     msg = msg[-250000:]   # Just look at last 250k bytes
     for error_name, pattern in reasons_and_errors:
         if re.search(pattern, msg):
+            print(f"Matched error pattern: {pattern}")
             return error_name
     print(f"Unknown error: {msg}")
     return "UNKNOWN"
@@ -143,7 +144,7 @@ def check_failed_taskrun(data_dir, ns, tr_name):
     try:
         data = load(datafile)
     except FileNotFoundError as e:
-        print(f"ERROR: Missing file: {str(e)}")
+        print(f"WARNING: Missing file: {str(e)}")
         return False, "Missing expected TaskRun file", datafile
 
     try:

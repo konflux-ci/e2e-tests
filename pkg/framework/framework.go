@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -77,7 +77,7 @@ func NewFrameworkWithTimeout(userName string, timeout time.Duration, options ...
 		err = retry.Do(
 			func() error {
 				if k, err = kubeCl.NewDevSandboxProxyClient(userName, option); err != nil {
-					GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
+					ginkgo.GinkgoWriter.Printf("error when creating dev sandbox proxy client: %+v\n", err)
 				}
 				return err
 			},

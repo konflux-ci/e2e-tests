@@ -29,7 +29,7 @@ func getRepoNameFromRepoUrl(repoUrl string) (string, error) {
 	if match != nil {
 		return match[1], nil
 	} else {
-		return "", fmt.Errorf("Failed to parse repo name out of url %s", repoUrl)
+		return "", fmt.Errorf("failed to parse repo name out of url %s", repoUrl)
 	}
 }
 
@@ -48,7 +48,7 @@ func getRepoOrgFromRepoUrl(repoUrl string) (string, error) {
 	if match != nil {
 		return match[1], nil
 	} else {
-		return "", fmt.Errorf("Failed to parse repo org out of url %s", repoUrl)
+		return "", fmt.Errorf("failed to parse repo org out of url %s", repoUrl)
 	}
 }
 
@@ -81,12 +81,12 @@ func getRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileName 
 	if strings.Contains(repoUrl, "gitlab.") {
 		fileContent, err = f.AsKubeAdmin.CommonController.Gitlab.GetFile(repoOrgName + "/" + repoName, fileName, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to get file %s from repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
 		}
 	} else {
 		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFileWithOrg(repoOrgName, repoName, fileName, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
 		}
 
 		fileContent, err = fileResponse.GetContent()
@@ -114,20 +114,20 @@ func updateRepoFileContent(f *framework.Framework, repoUrl, repoRevision, fileNa
 	if strings.Contains(repoUrl, "gitlab.") {
 		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoOrgName + "/" + repoName, fileName, fileContent, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName + "/" + repoName, repoRevision, err)
 		}
 	} else {
 		fileResponse, err := f.AsKubeAdmin.CommonController.Github.GetFile(repoName, fileName, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to get file %s from repo %s revision %s: %v", fileName, repoName, repoRevision, err)
 		}
 
 		repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *fileResponse.SHA)
 		if err != nil {
-			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to update file %s in repo %s revision %s: %v", fileName, repoName, repoRevision, err)
 		}
 
-		commitSha = *repoContentResponse.Commit.SHA
+		commitSha = *repoContentResponse.SHA
 	}
 
 	return commitSha, nil
@@ -259,7 +259,7 @@ func doHarmlessCommit(f *framework.Framework, repoUrl, repoRevision string) (str
 
 		commitSha, err = f.AsKubeAdmin.CommonController.Gitlab.UpdateFile(repoOrgName+"/"+repoName, fileName, fileContent, repoRevision)
 		if err != nil {
-			return "", fmt.Errorf("Failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName+"/"+repoName, repoRevision, err)
+			return "", fmt.Errorf("failed to update file %s in repo %s revision %s: %v", fileName, repoOrgName+"/"+repoName, repoRevision, err)
 		}
 	} else {
 		// For github, we need to get SHA if file exists.
@@ -284,15 +284,15 @@ func doHarmlessCommit(f *framework.Framework, repoUrl, repoRevision string) (str
 			// We have to assume a CreateFile function exists in the framework's github controller
 			repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.CreateFile(repoName, fileName, fileContent, repoRevision)
 			if err != nil {
-				return "", fmt.Errorf("Failed to create file %s in repo %s: %v", fileName, repoUrl, err)
+				return "", fmt.Errorf("failed to create file %s in repo %s: %v", fileName, repoUrl, err)
 			}
-			commitSha = *repoContentResponse.Commit.SHA
+			commitSha = *repoContentResponse.SHA
 		} else {
 			repoContentResponse, err := f.AsKubeAdmin.CommonController.Github.UpdateFile(repoName, fileName, fileContent, repoRevision, *sha)
 			if err != nil {
-				return "", fmt.Errorf("Failed to update file %s in repo %s: %v", fileName, repoUrl, err)
+				return "", fmt.Errorf("failed to update file %s in repo %s: %v", fileName, repoUrl, err)
 			}
-			commitSha = *repoContentResponse.Commit.SHA
+			commitSha = *repoContentResponse.SHA
 		}
 	}
 	return commitSha, nil

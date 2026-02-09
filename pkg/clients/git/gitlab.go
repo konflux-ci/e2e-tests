@@ -50,7 +50,7 @@ func (g *GitLabClient) CreateFile(repository, pathToFile, content, branchName st
 	}
 
 	opts := gitlab2.GetFileOptions{Ref: gitlab2.Ptr(branchName)}
-	file, _, err := g.GitlabClient.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
+	file, _, err := g.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (g *GitLabClient) CreateFile(repository, pathToFile, content, branchName st
 
 func (g *GitLabClient) GetFile(repository, pathToFile, branchName string) (*RepositoryFile, error) {
 	opts := gitlab2.GetFileOptions{Ref: gitlab2.Ptr(branchName)}
-	file, _, err := g.GitlabClient.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
+	file, _, err := g.GetClient().RepositoryFiles.GetFile(repository, pathToFile, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base str
 		SourceBranch: gitlab2.Ptr(head),
 		TargetBranch: gitlab2.Ptr(base),
 	}
-	mr, _, err := g.GitlabClient.GetClient().MergeRequests.CreateMergeRequest(repository, &opts)
+	mr, _, err := g.GetClient().MergeRequests.CreateMergeRequest(repository, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (g *GitLabClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 }
 
 func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumber int) error {
-	mr, _, err := g.GitlabClient.GetClient().MergeRequests.GetMergeRequest(repository, prNumber, nil)
+	mr, _, err := g.GetClient().MergeRequests.GetMergeRequest(repository, prNumber, nil)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (g *GitLabClient) ForkRepository(sourceRepoName, targetRepoName string) err
 }
 
 func (g *GitLabClient) DeleteRepositoryIfExists(repoName string) error {
-	err := g.GitlabClient.DeleteRepositoryOnlyIfExists(repoName)
+	err := g.DeleteRepositoryOnlyIfExists(repoName)
 	if err != nil {
 		return err
 	}

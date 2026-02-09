@@ -13,7 +13,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	intgteststat "github.com/konflux-ci/integration-service/pkg/integrationteststatus"
-	. "github.com/onsi/ginkgo/v2"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -171,7 +171,7 @@ func (i *IntegrationController) WaitForSnapshotToGetCreated(snapshotName, pipeli
 	err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 10*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		snapshot, err = i.GetSnapshot(snapshotName, pipelinerunName, componentName, testNamespace)
 		if err != nil {
-			GinkgoWriter.Printf("unable to get the Snapshot within the namespace %s. Error: %v", testNamespace, err)
+			ginkgo.GinkgoWriter.Printf("unable to get the Snapshot within the namespace %s. Error: %v", testNamespace, err)
 			return false, nil
 		}
 
@@ -265,8 +265,8 @@ func (i *IntegrationController) SortSnapshots(snapshots []appstudioApi.Snapshot)
 			time_i, _ = strconv.Atoi(snapshots[i].Annotations[BuildPipelineRunStartTime])
 			time_j, _ = strconv.Atoi(snapshots[j].Annotations[BuildPipelineRunStartTime])
 		} else {
-			time_i = int(snapshots[i].CreationTimestamp.Time.Unix())
-			time_j = int(snapshots[j].CreationTimestamp.Time.Unix())
+			time_i = int(snapshots[i].CreationTimestamp.Unix())
+			time_j = int(snapshots[j].CreationTimestamp.Unix())
 		}
 		return time_i > time_j
 	})
@@ -276,7 +276,7 @@ func (i *IntegrationController) SortSnapshots(snapshots []appstudioApi.Snapshot)
 func (i *IntegrationController) IsOlderSnapshotAndIntegrationPlrCancelled(snapshots []appstudioApi.Snapshot, integrationTestScenarioName string) (bool, error) {
 	snapshots = i.SortSnapshots(snapshots)
 	if len(snapshots) < 2 {
-		return false, fmt.Errorf("The length of snapshots < 2,  there is no older snapshot")
+		return false, fmt.Errorf("the length of snapshots < 2,  there is no older snapshot")
 	}
 
 	if !i.IsSnapshotMarkedAsCanceled(&snapshots[1]) {
