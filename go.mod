@@ -1,6 +1,6 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
@@ -92,7 +92,7 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.2
 	k8s.io/kubectl => k8s.io/kubectl v0.34.2
 	k8s.io/kubelet => k8s.io/kubelet v0.34.2
-	k8s.io/kubernetes => k8s.io/kubernetes v1.34.2
+	k8s.io/kubernetes => k8s.io/kubernetes v1.35.1
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.34.2
 	k8s.io/metrics => k8s.io/metrics v0.34.2
 	k8s.io/mount-utils => k8s.io/mount-utils v0.34.2
@@ -145,7 +145,7 @@ require (
 	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/containerd/containerd v1.7.25 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
-	github.com/containerd/typeurl/v2 v2.2.2 // indirect
+	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/containers/image/v5 v5.29.3 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.10 // indirect
@@ -253,7 +253,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runc v1.1.14 // indirect
-	github.com/opencontainers/runtime-spec v1.2.0 // indirect
+	github.com/opencontainers/runtime-spec v1.2.1 // indirect
 	github.com/operator-framework/operator-lib v0.19.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -319,7 +319,7 @@ require (
 	k8s.io/kube-aggregator v0.34.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
 	k8s.io/kubectl v0.34.0 // indirect
-	k8s.io/kubernetes v1.34.2 // indirect
+	k8s.io/kubernetes v1.35.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/kustomize/api v0.20.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
