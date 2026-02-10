@@ -1,0 +1,73 @@
+# =============================================================================
+# Container GC DaemonSet — AGGRESSIVE mode
+#
+# Tekton creates ~10 step containers per PipelineRun. On a burst of 7+ PLRs,
+# 200+ containers can exit within 30 seconds. Dead containers pile up and
+# overwhelm containerd: each exited container keeps metadata in memory, holds
+# file descriptors, and adds to every crictl/containerd-shim operation.
+# When the count exceeds ~100, containerd starts dropping socket connections,
+# which cascades into pull QPS exceeded, Kyverno webhook failures, and
+# control plane probe failures.
+#
+# Strategy: run crictl rm every 10s with a threshold of 10.
+# This ensures exited containers never accumulate enough to stress containerd.
+# On a 56 GiB machine, the GC overhead is negligible.
+# =============================================================================
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: container-gc
+  namespace: default
+  labels:
+    app: container-gc
+spec:
+  selector:
+    matchLabels:
+      app: container-gc
+  template:
+    metadata:
+      labels:
+        app: container-gc
+    spec:
+      hostPID: true
+      tolerations:
+      - operator: Exists
+      # Ensure GC pod is high priority and scheduled before workloads
+      priorityClassName: system-node-critical
+      containers:
+      - name: gc
+        image: busybox
+        command:
+        - nsenter
+        - --target
+        - "1"
+        - --mount
+        - --uts
+        - --ipc
+        - --net
+        - --pid
+        - --
+        - bash
+        - -c
+        - |
+          echo "Container GC started (threshold=10, interval=10s, aggressive)"
+          while true; do
+            EXITED=$(crictl ps -a --state exited -q 2>/dev/null | wc -l)
+            if [ "$EXITED" -gt 10 ]; then
+              echo "$(date): Cleaning $EXITED exited containers..."
+              # Remove ALL exited containers, no cap — machine has capacity
+              crictl ps -a --state exited -q 2>/dev/null | xargs -n100 crictl rm 2>/dev/null
+              REMAINING=$(crictl ps -a --state exited -q 2>/dev/null | wc -l)
+              echo "$(date): Remaining=$REMAINING"
+            fi
+            sleep 10
+          done
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: 500m
+            memory: 128Mi

@@ -52,6 +52,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var mergeResult *git.PullRequest
 		var timeout time.Duration
 		var parentFirstDigest string
+		var parentPLR *pipeline.PipelineRun
 		var parentPostPacMergeDigest string
 		var parentImageNameWithNoDigest string
 		const distributionRepository = "quay.io/redhat-appstudio-qe/release-repository"
@@ -226,17 +227,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", ParentComponentDef.componentName, testNamespace))
 			})
-			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
-				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
-				pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.component.GetName(), ParentComponentDef.component.Spec.Application, ParentComponentDef.component.GetNamespace(), "")
-				Expect(err).ShouldNot(HaveOccurred())
-				for _, result := range pr.Status.PipelineRunStatusFields.Results {
-					if result.Name == "IMAGE_DIGEST" {
-						parentFirstDigest = result.Value.StringVal
-					}
+		It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
+			parentPLR = &pipeline.PipelineRun{}
+			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, parentPLR)).To(Succeed())
+			for _, result := range parentPLR.Status.PipelineRunStatusFields.Results {
+				if result.Name == "IMAGE_DIGEST" {
+					parentFirstDigest = result.Value.StringVal
 				}
-				Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun status results: %v", pr.Status.PipelineRunStatusFields.Results))
-			})
+			}
+			Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun %s status results: %v", parentPLR.Name, parentPLR.Status.PipelineRunStatusFields.Results))
+		})
 
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for child component %s", ChildComponentDef.componentName), func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())

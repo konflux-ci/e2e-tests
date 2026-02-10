@@ -1,0 +1,196 @@
+---
+# DaemonSet to pre-pull commonly used pipeline images on all nodes.
+# This ensures that the first PipelineRun on a new cluster starts fast
+# instead of waiting 3-7 minutes for image pulls.
+#
+# Images use :latest or untagged refs so they always pull the most recent
+# version. Even if the pipeline pins a slightly different digest, shared
+# layers will already be cached, making pulls near-instant.
+#
+# Note: Tekton infrastructure images (entrypoint, workingdirinit) are tiny
+# and already cached from the Tekton installation, so they're not included.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prepull-images
+  namespace: default
+  labels:
+    app: prepull-images
+spec:
+  selector:
+    matchLabels:
+      app: prepull-images
+  template:
+    metadata:
+      labels:
+        app: prepull-images
+    spec:
+      terminationGracePeriodSeconds: 5
+      tolerations:
+      - operator: Exists
+      initContainers:
+      # -- Build Task Images --
+      - name: pull-buildah
+        image: quay.io/konflux-ci/buildah-task:latest
+        command: ["/bin/bash", "-c", "echo pulled buildah"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-git-clone
+        image: quay.io/konflux-ci/git-clone:latest
+        command: ["/bin/bash", "-c", "echo pulled git-clone"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-oras
+        image: quay.io/konflux-ci/oras:latest
+        command: ["/bin/sh", "-c", "echo pulled oras"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      # -- Utility Images --
+      - name: pull-appstudio-utils
+        image: quay.io/konflux-ci/appstudio-utils:latest
+        command: ["/bin/bash", "-c", "echo pulled appstudio-utils"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-konflux-test
+        image: quay.io/konflux-ci/konflux-test:latest
+        command: ["/bin/bash", "-c", "echo pulled konflux-test"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-redhat-test
+        image: quay.io/redhat-appstudio/konflux-test:latest
+        command: ["/bin/bash", "-c", "echo pulled redhat-konflux-test"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      # -- Scan Images --
+      - name: pull-clair
+        image: quay.io/konflux-ci/clair-in-ci:latest
+        command: ["/bin/bash", "-c", "echo pulled clair"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-clamav
+        image: quay.io/konflux-ci/clamav-db:latest
+        command: ["/bin/bash", "-c", "echo pulled clamav"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-preflight
+        image: quay.io/opdev/preflight:stable
+        command: ["/bin/bash", "-c", "echo pulled preflight"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-mobster
+        image: quay.io/konflux-ci/mobster:latest
+        command: ["/bin/bash", "-c", "echo pulled mobster"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      # -- Build CLI & Dependency Tools --
+      - name: pull-hermeto
+        image: quay.io/konflux-ci/hermeto:latest
+        command: ["/bin/bash", "-c", "echo pulled hermeto"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-yq
+        image: quay.io/konflux-ci/yq:latest
+        command: ["/bin/sh", "-c", "echo pulled yq"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-tools
+        image: quay.io/konflux-ci/tools:latest
+        command: ["/bin/bash", "-c", "echo pulled tools"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      # -- Base Images --
+      - name: pull-ubi9
+        image: registry.access.redhat.com/ubi9/ubi:latest
+        command: ["/bin/bash", "-c", "echo pulled ubi9"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      - name: pull-mintmaker-renovate
+        image: quay.io/konflux-ci/mintmaker-renovate-image:latest
+        command: ["/bin/bash", "-c", "echo pulled mintmaker-renovate"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.10
+        resources:
+          requests:
+            cpu: 1m
+            memory: 4Mi
+          limits:
+            cpu: 10m
+            memory: 16Mi

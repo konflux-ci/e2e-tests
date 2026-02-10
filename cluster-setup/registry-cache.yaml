@@ -1,0 +1,267 @@
+---
+# Pull-through registry caches for KinD clusters
+# Deploys one pull-through proxy per external registry to avoid redundant image pulls.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry-cache
+---
+# ConfigMap with registry configs for each upstream
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-configs
+  namespace: registry-cache
+data:
+  quay-config.yml: |
+    version: 0.1
+    proxy:
+      remoteurl: https://quay.io
+    http:
+      addr: :5000
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+  ghcr-config.yml: |
+    version: 0.1
+    proxy:
+      remoteurl: https://ghcr.io
+    http:
+      addr: :5000
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+  cgr-config.yml: |
+    version: 0.1
+    proxy:
+      remoteurl: https://cgr.dev
+    http:
+      addr: :5000
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+  redhat-config.yml: |
+    version: 0.1
+    proxy:
+      remoteurl: https://registry.access.redhat.com
+    http:
+      addr: :5000
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+---
+# Quay.io pull-through cache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-quay
+  namespace: registry-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-quay
+  template:
+    metadata:
+      labels:
+        app: cache-quay
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/docker/registry/config.yml
+          subPath: quay-config.yml
+        - name: cache-storage
+          mountPath: /var/lib/registry
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+      - name: config
+        configMap:
+          name: registry-configs
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-quay
+  namespace: registry-cache
+spec:
+  selector:
+    app: cache-quay
+  ports:
+  - port: 5000
+    targetPort: 5000
+---
+# GHCR.io pull-through cache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-ghcr
+  namespace: registry-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-ghcr
+  template:
+    metadata:
+      labels:
+        app: cache-ghcr
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/docker/registry/config.yml
+          subPath: ghcr-config.yml
+        - name: cache-storage
+          mountPath: /var/lib/registry
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+      - name: config
+        configMap:
+          name: registry-configs
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-ghcr
+  namespace: registry-cache
+spec:
+  selector:
+    app: cache-ghcr
+  ports:
+  - port: 5000
+    targetPort: 5000
+---
+# cgr.dev pull-through cache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-cgr
+  namespace: registry-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-cgr
+  template:
+    metadata:
+      labels:
+        app: cache-cgr
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/docker/registry/config.yml
+          subPath: cgr-config.yml
+        - name: cache-storage
+          mountPath: /var/lib/registry
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+      - name: config
+        configMap:
+          name: registry-configs
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-cgr
+  namespace: registry-cache
+spec:
+  selector:
+    app: cache-cgr
+  ports:
+  - port: 5000
+    targetPort: 5000
+---
+# registry.access.redhat.com pull-through cache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-redhat
+  namespace: registry-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-redhat
+  template:
+    metadata:
+      labels:
+        app: cache-redhat
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/docker/registry/config.yml
+          subPath: redhat-config.yml
+        - name: cache-storage
+          mountPath: /var/lib/registry
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+      - name: config
+        configMap:
+          name: registry-configs
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-redhat
+  namespace: registry-cache
+spec:
+  selector:
+    app: cache-redhat
+  ports:
+  - port: 5000
+    targetPort: 5000
