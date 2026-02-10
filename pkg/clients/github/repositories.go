@@ -192,12 +192,12 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 		fork, resp, err = g.client.Repositories.CreateFork(ctx, sourceOrgName, sourceName, forkOptions)
 		if err != nil {
 			if _, ok := err.(*github.AcceptedError); ok && resp.StatusCode == 202 {
-				// This meens forking is happening asynchronously
+				// This means forking is happening asynchronously
 				return true, nil
 			}
 			if resp.StatusCode == 403 {
 				// This catches error: "403 Repository is already being forked."
-				// This happens whem more than ~3 forks of one repo is ongoing in parallel
+				// This happens when more than ~3 forks of one repo is ongoing in parallel
 				fmt.Printf("Warning, got 403: %s\n", resp.Body)
 				return false, nil
 			}
@@ -242,7 +242,7 @@ func (g *Github) ForkRepository(sourceName, targetName string) (*github.Reposito
 	return g.ForkRepositoryWithOrgs(g.organization, sourceName, g.organization, targetName)
 }
 
-// For repozitory from our organization to another org
+// For repository from our organization to another org
 func (g *Github) ForkRepositoryToOrg(sourceName, targetName, targetOrgName string) (*github.Repository, error) {
 	return g.ForkRepositoryWithOrgs(g.organization, sourceName, targetOrgName, targetName)
 }
