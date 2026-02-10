@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -136,18 +137,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					timeout = time.Second * 300
 					interval := time.Second * 5
 
-					Eventually(func() bool {
-						prs, err := f.AsKubeAdmin.CommonController.Github.ListPullRequests(multiComponentGitSourceRepoName)
-						Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() bool {
+					gitClient := git.NewGitHubClient(f.AsKubeAdmin.CommonController.Github)
+					prs, err := git.ListPullRequestsWithRetry(gitClient, multiComponentGitSourceRepoName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-						for _, pr := range prs {
-							if pr.Head.GetRef() == pacBranchName {
-								prNumber = pr.GetNumber()
-								return true
-							}
+					for _, pr := range prs {
+						if pr.SourceBranch == pacBranchName {
+							prNumber = pr.Number
+							return true
 						}
-						return false
-					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", pacBranchName, multiComponentGitSourceRepoName))
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", pacBranchName, multiComponentGitSourceRepoName))
 				})
 
 				It(fmt.Sprintf("the PipelineRun should eventually finish successfully for component %s", componentName), func() {

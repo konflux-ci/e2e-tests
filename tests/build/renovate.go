@@ -246,18 +246,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval := time.Second * 5
 
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(childRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, childRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.SourceBranch == ChildComponentDef.pacBranchName {
-							prNumber = pr.Number
-							return true
-						}
+				for _, pr := range prs {
+					if pr.SourceBranch == ChildComponentDef.pacBranchName {
+						prNumber = pr.Number
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ChildComponentDef.pacBranchName, ChildComponentDef.repoName))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ChildComponentDef.pacBranchName, ChildComponentDef.repoName))
 			})
 
 			It(fmt.Sprintf("Merging the PaC PR should be successful for child component %s", ChildComponentDef.componentName), func() {
@@ -287,7 +287,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				_, err = gitClient.CreatePullRequest(childRepository, "updated to build repo image", "update to build repo image", ChildComponentDef.pacBranchName, ChildComponentDef.componentBranch)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				prs, err := gitClient.ListPullRequests(childRepository)
+				prs, err := git.ListPullRequestsWithRetry(gitClient, childRepository)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				prno := -1
@@ -310,18 +310,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval := time.Second * 5
 
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(parentRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, parentRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.SourceBranch == ParentComponentDef.pacBranchName {
-							prNumber = pr.Number
-							return true
-						}
+				for _, pr := range prs {
+					if pr.SourceBranch == ParentComponentDef.pacBranchName {
+						prNumber = pr.Number
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ParentComponentDef.pacBranchName, ParentComponentDef.repoName))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ParentComponentDef.pacBranchName, ParentComponentDef.repoName))
 			})
 			It(fmt.Sprintf("Merging the PaC PR should be successful for parent component %s", ParentComponentDef.componentName), func() {
 				Eventually(func() error {
@@ -364,18 +364,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Minute * 20
 				interval := time.Second * 10
 
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(componentDependenciesChildRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, componentDependenciesChildRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
-							prNumber = pr.Number
-							return true
-						}
+				for _, pr := range prs {
+					if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
+						prNumber = pr.Number
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
 			})
 			It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 				Eventually(func() error {

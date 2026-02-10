@@ -125,18 +125,18 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("correctly targets the default branch (that is not named 'main') with PaC", func() {
 				timeout = time.Second * 300
 				interval = time.Second * 5
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(helloWorldRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.SourceBranch == customDefaultComponentBranch {
-							Expect(pr.TargetBranch).To(Equal(helloWorldComponentDefaultBranch))
-							return true
-						}
+				for _, pr := range prs {
+					if pr.SourceBranch == customDefaultComponentBranch {
+						Expect(pr.TargetBranch).To(Equal(helloWorldComponentDefaultBranch))
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
 			})
 
 			It("workspace parameter is set correctly in PaC repository CR", func() {
@@ -327,19 +327,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval = time.Second * 5
 
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(helloWorldRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.SourceBranch == pacBranchName {
-							prNumber = pr.Number
-							prHeadSha = pr.HeadSHA
-							return true
-						}
+				for _, pr := range prs {
+					if pr.SourceBranch == pacBranchName {
+						prNumber = pr.Number
+						prHeadSha = pr.HeadSHA
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
 			})
 			It("the PipelineRun should eventually finish successfully", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
@@ -472,20 +472,20 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval = time.Second * 5
 
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(helloWorldRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.SourceBranch == pacBranchName {
-							Expect(prHeadSha).NotTo(Equal(pr.HeadSHA))
-							prNumber = pr.Number
-							prHeadSha = pr.HeadSHA
-							return true
-						}
+				for _, pr := range prs {
+					if pr.SourceBranch == pacBranchName {
+						Expect(prHeadSha).NotTo(Equal(pr.HeadSHA))
+						prNumber = pr.Number
+						prHeadSha = pr.HeadSHA
+						return true
 					}
-					return false
-				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
+				}
+				return false
+			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR (branch name '%s') to be created in %s repository", pacBranchName, helloWorldRepository))
 			})
 			It("PipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", createdFileSHA, "",
@@ -656,37 +656,41 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			AfterAll(func() {
-				//Get the Purge PR number created after deleting the component
-				Eventually(func() bool {
-					prs, err := gitClient.ListPullRequests(helloWorldRepository)
-					Expect(err).ShouldNot(HaveOccurred())
+			//Get the Purge PR number created after deleting the component
+			Eventually(func() bool {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
+				Expect(err).ShouldNot(HaveOccurred())
 
-					for _, pr := range prs {
-						if pr.TargetBranch == componentBaseBranchName {
-							GinkgoWriter.Printf("Found purge PR with id: %d\n", pr.Number)
-							purgePrNumber = pr.Number
-							return true
-						}
+				for _, pr := range prs {
+					if pr.TargetBranch == componentBaseBranchName {
+						GinkgoWriter.Printf("Found purge PR with id: %d\n", pr.Number)
+						purgePrNumber = pr.Number
+						return true
 					}
-					return false
-				}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldRepository))
+				}
+				return false
+			}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldRepository))
 
 			})
 
 			It("should no longer lead to a creation of a PaC PR", func() {
 				timeout = time.Second * 10
 				interval = time.Second * 2
-				Consistently(func() error {
-					prs, err := gitClient.ListPullRequests(helloWorldRepository)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					for _, pr := range prs {
-						if pr.SourceBranch == pacBranchName {
-							return fmt.Errorf("did not expect a new PR created in %s repository after initial PaC configuration was already merged for the same component name and a namespace", helloWorldRepository)
-						}
-					}
+			Consistently(func() error {
+				prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
+				if err != nil {
+					// Transient API errors should not fail a Consistently check
+					GinkgoWriter.Printf("error listing PRs in %s after retries (ignoring): %v\n", helloWorldRepository, err)
 					return nil
-				}, timeout, interval).ShouldNot(HaveOccurred())
+				}
+
+				for _, pr := range prs {
+					if pr.SourceBranch == pacBranchName {
+						return fmt.Errorf("did not expect a new PR created in %s repository after initial PaC configuration was already merged for the same component name and a namespace", helloWorldRepository)
+					}
+				}
+				return nil
+			}, timeout, interval).ShouldNot(HaveOccurred())
 			})
 		})
 	},
