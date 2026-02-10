@@ -6,6 +6,7 @@ type GitProvider int
 const (
 	GitHubProvider GitProvider = iota
 	GitLabProvider
+	ForgejoProvider
 )
 
 // PullRequest represents a generic provider-agnostic pull/merge request

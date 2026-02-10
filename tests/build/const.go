@@ -45,8 +45,9 @@ const (
 	componentDependenciesChildDefaultBranch  = "main"
 	componentDependenciesChildGitRevision    = "56c13d17b1a8f801f2c41091e6f4e62cf16ee5f2"
 
-	githubUrlFormat = "https://github.com/%s/%s"
-	gitlabUrlFormat = "https://gitlab.com/%s"
+	githubUrlFormat   = "https://github.com/%s/%s"
+	gitlabUrlFormat   = "https://gitlab.com/%s"
+	codebergUrlFormat = "https://codeberg.org/%s"
 
 	//Logging related
 	buildStatusAnnotationValueLoggingFormat = "build status annotation value: %s\n"
@@ -56,15 +57,17 @@ const (
 )
 
 var (
-	additionalTags                     = []string{"test-tag1", "test-tag2"}
-	componentUrls                      = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitHubURL), ",") //multiple urls
-	githubOrg                          = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
-	gitlabOrg                          = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
-	annotationsTestGitHubURL           = fmt.Sprintf(githubUrlFormat, githubOrg, annotationsTestGitSourceRepoName)
-	helloWorldComponentGitLabProjectID = fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName)
-	multiComponentGitHubURL            = fmt.Sprintf(githubUrlFormat, githubOrg, multiComponentGitSourceRepoName)
-	multiComponentContextDirs          = []string{"go-component", "python-component"}
-	pythonComponentGitHubURL           = fmt.Sprintf(githubUrlFormat, githubOrg, pythonComponentRepoName)
+	additionalTags                       = []string{"test-tag1", "test-tag2"}
+	componentUrls                        = strings.Split(utils.GetEnv(COMPONENT_REPO_URLS_ENV, pythonComponentGitHubURL), ",") //multiple urls
+	githubOrg                            = utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	gitlabOrg                            = utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
+	codebergOrg                          = utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg)
+	annotationsTestGitHubURL             = fmt.Sprintf(githubUrlFormat, githubOrg, annotationsTestGitSourceRepoName)
+	helloWorldComponentGitLabProjectID   = fmt.Sprintf("%s/%s", gitlabOrg, helloWorldComponentGitSourceRepoName)
+	helloWorldComponentCodebergProjectID = fmt.Sprintf("%s/%s", codebergOrg, helloWorldComponentGitSourceRepoName)
+	multiComponentGitHubURL              = fmt.Sprintf(githubUrlFormat, githubOrg, multiComponentGitSourceRepoName)
+	multiComponentContextDirs            = []string{"go-component", "python-component"}
+	pythonComponentGitHubURL             = fmt.Sprintf(githubUrlFormat, githubOrg, pythonComponentRepoName)
 
 	secretLookupComponentOneGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoOneName)
 	secretLookupComponentTwoGitSourceURL = fmt.Sprintf(githubUrlFormat, noAppOrgName, secretLookupGitSourceRepoTwoName)
