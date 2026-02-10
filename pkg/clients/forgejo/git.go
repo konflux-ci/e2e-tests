@@ -233,9 +233,8 @@ func (fc *ForgejoClient) ForkRepository(sourceProjectID, targetProjectID string)
 	}
 
 	var forkedRepo *forgejo.Repository
-	var err error
 
-	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
+	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
 		forkedRepo, _, err = fc.client.CreateFork(sourceOwner, sourceRepo, opts)
 		if err != nil {
 			fmt.Printf("Failed to fork %s, trying again: %v\n", sourceProjectID, err)
