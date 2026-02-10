@@ -1,8 +1,6 @@
 package git
 
 import (
-	"strings"
-
 	"github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 )
 
@@ -143,11 +141,3 @@ func (f *ForgejoClient) GetCommitStatusConclusion(statusName, projectID, commitS
 	return f.ForgejoClient.GetCommitStatusConclusion(statusName, projectID, commitSHA, int64(prNumber))
 }
 
-// splitProjectID is a helper to split owner/repo format
-func splitForgejoProjectID(projectID string) (string, string) {
-	parts := strings.SplitN(projectID, "/", 2)
-	if len(parts) != 2 {
-		return projectID, ""
-	}
-	return parts[0], parts[1]
-}
