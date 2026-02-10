@@ -767,6 +767,6 @@
   id: mock_build_failed_because_createrepo_c_returned_non_zero_exit_status_2
   note: ''
   reason: Mock build failed because createrepo_c returned non-zero exit status 2
-  regexp: "C_CREATEREPOLIB: Warning: Cannot read package.*rpmReadPackageFile.*subprocess\.CalledProcessError.*Command .*createrepo_c.* returned non-zero exit status 2"
+  regexp: 'C_CREATEREPOLIB: Warning: Cannot read package.*rpmReadPackageFile.*subprocess\.CalledProcessError.*Command .*createrepo_c.* returned non-zero exit status 2'
   test_dir:
   - run-stone-prd-rh01-2026_02_10T01_48_38_001000000_00_00
