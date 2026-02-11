@@ -134,14 +134,14 @@ case "$COMPONENT" in
     if ! grep -q "auto-compaction" "$MANIFEST"; then
       sed -i '/--quota-backend-bytes/a\    - --auto-compaction-mode=periodic\n    - --auto-compaction-retention=5m' "$MANIFEST"
     fi
-    # Increase resource limits
+    # Increase resource limits — etcd needs more headroom than other components
     if grep -q 'memory:.*[0-9]*Mi' "$MANIFEST"; then
-      sed -i 's/memory: [0-9]*Mi/memory: 4Gi/g' "$MANIFEST"
+      sed -i 's/memory: [0-9]*Mi/memory: 8Gi/g' "$MANIFEST"
     fi
     if grep -q 'cpu:.*[0-9]*m' "$MANIFEST"; then
-      sed -i 's/cpu: [0-9]*m/cpu: 2000m/g' "$MANIFEST"
+      sed -i 's/cpu: [0-9]*m/cpu: 3000m/g' "$MANIFEST"
     fi
-    echo "DONE: etcd quota=8GB, auto-compact=5m, memory=4Gi, cpu=2"
+    echo "DONE: etcd quota=8GB, auto-compact=5m, memory=8Gi, cpu=3"
     ;;
 
   *)
@@ -241,7 +241,7 @@ for i in $(seq 1 10); do
   sleep 2
 done
 
-patch_component "etcd" "etcd (quota=8GB, 4Gi, 2 CPU)"
+patch_component "etcd" "etcd (quota=8GB, 8Gi, 3 CPU)"
 
 # Final check
 echo "==> Verifying all control plane pods are running..."
@@ -253,7 +253,7 @@ echo "=============================================="
 echo "  scheduler:          qps=100, burst=200, lease=60s/45s, cpu=2, memory=4Gi"
 echo "  controller-manager: qps=100, burst=200, lease=60s/45s, cpu=2, memory=4Gi"
 echo "  apiserver:          inflight=800/400, event-ttl=30m, del-workers=5, 4Gi, cpu=2"
-echo "  etcd:               quota=8GB, auto-compact=5m, 4Gi, cpu=2"
+echo "  etcd:               quota=8GB, auto-compact=5m, 8Gi, cpu=3"
 echo "=============================================="
 echo ""
 echo "  Control plane pods:"
