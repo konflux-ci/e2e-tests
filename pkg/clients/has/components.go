@@ -206,13 +206,30 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
 
+	// Fail fast if the PipelineRun is never created.
+	// Without this, we burn the full 30-minute completion timeout
+	// just polling for a resource that may never appear.
+	const pipelineRunCreationTimeout = 5 * time.Minute
+
 	for {
+		creationDeadline := time.Now().Add(pipelineRunCreationTimeout)
+		prFound := false
+
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 			pr, err = h.GetComponentPipelineRunWithType(component.GetName(), app, component.GetNamespace(), pipelineType, sha, eventType)
 
 			if err != nil {
+				if !prFound && time.Now().After(creationDeadline) {
+					return false, fmt.Errorf("PipelineRun was not created for Component %s/%s within %v",
+						component.GetNamespace(), component.GetName(), pipelineRunCreationTimeout)
+				}
 				ginkgo.GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
 				return false, nil
+			}
+
+			if !prFound {
+				prFound = true
+				ginkgo.GinkgoWriter.Printf("PipelineRun %s found for Component %s/%s\n", pr.Name, component.GetNamespace(), component.GetName())
 			}
 
 			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
@@ -236,7 +253,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 		})
 
 		if err != nil {
-			if pr == nil {
+			if !prFound {
 				return fmt.Errorf("PipelineRun cannot be created for the Component %s/%s", component.GetNamespace(), component.GetName())
 			}
 			ginkgo.GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, r.Retries+1, pr.GetName(), err)

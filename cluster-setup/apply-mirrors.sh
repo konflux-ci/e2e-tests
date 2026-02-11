@@ -64,7 +64,19 @@ else
 fi
 
 systemctl restart containerd
-sleep 3
+
+# Wait for containerd to fully stabilize after restart.
+# With 200+ containers from previous runs, containerd needs time to recover
+# its shim connections and bolt DB state. Restarting too early leads to crashes.
+echo "Waiting for containerd to stabilize..."
+sleep 5
+for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
+  if crictl info 1>/dev/null 2>/dev/null; then
+    echo "containerd healthy after attempt \${ATTEMPT}"
+    break
+  fi
+  sleep 1
+done
 echo DONE
 INNEREOF
 )
