@@ -61,6 +61,28 @@ func CreateGitlabBuildSecret(f *framework.Framework, secretName string, annotati
 	return nil
 }
 
+// CreateCodebergBuildSecret creates a Kubernetes secret for Codeberg/Forgejo build credentials
+func CreateCodebergBuildSecret(f *framework.Framework, secretName string, annotations map[string]string, token string) error {
+	buildSecret := v1.Secret{}
+	buildSecret.Name = secretName
+	buildSecret.Labels = map[string]string{
+		"appstudio.redhat.com/credentials": "scm",
+		"appstudio.redhat.com/scm.host":    "codeberg.org",
+	}
+	if annotations != nil {
+		buildSecret.Annotations = annotations
+	}
+	buildSecret.Type = "kubernetes.io/basic-auth"
+	buildSecret.StringData = map[string]string{
+		"password": token,
+	}
+	_, err := f.AsKubeAdmin.CommonController.CreateSecret(f.UserNamespace, &buildSecret)
+	if err != nil {
+		return fmt.Errorf("error creating build secret: %v", err)
+	}
+	return nil
+}
+
 func CleanupWebhooks(f *framework.Framework, repoName string) error {
 	hooks, err := f.AsKubeAdmin.CommonController.Github.ListRepoWebhooks(repoName)
 	if err != nil {

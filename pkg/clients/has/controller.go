@@ -4,6 +4,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	kubeCl "github.com/konflux-ci/e2e-tests/pkg/clients/kubernetes"
@@ -16,6 +17,9 @@ type HasController struct {
 
 	// A Client manages communication with the GitLab API in a specific Organization.
 	GitLab *gitlab.GitlabClient
+
+	// A Client manages communication with Forgejo/Codeberg API in a specific Organization.
+	Forgejo *forgejo.ForgejoClient
 
 	// Generates a kubernetes client to interact with clusters.
 	*kubeCl.CustomClient
@@ -36,9 +40,24 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*HasController, error) {
 		return nil, err
 	}
 
+	// Initialize Forgejo client (for Codeberg)
+	var fj *forgejo.ForgejoClient
+	forgejoToken := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
+	if forgejoToken != "" {
+		fj, err = forgejo.NewForgejoClient(
+			forgejoToken,
+			utils.GetEnv(constants.CODEBERG_API_URL_ENV, constants.DefaultCodebergAPIURL),
+			utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &HasController{
-		gh,
-		gl,
-		kube,
+		Github:       gh,
+		GitLab:       gl,
+		Forgejo:      fj,
+		CustomClient: kube,
 	}, nil
 }

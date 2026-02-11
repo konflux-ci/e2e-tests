@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 
+	"github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
@@ -20,6 +21,8 @@ type SuiteController struct {
 	// Github client to interact with GH apis
 	Github *github.Github
 	Gitlab *gitlab.GitlabClient
+	// Forgejo client to interact with Forgejo/Codeberg APIs
+	Forgejo *forgejo.ForgejoClient
 }
 
 /*
@@ -37,9 +40,24 @@ func NewSuiteController(kubeC *kubeCl.CustomClient) (*SuiteController, error) {
 		return nil, fmt.Errorf("failed to authenticate with GitLab: %w", err)
 	}
 
+	// Initialize Forgejo client (for Codeberg)
+	var fj *forgejo.ForgejoClient
+	forgejoToken := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
+	if forgejoToken != "" {
+		fj, err = forgejo.NewForgejoClient(
+			forgejoToken,
+			utils.GetEnv(constants.CODEBERG_API_URL_ENV, constants.DefaultCodebergAPIURL),
+			utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to authenticate with Forgejo/Codeberg: %w", err)
+		}
+	}
+
 	return &SuiteController{
 		CustomClient: kubeC,
 		Github:       gh,
 		Gitlab:       gl,
+		Forgejo:      fj,
 	}, nil
 }

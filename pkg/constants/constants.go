@@ -138,6 +138,18 @@ const (
 	// GitLab Project ID used for helper functions in magefiles
 	GITLAB_PROJECT_ID_ENV string = "GITLAB_PROJECT_ID"
 
+	// A Codeberg bot token is required to run tests against codeberg.org. The token needs to have permissions to the Codeberg organization/repositories.
+	CODEBERG_BOT_TOKEN_ENV string = "CODEBERG_BOT_TOKEN" // #nosec
+
+	// The Codeberg org which owns the test repositories
+	CODEBERG_QE_ORG_ENV string = "CODEBERG_QE_ORG"
+
+	// The Codeberg base URL used to run e2e tests against (defaults to https://codeberg.org)
+	CODEBERG_API_URL_ENV string = "CODEBERG_API_URL" // #nosec
+
+	// The smee.io channel URL for forwarding webhooks to the test cluster
+	SMEE_CHANNEL_ENV string = "SMEE_CHANNEL"
+
 	// Release service catalog default URL and revision for e2e tests
 	RELEASE_CATALOG_DEFAULT_URL      = "https://github.com/konflux-ci/release-service-catalog.git"
 	RELEASE_CATALOG_DEFAULT_REVISION = "staging"
@@ -181,6 +193,9 @@ const (
 	DefaultGitLabAPIURL   = "https://gitlab.com/api/v4"
 	DefaultGitLabQEOrg    = "konflux-qe"
 	DefaultGitLabRepoName = "hacbs-test-project-integration"
+
+	DefaultCodebergAPIURL = "https://codeberg.org"
+	DefaultCodebergQEOrg  = "konflux-qe"
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
 	ComponentSecretName    = "comp-secret"
