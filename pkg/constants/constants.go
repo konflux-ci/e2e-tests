@@ -144,7 +144,7 @@ const (
 	// The Codeberg org which owns the test repositories
 	CODEBERG_QE_ORG_ENV string = "CODEBERG_QE_ORG"
 
-	// The Codeberg API URL used to run e2e tests against (defaults to https://codeberg.org/api/v1)
+	// The Codeberg base URL used to run e2e tests against (defaults to https://codeberg.org)
 	CODEBERG_API_URL_ENV string = "CODEBERG_API_URL" // #nosec
 
 	// The smee.io channel URL for forwarding webhooks to the test cluster
@@ -194,7 +194,7 @@ const (
 	DefaultGitLabQEOrg    = "konflux-qe"
 	DefaultGitLabRepoName = "hacbs-test-project-integration"
 
-	DefaultCodebergAPIURL = "https://codeberg.org/api/v1"
+	DefaultCodebergAPIURL = "https://codeberg.org"
 	DefaultCodebergQEOrg  = "konflux-qe"
 
 	RegistryAuthSecretName = "redhat-appstudio-registry-pull-secret"
