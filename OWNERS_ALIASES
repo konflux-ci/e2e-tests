@@ -2,7 +2,6 @@
 
 aliases:
   rhtap-qe:
-  - rhopp
   - flacatus
   - psturc
   - jkopriva
