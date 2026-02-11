@@ -651,6 +651,7 @@
   regexp: 'unsupported transport \\"docker\\" for looking up local images.*quay.io.*received unexpected HTTP status: 502 Bad Gateway'
   test_dir:
   - run-stone-prod-p01-2026_01_16T17_17_21_058000000_00_00
+  - run-kflux-ocp-p01-2026_02_10T13_50_47_255000000_00_00
 - caused_by: test
   id: ssh_connection_reset_during_build
   note: ''
@@ -770,3 +771,17 @@
   regexp: 'C_CREATEREPOLIB: Warning: Cannot read package.*rpmReadPackageFile.*subprocess\.CalledProcessError.*Command .*createrepo_c.* returned non-zero exit status 2'
   test_dir:
   - run-stone-prd-rh01-2026_02_10T01_48_38_001000000_00_00
+- caused_by: quay.io
+  id: quay_io_returned_504_gateway_timeout_during_rpm_signature_scan
+  note: ''
+  reason: Quay.io returned 504 Gateway Timeout during RPM signature scan
+  regexp: 'received unexpected HTTP status: 504 Gateway Timeout'
+  test_dir:
+  - run-stone-prod-p01-2026_02_06T16_17_19_265000000_00_00
+- caused_by: mirrors.fedoraproject.org
+  id: mock_build_failed_to_download_metadata_due_to_zchunk_lead_error
+  note: ''
+  reason: Mock build failed to download metadata from mirrors.fedoraproject.org due to zchunk lead error
+  regexp: 'Librepo error: Checksum error .*fedora.*primary.xml.zck: Unable to read zchunk lead'
+  test_dir:
+  - run-stone-prd-rh01-2026_02_10T12_44_33_768000000_00_00

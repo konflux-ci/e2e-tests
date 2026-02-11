@@ -197,3 +197,9 @@
   regexp: 'admission webhook .*mutate.kyverno.svc-fail.* denied the request: mutation policy tekton-pod-adjust-resources-by-platform error'
   test_dir:
   - run-stone-stg-rh01-2026_02_06T10_09_21_249000000_00_00
+- caused_by: SKIP
+  id: build_task_failed_with_code_125
+  note: ''
+  reason: SKIP
+  regexp: step-build.*exited with code 125
+  test_dir: []

@@ -723,3 +723,10 @@
   reason: Repo templating cleanup failed to list PipelineRuns due to context deadline exceeded
   regexp: 'Repo-templating workflow component cleanup failed: .* unable to list PipelineRuns .* context deadline exceeded'
   test_dir: []
+- caused_by: github.com
+  id: github_api_returned_503_service_unavailable_during_repo_forking
+  note: ''
+  reason: GitHub API returned 503 Service Unavailable during repo forking
+  regexp: 'Repo forking failed: error checking repository .* GET https://api.github.com/repos/.*: 503 No server is currently available'
+  test_dir:
+  - run-kflux-prd-rh03-2026_02_10T15_58_41_209000000_00_00
