@@ -61,12 +61,12 @@ else
   echo "serializeImagePulls: false" >> "$CONFIG"
 fi
 if grep -q "^maxParallelImagePulls:" "$CONFIG"; then
-  sed -i "s/^maxParallelImagePulls:.*/maxParallelImagePulls: 20/" "$CONFIG"
+  sed -i "s/^maxParallelImagePulls:.*/maxParallelImagePulls: 15/" "$CONFIG"
 else
-  echo "maxParallelImagePulls: 20" >> "$CONFIG"
+  echo "maxParallelImagePulls: 15" >> "$CONFIG"
 fi
 
-# --- Containerd systemd: give it resources and protect from OOM ---
+# --- Containerd systemd: resources, priority, OOM protection ---
 mkdir -p /etc/systemd/system/containerd.service.d
 cat > /etc/systemd/system/containerd.service.d/override.conf <<CONTAINERD_OVERRIDE
 [Service]
@@ -75,8 +75,12 @@ LimitMEMLOCK=infinity
 TasksMax=infinity
 MemoryMin=8G
 OOMScoreAdjust=-999
+CPUWeight=1000
+IOWeight=1000
 Restart=always
 RestartSec=2
+Environment=GOMAXPROCS=8
+Environment=GOMEMLIMIT=12GiB
 CONTAINERD_OVERRIDE
 
 systemctl daemon-reload
@@ -121,7 +125,7 @@ kubectl logs "${POD_NAME}" 2>/dev/null || true
 kubectl delete pod "${POD_NAME}" --force --grace-period=0 2>/dev/null || true
 echo "    Waiting for node Ready after kubelet restart..."
 kubectl wait --for=condition=Ready node/"${NODE_NAME}" --timeout=120s 2>/dev/null
-echo "    maxPods=${MAX_PODS}, parallelPulls=20, containerd protected."
+echo "    maxPods=${MAX_PODS}, parallelPulls=15, containerd hardened."
 echo ""
 
 # -----------------------------------------------------------------------------
@@ -169,8 +173,8 @@ echo ""
 echo "=============================================="
 echo "  Cluster Ready"
 echo "=============================================="
-echo "  maxPods=${MAX_PODS}  parallelPulls=20"
-echo "  containerd: MemoryMin=8G OOM=-999 FDs=1M"
+echo "  maxPods=${MAX_PODS}  parallelPulls=15"
+echo "  containerd: MemoryMin=8G OOM=-999 CPU=max IO=max GOMAXPROCS=8"
 echo "  caches: quay ghcr cgr redhat"
 echo "  cleanup: container-gc(25s) etcd-pruner(*/10)"
 echo "  CoreDNS: 3x512Mi"

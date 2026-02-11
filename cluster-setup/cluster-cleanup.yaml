@@ -255,7 +255,7 @@ spec:
           restartPolicy: Never
           containers:
           - name: prune
-            image: bitnami/kubectl:1.32
+            image: quay.io/openshift/origin-cli:latest
             resources:
               requests:
                 cpu: 10m

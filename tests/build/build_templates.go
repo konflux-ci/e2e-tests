@@ -292,8 +292,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 				if os.Getenv(constants.E2E_APPLICATIONS_NAMESPACE_ENV) != "" {
 					ginkgo.DeferCleanup(f.AsKubeAdmin.HasController.DeleteApplication, applicationName, testNamespace, false)
 				} else {
-					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
-					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
+					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
+					gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
 				}
 			}
 
