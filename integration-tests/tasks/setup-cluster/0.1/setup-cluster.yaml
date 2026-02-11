@@ -1,0 +1,301 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: setup-cluster
+spec:
+  description: >
+    Hardens a fresh KinD cluster for burst E2E workloads:
+    node hardening, registry caches, containerd mirrors, metrics-server, CoreDNS HA.
+  params:
+    - name: cluster-access-secret-name
+      type: string
+      default: ""
+      description: "The name of the secret containing the kubeconfig to access the target cluster."
+    - name: node-name
+      type: string
+      default: "kind-mapt-control-plane"
+    - name: max-pods
+      type: string
+      default: "350"
+    - name: max-parallel-image-pulls
+      type: string
+      default: "15"
+    - name: manifests-base-url
+      type: string
+      default: "https://raw.githubusercontent.com/flacatus/e2e-tests/separate_build_service_suite/integration-tests/resources"
+      description: "Base URL to fetch image-optimization.yaml and cluster-cleanup.yaml"
+  volumes:
+    - name: cluster-secret-volume
+      secret:
+        optional: true
+        secretName: $(params.cluster-access-secret-name)
+  steps:
+    - name: setup
+      image: quay.io/openshift/origin-cli:latest
+      env:
+        - name: KUBECONFIG
+          value: /tmp/kubeconfig
+      volumeMounts:
+        - name: cluster-secret-volume
+          mountPath: /tmp/kubeconfig
+          subPath: kubeconfig
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        NODE_NAME="$(params.node-name)"
+        MAX_PODS="$(params.max-pods)"
+        MAX_PULLS="$(params.max-parallel-image-pulls)"
+        MANIFESTS_URL="$(params.manifests-base-url)"
+
+        echo "=============================================="
+        echo "  Konflux E2E Cluster Setup"
+        echo "=============================================="
+        echo "  Node: ${NODE_NAME}  MaxPods: ${MAX_PODS}"
+        echo "=============================================="
+        echo ""
+
+        # =================================================================
+        # Step 1: Node hardening (kubelet + containerd)
+        # =================================================================
+        echo "==> [1/5] Hardening node..."
+
+        NODE_SCRIPT=$(cat <<'INNER_SCRIPT'
+        #!/bin/bash
+        set -e
+        CONFIG="/var/lib/kubelet/config.yaml"
+
+        if grep -q "^maxPods:" "$CONFIG"; then
+          sed -i "s/^maxPods:.*/maxPods: __MAX_PODS__/" "$CONFIG"
+        else
+          echo "maxPods: __MAX_PODS__" >> "$CONFIG"
+        fi
+
+        if grep -q "^serializeImagePulls:" "$CONFIG"; then
+          sed -i "s/^serializeImagePulls:.*/serializeImagePulls: false/" "$CONFIG"
+        else
+          echo "serializeImagePulls: false" >> "$CONFIG"
+        fi
+        if grep -q "^maxParallelImagePulls:" "$CONFIG"; then
+          sed -i "s/^maxParallelImagePulls:.*/maxParallelImagePulls: __MAX_PULLS__/" "$CONFIG"
+        else
+          echo "maxParallelImagePulls: __MAX_PULLS__" >> "$CONFIG"
+        fi
+
+        mkdir -p /etc/systemd/system/containerd.service.d
+        cat > /etc/systemd/system/containerd.service.d/override.conf <<CONTAINERD_OVERRIDE
+        [Service]
+        LimitNOFILE=1048576
+        LimitMEMLOCK=infinity
+        TasksMax=infinity
+        MemoryMin=8G
+        OOMScoreAdjust=-999
+        CPUWeight=1000
+        IOWeight=1000
+        Restart=always
+        RestartSec=2
+        Environment=GOMAXPROCS=8
+        Environment=GOMEMLIMIT=12GiB
+        CONTAINERD_OVERRIDE
+
+        systemctl daemon-reload
+        systemctl restart kubelet
+        echo "DONE"
+        INNER_SCRIPT
+        )
+
+        NODE_SCRIPT="${NODE_SCRIPT//__MAX_PODS__/${MAX_PODS}}"
+        NODE_SCRIPT="${NODE_SCRIPT//__MAX_PULLS__/${MAX_PULLS}}"
+        ENCODED=$(echo "$NODE_SCRIPT" | base64 | tr -d '\n')
+
+        POD_NAME="setup-node-$(date +%s)"
+        kubectl run "${POD_NAME}" --restart=Never --image=busybox \
+          --overrides="{
+            \"spec\": {
+              \"hostPID\": true,
+              \"nodeName\": \"${NODE_NAME}\",
+              \"containers\": [{
+                \"name\": \"fix\",
+                \"image\": \"busybox\",
+                \"command\": [
+                  \"nsenter\", \"--target\", \"1\",
+                  \"--mount\", \"--uts\", \"--ipc\", \"--net\", \"--pid\", \"--\",
+                  \"bash\", \"-c\",
+                  \"echo ${ENCODED} | base64 -d | bash\"
+                ],
+                \"securityContext\": {\"privileged\": true}
+              }]
+            }
+          }" 2>/dev/null
+
+        echo "    Waiting for pod to complete..."
+        for i in $(seq 1 60); do
+          PHASE=$(kubectl get pod "${POD_NAME}" -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
+          if [ "$PHASE" = "Succeeded" ] || [ "$PHASE" = "Failed" ]; then
+            echo "    Pod finished (${PHASE}) after ${i}s."
+            break
+          fi
+          sleep 1
+        done
+        kubectl logs "${POD_NAME}" 2>/dev/null || true
+        kubectl delete pod "${POD_NAME}" --force --grace-period=0 2>/dev/null || true
+        echo "    Waiting for node Ready after kubelet restart..."
+        kubectl wait --for=condition=Ready node/"${NODE_NAME}" --timeout=120s
+        echo "    maxPods=${MAX_PODS}, parallelPulls=${MAX_PULLS}, containerd hardened."
+        echo ""
+
+        # =================================================================
+        # Step 2: Deploy manifests (registry caches + cleanup jobs)
+        # =================================================================
+        echo "==> [2/5] Deploying manifests..."
+        curl -sL "${MANIFESTS_URL}/image-optimization.yaml" | kubectl apply -f - 2>/dev/null
+        curl -sL "${MANIFESTS_URL}/cluster-cleanup.yaml"    | kubectl apply -f - 2>/dev/null
+
+        echo "    Waiting for registry caches..."
+        kubectl wait --for=condition=Available \
+          deployment/cache-quay deployment/cache-ghcr deployment/cache-cgr deployment/cache-redhat \
+          -n registry-cache --timeout=120s 2>/dev/null || echo "    (some caches still starting...)"
+        echo "    All manifests deployed."
+        echo ""
+
+        # =================================================================
+        # Step 3: Containerd mirrors
+        # =================================================================
+        echo "==> [3/5] Configuring containerd mirrors..."
+
+        QUAY_IP=$(kubectl get svc cache-quay -n registry-cache -o jsonpath='{.spec.clusterIP}')
+        GHCR_IP=$(kubectl get svc cache-ghcr -n registry-cache -o jsonpath='{.spec.clusterIP}')
+        CGR_IP=$(kubectl get svc cache-cgr -n registry-cache -o jsonpath='{.spec.clusterIP}')
+        REDHAT_IP=$(kubectl get svc cache-redhat -n registry-cache -o jsonpath='{.spec.clusterIP}')
+        echo "    quay=${QUAY_IP} ghcr=${GHCR_IP} cgr=${CGR_IP} redhat=${REDHAT_IP}"
+
+        SETUP_SCRIPT=$(cat <<MIRROREOF
+        #!/bin/bash
+        set -e
+        mkdir -p /etc/containerd/certs.d/quay.io /etc/containerd/certs.d/ghcr.io /etc/containerd/certs.d/cgr.dev /etc/containerd/certs.d/registry.access.redhat.com
+
+        cat > /etc/containerd/certs.d/quay.io/hosts.toml <<TOML
+        server = "https://quay.io"
+        [host."http://${QUAY_IP}:5000"]
+          capabilities = ["pull", "resolve"]
+        [host."https://quay.io"]
+          capabilities = ["pull", "resolve"]
+        TOML
+
+        cat > /etc/containerd/certs.d/ghcr.io/hosts.toml <<TOML
+        server = "https://ghcr.io"
+        [host."http://${GHCR_IP}:5000"]
+          capabilities = ["pull", "resolve"]
+        [host."https://ghcr.io"]
+          capabilities = ["pull", "resolve"]
+        TOML
+
+        cat > /etc/containerd/certs.d/cgr.dev/hosts.toml <<TOML
+        server = "https://cgr.dev"
+        [host."http://${CGR_IP}:5000"]
+          capabilities = ["pull", "resolve"]
+        [host."https://cgr.dev"]
+          capabilities = ["pull", "resolve"]
+        TOML
+
+        cat > /etc/containerd/certs.d/registry.access.redhat.com/hosts.toml <<TOML
+        server = "https://registry.access.redhat.com"
+        [host."http://${REDHAT_IP}:5000"]
+          capabilities = ["pull", "resolve"]
+        [host."https://registry.access.redhat.com"]
+          capabilities = ["pull", "resolve"]
+        TOML
+
+        if ! grep -q 'config_path' /etc/containerd/config.toml; then
+          sed -i '/\[plugins."io.containerd.grpc.v1.cri".registry\]/a\\      config_path = "/etc/containerd/certs.d"' /etc/containerd/config.toml
+        fi
+        if grep -q 'max_concurrent_downloads' /etc/containerd/config.toml; then
+          sed -i 's/max_concurrent_downloads.*/max_concurrent_downloads = 50/' /etc/containerd/config.toml
+        else
+          sed -i '/\[plugins."io.containerd.grpc.v1.cri"\]/a\\    max_concurrent_downloads = 50' /etc/containerd/config.toml
+        fi
+
+        systemctl restart containerd
+        echo "Waiting for containerd to stabilize..."
+        sleep 5
+        for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
+          if crictl info 1>/dev/null 2>/dev/null; then
+            echo "containerd healthy after attempt \${ATTEMPT}"
+            break
+          fi
+          sleep 1
+        done
+        echo DONE
+        MIRROREOF
+        )
+
+        ENCODED_MIRROR=$(echo "${SETUP_SCRIPT}" | base64 | tr -d '\n')
+
+        POD_NAME="setup-mirrors-$(date +%s)"
+        kubectl run "${POD_NAME}" --restart=Never --image=busybox \
+          --overrides="{
+            \"spec\": {
+              \"hostPID\": true,
+              \"nodeName\": \"${NODE_NAME}\",
+              \"restartPolicy\": \"Never\",
+              \"containers\": [{
+                \"name\": \"setup\",
+                \"image\": \"busybox\",
+                \"command\": [
+                  \"nsenter\", \"--target\", \"1\",
+                  \"--mount\", \"--uts\", \"--ipc\", \"--net\", \"--pid\", \"--\",
+                  \"bash\", \"-c\",
+                  \"echo ${ENCODED_MIRROR} | base64 -d | bash\"
+                ],
+                \"securityContext\": {\"privileged\": true}
+              }]
+            }
+          }" 2>/dev/null
+
+        for i in $(seq 1 60); do
+          PHASE=$(kubectl get pod "${POD_NAME}" -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
+          if [ "$PHASE" = "Succeeded" ] || [ "$PHASE" = "Failed" ]; then
+            echo "    Pod finished (${PHASE}) after ${i}s."
+            break
+          fi
+          sleep 1
+        done
+        kubectl logs "${POD_NAME}" 2>/dev/null || true
+        kubectl delete pod "${POD_NAME}" --force --grace-period=0 2>/dev/null || true
+        kubectl wait --for=condition=Ready "node/${NODE_NAME}" --timeout=120s
+        echo "==> Mirror configuration applied!"
+        echo ""
+
+        # =================================================================
+        # Step 4: Metrics-server + CoreDNS HA
+        # =================================================================
+        echo "==> [4/5] Metrics-server + CoreDNS..."
+        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml 2>/dev/null
+        kubectl patch deployment metrics-server -n kube-system --type='json' \
+          -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]' 2>/dev/null || true
+        if kubectl get deployment coredns -n kube-system &>/dev/null; then
+          kubectl scale deployment coredns -n kube-system --replicas=3 2>/dev/null || true
+          kubectl patch deployment coredns -n kube-system --type='json' -p='[
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"512Mi"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"128Mi"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/cpu","value":"200m"}
+          ]' 2>/dev/null || true
+        fi
+        echo "    Metrics-server installed. CoreDNS: 3 replicas, 512Mi."
+        echo ""
+
+        # =================================================================
+        # Step 5: Verify
+        # =================================================================
+        echo "==> [5/5] Done."
+        echo ""
+        echo "=============================================="
+        echo "  Cluster Ready"
+        echo "=============================================="
+        echo "  maxPods=${MAX_PODS}  parallelPulls=${MAX_PULLS}"
+        echo "  containerd: MemoryMin=8G OOM=-999 CPU=max IO=max GOMAXPROCS=8"
+        echo "  caches: quay ghcr cgr redhat"
+        echo "  cleanup: container-gc(25s) etcd-pruner(*/10)"
+        echo "  CoreDNS: 3x512Mi"
+        echo "=============================================="
+        kubectl get node "${NODE_NAME}" 2>/dev/null || true

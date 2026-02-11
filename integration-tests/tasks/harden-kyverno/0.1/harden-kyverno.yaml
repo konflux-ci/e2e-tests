@@ -1,0 +1,103 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: harden-kyverno
+spec:
+  description: >
+    Hardens Kyverno for burst PipelineRun workloads.
+    Scales admission-controller to 3 replicas, increases resources,
+    and disables the reports-controller to reduce etcd churn.
+    Run AFTER Konflux bootstrap deploys Kyverno.
+  params:
+    - name: cluster-access-secret-name
+      type: string
+      default: ""
+      description: "The name of the secret containing the kubeconfig to access the target cluster."
+    - name: admission-replicas
+      type: string
+      default: "3"
+    - name: admission-memory-limit
+      type: string
+      default: "1Gi"
+    - name: admission-cpu-request
+      type: string
+      default: "100m"
+    - name: background-replicas
+      type: string
+      default: "2"
+    - name: disable-reports
+      type: string
+      default: "true"
+  volumes:
+    - name: cluster-secret-volume
+      secret:
+        optional: true
+        secretName: $(params.cluster-access-secret-name)
+  steps:
+    - name: harden
+      image: quay.io/openshift/origin-cli:latest
+      env:
+        - name: KUBECONFIG
+          value: /tmp/kubeconfig
+      volumeMounts:
+        - name: cluster-secret-volume
+          mountPath: /tmp/kubeconfig
+          subPath: kubeconfig
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        echo "==> Hardening Kyverno for burst workloads..."
+
+        if ! kubectl get namespace kyverno &>/dev/null; then
+          echo "    Kyverno namespace not found. Run this after Konflux bootstrap."
+          exit 1
+        fi
+
+        if ! kubectl get deployment kyverno-admission-controller -n kyverno &>/dev/null; then
+          echo "    kyverno-admission-controller not found. Skipping."
+          exit 1
+        fi
+
+        echo "    Scaling admission-controller to $(params.admission-replicas) replicas..."
+        kubectl scale deployment kyverno-admission-controller -n kyverno \
+          --replicas="$(params.admission-replicas)"
+
+        echo "    Increasing admission-controller resources..."
+        kubectl patch deployment kyverno-admission-controller -n kyverno --type='json' -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/cpu","value":"$(params.admission-cpu-request)"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"256Mi"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"$(params.admission-memory-limit)"}
+        ]'
+
+        echo "    Scaling background-controller to $(params.background-replicas) replicas..."
+        kubectl scale deployment kyverno-background-controller -n kyverno \
+          --replicas="$(params.background-replicas)" 2>/dev/null || true
+
+        kubectl patch deployment kyverno-background-controller -n kyverno --type='json' -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/cpu","value":"50m"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"128Mi"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"512Mi"}
+        ]' 2>/dev/null || true
+
+        if [ "$(params.disable-reports)" = "true" ]; then
+          echo "    Disabling ephemeral reports (etcd write churn reduction)..."
+          kubectl scale deployment kyverno-reports-controller -n kyverno --replicas=0 2>/dev/null || true
+          kubectl delete ephemeralreports.reports.kyverno.io --all -A --timeout=30s 2>/dev/null || true
+          kubectl delete clusterephemeralreports.reports.kyverno.io --all --timeout=30s 2>/dev/null || true
+          echo "    Reports controller scaled to 0, existing reports purged."
+        fi
+
+        echo "    Waiting for rollout..."
+        kubectl rollout status deployment/kyverno-admission-controller -n kyverno --timeout=120s
+
+        echo ""
+        echo "==> Kyverno hardened:"
+        echo "    admission-controller: $(params.admission-replicas) replicas, 256Mi-$(params.admission-memory-limit) memory, $(params.admission-cpu-request) CPU"
+        echo "    background-controller: $(params.background-replicas) replicas, 128Mi-512Mi memory, 50m CPU"
+        if [ "$(params.disable-reports)" = "true" ]; then
+          echo "    reports-controller: DISABLED (0 replicas)"
+        fi
+        echo ""
+        echo "    Status:"
+        kubectl get pods -n kyverno -o wide

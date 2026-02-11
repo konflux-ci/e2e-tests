@@ -1,0 +1,298 @@
+# =============================================================================
+# Cluster Cleanup — All periodic hygiene workloads for Konflux E2E clusters
+#
+# This file contains two automated cleanup mechanisms:
+#
+#   1. Container GC DaemonSet (SMART Tekton-aware)
+#      - Runs every 25s on each node
+#      - Only removes containers from TERMINATED pod sandboxes (NotReady)
+#      - 60s grace period so E2E tests can read PipelineRun results
+#      - Orphan sweep every 5th cycle (~2 min)
+#      - Prevents ContainerStatusUnknown / exit 137 / "build failed"
+#
+#   2. etcd Pruner CronJob (every 10 min)
+#      - Prunes events when count > 1,000 (events regenerate instantly)
+#      - Prunes expired dex authrequests (2.7s avg etcd write time)
+#      - Keeps etcd lean so kubectl stays fast under burst
+#
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Part 1: Container GC DaemonSet — SMART Tekton-aware mode
+#
+# CONTEXT: This cluster runs ONLY Tekton E2E tests. Every workload pod is a
+# Tekton TaskRun pod. Containers exit sequentially while later ones still run.
+# At burst (7+ PipelineRuns), 200+ containers exit within seconds.
+#
+# WHY GC: Dead containers pile up, holding containerd metadata + FDs. Past 100,
+# containerd drops socket connections → pull QPS exceeded → cascading failures.
+#
+# THE TRAP: A naive "crictl rm all exited" kills running Tekton pods. Init
+# containers and early steps are "exited" while later steps run. Removing them
+# corrupts containerd metadata → ContainerStatusUnknown (exit 137).
+#
+# THE SMART FIX — three layers of protection:
+#   1. SANDBOX-FIRST: Only touch NotReady sandboxes (pod fully terminated)
+#   2. GRACE PERIOD (60s): Let E2E tests read results before cleanup
+#   3. ORPHAN SWEEP (every 5th cycle): Clean containers with no parent sandbox
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: container-gc
+  namespace: default
+  labels:
+    app: container-gc
+spec:
+  selector:
+    matchLabels:
+      app: container-gc
+  template:
+    metadata:
+      labels:
+        app: container-gc
+    spec:
+      hostPID: true
+      tolerations:
+      - operator: Exists
+      priorityClassName: system-node-critical
+      containers:
+      - name: gc
+        image: busybox
+        command:
+        - nsenter
+        - --target
+        - "1"
+        - --mount
+        - --uts
+        - --ipc
+        - --net
+        - --pid
+        - --
+        - bash
+        - -c
+        - |
+          echo "Container GC started (SMART Tekton-aware, grace=60s, interval=25s)"
+
+          # State file: tracks when we first saw each sandbox as NotReady
+          # Format: <sandbox_id> <epoch_first_seen>
+          STATE="/tmp/gc-sandbox-seen"
+          : > "$STATE"  # truncate on start
+
+          CYCLE=0
+          while true; do
+            CYCLE=$((CYCLE+1))
+            NOW=$(date +%s)
+
+            # Counts for logging
+            TOTAL_EXITED=$(crictl ps -a --state exited -q 2>/dev/null | wc -l)
+            TOTAL_RUNNING=$(crictl ps --state running -q 2>/dev/null | wc -l)
+
+            # ── Phase 1: Clean terminated sandboxes with grace period ──
+            DEAD_SANDBOXES=$(crictl pods --state=notready -q 2>/dev/null)
+            CLEANED_CTRS=0
+            CLEANED_PODS=0
+            SKIPPED_YOUNG=0
+
+            # Build new state file (prune entries for sandboxes that no longer exist)
+            NEW_STATE="/tmp/gc-sandbox-seen.new"
+            : > "$NEW_STATE"
+
+            for SB in $DEAD_SANDBOXES; do
+              [ -z "$SB" ] && continue
+
+              # Look up when we first saw this sandbox as NotReady
+              FIRST_SEEN=$(grep "^${SB} " "$STATE" 2>/dev/null | awk '{print $2}')
+
+              if [ -z "$FIRST_SEEN" ]; then
+                # First sighting — record now, skip this cycle
+                echo "$SB $NOW" >> "$NEW_STATE"
+                SKIPPED_YOUNG=$((SKIPPED_YOUNG + 1))
+                continue
+              fi
+
+              AGE=$((NOW - FIRST_SEEN))
+              if [ "$AGE" -lt 60 ]; then
+                # Under grace period — keep tracking, don't clean
+                echo "$SB $FIRST_SEEN" >> "$NEW_STATE"
+                SKIPPED_YOUNG=$((SKIPPED_YOUNG + 1))
+                continue
+              fi
+
+              # Grace period elapsed — safe to clean
+              CTRS=$(crictl ps -a --pod="$SB" -q 2>/dev/null)
+              if [ -n "$CTRS" ]; then
+                CTR_COUNT=$(echo "$CTRS" | wc -l)
+                echo "$CTRS" | xargs -n50 crictl rm 2>/dev/null || true
+                CLEANED_CTRS=$((CLEANED_CTRS + CTR_COUNT))
+              fi
+              crictl rmp "$SB" 2>/dev/null || true
+              CLEANED_PODS=$((CLEANED_PODS + 1))
+            done
+
+            # Swap state file (atomic-ish)
+            mv "$NEW_STATE" "$STATE"
+
+            # ── Phase 2: Orphan sweep (every 5th cycle ≈ 2 min) ──
+            ORPHANS=0
+            if [ $((CYCLE % 5)) -eq 0 ]; then
+              # Get all Ready sandbox IDs for fast lookup
+              READY_SBS=$(crictl pods --state=ready -q 2>/dev/null)
+              ALL_NOTREADY_SBS=$(crictl pods --state=notready -q 2>/dev/null)
+              KNOWN_SBS=$(echo -e "${READY_SBS}\n${ALL_NOTREADY_SBS}" | sort -u)
+
+              for CTR in $(crictl ps -a --state exited -q 2>/dev/null); do
+                # Get the sandbox this container belongs to
+                POD_SB=$(crictl inspect "$CTR" 2>/dev/null | grep -o '"sandboxID":"[^"]*"' | head -1 | cut -d'"' -f4)
+                if [ -n "$POD_SB" ]; then
+                  # Check if sandbox still exists
+                  if ! echo "$KNOWN_SBS" | grep -qx "$POD_SB"; then
+                    crictl rm "$CTR" 2>/dev/null || true
+                    ORPHANS=$((ORPHANS + 1))
+                  fi
+                else
+                  # No sandbox reference at all — definitely orphaned
+                  crictl rm "$CTR" 2>/dev/null || true
+                  ORPHANS=$((ORPHANS + 1))
+                fi
+              done
+            fi
+
+            # ── Logging ──
+            if [ "$CLEANED_CTRS" -gt 0 ] || [ "$ORPHANS" -gt 0 ]; then
+              REMAINING=$(crictl ps -a --state exited -q 2>/dev/null | wc -l)
+              echo "$(date): [#$CYCLE] cleaned=$CLEANED_CTRS pods=$CLEANED_PODS orphans=$ORPHANS grace_wait=$SKIPPED_YOUNG (exited: was=$TOTAL_EXITED now=$REMAINING running=$TOTAL_RUNNING)"
+            elif [ "$SKIPPED_YOUNG" -gt 0 ]; then
+              echo "$(date): [#$CYCLE] grace_wait=$SKIPPED_YOUNG (exited=$TOTAL_EXITED running=$TOTAL_RUNNING — waiting for 60s grace)"
+            elif [ $((CYCLE % 12)) -eq 0 ]; then
+              # ~5 min heartbeat when idle
+              echo "$(date): [#$CYCLE] idle (exited=$TOTAL_EXITED running=$TOTAL_RUNNING)"
+            fi
+
+            sleep 25
+          done
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: 500m
+            memory: 128Mi
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Part 2: etcd Pruner CronJob
+#
+# During E2E test bursts, etcd accumulates thousands of objects that are
+# never garbage-collected:
+#   - Events: 2,000-3,000+ objects (biggest table, constant churn)
+#   - Dex AuthRequests: 50-100+ objects with pathological 2.7s avg write time
+# This I/O pressure slows every kubectl call from ~1s to ~10s.
+#
+# Solution: CronJob runs every 10 minutes. When events exceed 1,000, it prunes
+# them. Events regenerate instantly for active resources — debugging is not lost.
+# Dex authrequests are always pruned (expired auth tokens).
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: etcd-hygiene
+  labels:
+    app: etcd-hygiene
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pruner
+  namespace: etcd-hygiene
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: etcd-pruner
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["list", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list"]
+- apiGroups: ["dex.coreos.com"]
+  resources: ["authrequests"]
+  verbs: ["list", "delete", "deletecollection"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: etcd-pruner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: etcd-pruner
+subjects:
+- kind: ServiceAccount
+  name: pruner
+  namespace: etcd-hygiene
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-pruner
+  namespace: etcd-hygiene
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: pruner
+          restartPolicy: Never
+          containers:
+          - name: prune
+            image: quay.io/openshift/origin-cli:latest
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 64Mi
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== etcd hygiene $(date -u +%H:%M:%S) ==="
+
+              # --- 1. Event pruning (only when above threshold) ---
+              EVENT_COUNT=$(kubectl get events -A --no-headers 2>/dev/null | wc -l | tr -d ' ')
+              echo "  Events: ${EVENT_COUNT}"
+              if [ "${EVENT_COUNT}" -gt 1000 ]; then
+                echo "  Above 1000 threshold — pruning all namespaces..."
+                for NS in $(kubectl get namespaces -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+                  NS_COUNT=$(kubectl get events -n "${NS}" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                  if [ "${NS_COUNT}" -gt 0 ]; then
+                    kubectl delete events --all -n "${NS}" --timeout=30s 2>/dev/null || true
+                  fi
+                done
+                AFTER=$(kubectl get events -A --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                echo "  Events after prune: ${AFTER} (active resources regenerate instantly)"
+              else
+                echo "  Below threshold, skipping."
+              fi
+
+              # --- 2. Dex AuthRequest pruning (always — expired tokens) ---
+              DEX_COUNT=$(kubectl get authrequests.dex.coreos.com -A --no-headers 2>/dev/null | wc -l | tr -d ' ')
+              if [ "${DEX_COUNT}" -gt 0 ]; then
+                echo "  Dex authrequests: ${DEX_COUNT} — pruning..."
+                kubectl delete authrequests.dex.coreos.com --all -A --timeout=30s 2>/dev/null || true
+                echo "  Dex authrequests pruned."
+              else
+                echo "  Dex authrequests: 0"
+              fi
+
+              echo "=== Done ==="
