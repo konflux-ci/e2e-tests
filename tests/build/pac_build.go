@@ -600,21 +600,36 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
 			})
-			It("retrigger the pipeline manually", func() {
-				Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(customBranchComponentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, testNamespace)).To(Succeed())
-				// Check the pipelinerun is triggered
-				Eventually(func() error {
-					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(customBranchComponentName, applicationName, testNamespace, "build", "", "incoming")
-					if err != nil {
-						GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", testNamespace, customBranchComponentName)
-						return err
+		It("retrigger the pipeline manually", func() {
+			Expect(f.AsKubeAdmin.HasController.SetComponentAnnotation(customBranchComponentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, testNamespace)).To(Succeed())
+			// Check the pipelinerun is triggered.
+			// If build-service consumed the annotation (fire-and-forget HTTP POST to PaC)
+			// but PaC didn't create the PipelineRun, re-set the annotation to retry.
+			retriesLeft := 2
+			Eventually(func() error {
+				plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(customBranchComponentName, applicationName, testNamespace, "build", "", "incoming")
+				if err != nil {
+					GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", testNamespace, customBranchComponentName)
+					// Check if the annotation was already consumed; if so, re-set it
+					if retriesLeft > 0 {
+						comp, getErr := f.AsKubeAdmin.HasController.GetComponent(customBranchComponentName, testNamespace)
+						if getErr == nil {
+							annotations := comp.GetAnnotations()
+							if annotations == nil || annotations[controllers.BuildRequestAnnotationName] == "" {
+								GinkgoWriter.Printf("Build request annotation was consumed but no PipelineRun appeared. Re-setting annotation (retries left: %d)\n", retriesLeft)
+								_ = f.AsKubeAdmin.HasController.SetComponentAnnotation(customBranchComponentName, controllers.BuildRequestAnnotationName, controllers.BuildRequestTriggerPaCBuildAnnotationValue, testNamespace)
+								retriesLeft--
+							}
+						}
 					}
-					if !plr.HasStarted() {
-						return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", plr.GetNamespace(), plr.GetName())
-					}
-					return nil
-				}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", testNamespace, customBranchComponentName))
-			})
+					return err
+				}
+				if !plr.HasStarted() {
+					return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", plr.GetNamespace(), plr.GetName())
+				}
+				return nil
+			}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", testNamespace, customBranchComponentName))
+		})
 			It("retriggered pipelineRun should eventually finish", func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 			})
