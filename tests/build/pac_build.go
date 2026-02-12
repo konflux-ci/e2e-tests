@@ -143,22 +143,27 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
 			})
 
-			It("workspace parameter is set correctly in PaC repository CR", func() {
-				nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
-				Expect(err).ShouldNot(HaveOccurred())
-				wsName := nsObj.Labels["appstudio.redhat.com/workspace_name"]
-				repositoryParams, err := f.AsKubeAdmin.TektonController.GetRepositoryParams(customDefaultComponentName, testNamespace)
-				Expect(err).ShouldNot(HaveOccurred(), "error while trying to get repository params")
-				paramExists := false
+		It("workspace parameter is set correctly in PaC repository CR", func() {
+			nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
+			Expect(err).ShouldNot(HaveOccurred())
+			wsName := nsObj.Labels["appstudio.redhat.com/workspace_name"]
+			Eventually(func() error {
+				repositoryParams, getErr := f.AsKubeAdmin.TektonController.GetRepositoryParams(customDefaultComponentName, testNamespace)
+				if getErr != nil {
+					return getErr
+				}
 				for _, param := range repositoryParams {
 					if param.Name == "appstudio_workspace" {
-						paramExists = true
-						Expect(param.Value).To(Equal(wsName), fmt.Sprintf("got workspace param value: %s, expected %s", param.Value, wsName))
+						if param.Value != wsName {
+							return fmt.Errorf("got workspace param value: %s, expected %s", param.Value, wsName)
+						}
+						return nil
 					}
 				}
-				Expect(paramExists).To(BeTrue(), "appstudio_workspace param does not exists in repository CR")
+				return fmt.Errorf("appstudio_workspace param does not exist in repository CR")
+			}, 2*time.Minute, 10*time.Second).Should(Succeed(), "timed out waiting for PaC repository CR with correct workspace parameter")
 
-			})
+		})
 			It("triggers a PipelineRun", func() {
 				timeout = time.Minute * 5
 				Eventually(func() error {

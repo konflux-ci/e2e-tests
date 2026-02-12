@@ -519,33 +519,32 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			return "", err
 		}
 	}
-	watch, err := h.PipelineClient().TektonV1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return "", fmt.Errorf("error when initiating watch for new PipelineRun after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
-	}
-	newPRFound := false
+	// Poll for the new PipelineRun instead of using a watch to avoid a race
+	// condition where the PipelineRun is created between the retrigger action
+	// and the watch setup (which would cause the watch to miss the event).
+	deadline := time.After(5 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-time.After(5 * time.Minute):
+		case <-deadline:
 			return "", fmt.Errorf("timed out waiting for new PipelineRun to appear after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
-		case event := <-watch.ResultChan():
-			if event.Object == nil {
+		case <-ticker.C:
+			pipelineRuns, listErr := h.PipelineClient().TektonV1().PipelineRuns(component.GetNamespace()).List(context.Background(), metav1.ListOptions{})
+			if listErr != nil {
+				ginkgo.GinkgoWriter.Printf("failed to list PipelineRuns while waiting for retrigger: %v\n", listErr)
 				continue
 			}
-			newPR, ok := event.Object.(*pipeline.PipelineRun)
-			if !ok {
-				continue
+			for i := range pipelineRuns.Items {
+				newPR := &pipelineRuns.Items[i]
+				if pr.GetGenerateName() == newPR.GetGenerateName() && pr.GetName() != newPR.GetName() {
+					ginkgo.GinkgoWriter.Printf("New PipelineRun %s found after retrigger for component %s/%s\n", newPR.GetName(), component.GetNamespace(), component.GetName())
+					return sha, nil
+				}
 			}
-			if pr.GetGenerateName() == newPR.GetGenerateName() && pr.GetName() != newPR.GetName() {
-				newPRFound = true
-			}
-		}
-		if newPRFound {
-			break
 		}
 	}
-
-	return sha, nil
 }
 
 func (h *HasController) CheckImageRepositoryExists(namespace, componentName string) wait.ConditionFunc {
