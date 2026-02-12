@@ -54,6 +54,14 @@ spec:
       type: string
       description: "Name of the environment the testing should be performed in. Use 'downstream' for testing in OpenShift CI, or 'upstream' for testing in Kind cluster."
       default: "downstream"
+    - name: e2e-extra-label-filter
+      type: string
+      description: |
+        Additional Ginkgo label expression to narrow down which tests to run.
+        Combined with the base label filter using '&&'. Accepts any valid Ginkgo label expression.
+        Examples: "github", "gitlab", "multi-component", "github && pac-build", "github || gitlab".
+        Leave empty to run all tests matching the base filter.
+      default: ""
   volumes:
     - name: konflux-ci-secrets-volume
       secret:
@@ -115,6 +123,8 @@ spec:
           value: "true"
         - name: IMAGE_TAG_EXPIRATION
           value: "5d"
+        - name: E2E_EXTRA_LABEL_FILTER
+          value: $(params.e2e-extra-label-filter)
       onError: continue
       script: |
         #!/bin/bash
@@ -160,8 +170,9 @@ spec:
         git config --global credential.helper "store --file $git_creds_path"
         echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com" > "$git_creds_path"
 
-        git clone --origin upstream --branch main "https://github.com/konflux-ci/e2e-tests.git" .
-        make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
+        git clone --origin upstream --branch separate_build_service_suite "https://github.com/flacatus/e2e-tests.git" .
+        # Skip branch pairing since we are already on the correct branch
+        # make ci/prepare/e2e-branch 2>&1 | tee "${ARTIFACT_DIR}"/e2e-branch.log
 
         /bin/bash -c "integration-tests/scripts/konflux-e2e/0.2/konflux-e2e.sh"
     - name: secure-push-oci

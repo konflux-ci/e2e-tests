@@ -3,8 +3,10 @@ package git
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	"k8s.io/klog/v2"
 )
 
 type GitHubClient struct {
@@ -25,6 +27,26 @@ func (g *GitHubClient) DeleteBranch(repository, branchName string) error {
 
 func (g *GitHubClient) BranchExists(repository, branchName string) (bool, error) {
 	return g.ExistsRef(repository, branchName)
+}
+
+// ListPullRequestsWithRetry wraps Client.ListPullRequests with up to 3 retries
+// on transient errors (e.g. GitHub 503). Returns the PRs or the last error
+// after all retries are exhausted.
+func ListPullRequestsWithRetry(client Client, repository string) ([]*PullRequest, error) {
+	const maxRetries = 3
+	var prs []*PullRequest
+	var err error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		prs, err = client.ListPullRequests(repository)
+		if err == nil {
+			return prs, nil
+		}
+		klog.Warningf("error listing PRs in %s (attempt %d/%d): %v", repository, attempt, maxRetries, err)
+		if attempt < maxRetries {
+			time.Sleep(5 * time.Second)
+		}
+	}
+	return nil, fmt.Errorf("failed to list pull requests for %s after %d retries: %w", repository, maxRetries, err)
 }
 
 func (g *GitHubClient) ListPullRequests(repository string) ([]*PullRequest, error) {

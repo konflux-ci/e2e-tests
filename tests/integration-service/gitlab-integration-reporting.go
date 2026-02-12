@@ -93,8 +93,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 			gomega.Expect(f.AsKubeAdmin.CommonController.Gitlab.DeleteWebhooks(projectID, f.ClusterAppDomain)).NotTo(gomega.HaveOccurred())
 
 			if !ginkgo.CurrentSpecReport().Failed() {
-				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
-				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*5)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
+				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
 			}
 
 		})

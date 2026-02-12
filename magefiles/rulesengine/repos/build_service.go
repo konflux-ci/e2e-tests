@@ -2,6 +2,7 @@ package repos
 
 import (
 	"os"
+	"strings"
 
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"k8s.io/klog"
@@ -29,8 +30,8 @@ var BuildServiceRepoSetDefaultSettingsRule = rulesengine.Rule{Name: "General Req
 		rctx.RequiresSprayProxyRegistering = true
 		klog.Info("require sprayproxy registering is set to TRUE")
 
-		rctx.LabelFilter = "build-service"
-		klog.Info("setting 'build-service' test label")
+		rctx.LabelFilter = BuildLabelFilter("build-service")
+		klog.Infof("setting test label filter: '%s'", rctx.LabelFilter)
 
 		if rctx.DryRun {
 			klog.Info("setting up env vars for deploying component image")
@@ -49,3 +50,31 @@ var IsBuildServiceRepoPR = rulesengine.ConditionFunc(func(rctx *rulesengine.Rule
 	klog.Info("checking if repository is build-service")
 	return rctx.RepoName == "build-service", nil
 })
+
+// BuildLabelFilter constructs a Ginkgo label filter by combining the base label
+// with any extra labels from the E2E_EXTRA_LABEL_FILTER environment variable.
+//
+// E2E_EXTRA_LABEL_FILTER accepts any valid Ginkgo label expression that will be
+// AND-ed with the base label. Examples:
+//
+//	E2E_EXTRA_LABEL_FILTER=github                        -> "build-service && github"
+//	E2E_EXTRA_LABEL_FILTER=gitlab                        -> "build-service && gitlab"
+//	E2E_EXTRA_LABEL_FILTER=multi-component               -> "build-service && multi-component"
+//	E2E_EXTRA_LABEL_FILTER=github && pac-build           -> "build-service && github && pac-build"
+//	E2E_EXTRA_LABEL_FILTER=github || gitlab              -> "build-service && (github || gitlab)"
+//	E2E_EXTRA_LABEL_FILTER=""                            -> "build-service" (no extra filter)
+//
+// This allows CI jobs to target specific test subsets without changing any test code.
+func BuildLabelFilter(baseLabel string) string {
+	extra := strings.TrimSpace(os.Getenv("E2E_EXTRA_LABEL_FILTER"))
+	if extra == "" {
+		return baseLabel
+	}
+
+	// If the extra filter contains logical operators, wrap it in parentheses
+	// to preserve correct precedence when combined with &&
+	if strings.Contains(extra, "||") {
+		return baseLabel + " && (" + extra + ")"
+	}
+	return baseLabel + " && " + extra
+}
