@@ -177,13 +177,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ParentComponentDef.componentName, testNamespace, true)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(ChildComponentDef.componentName, testNamespace, true)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteComponent(ParentComponentDef.componentName, testNamespace, true)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteComponent(ChildComponentDef.componentName, testNamespace, true)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteApplication(applicationName, testNamespace, false)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				Expect(gitClient.DeleteRepositoryIfExists(parentRepository)).To(Succeed())
 				Expect(gitClient.DeleteRepositoryIfExists(childRepository)).To(Succeed())
 			}
-			Expect(f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)).ShouldNot(HaveOccurred())
+			Eventually(func() error {
+				return f.AsKubeAdmin.CommonController.DeleteNamespace(managedNamespace)
+			}, 2*time.Minute, 10*time.Second).Should(Succeed())
 		})
 
 		When("components are created in same namespace", func() {

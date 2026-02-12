@@ -93,8 +93,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				Expect(gitClient.DeleteRepositoryIfExists(helloWorldRepository)).To(Succeed())
 			}
 
@@ -230,7 +234,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			It("a related PipelineRun should be deleted after deleting the component", func() {
 				timeout = time.Second * 180
 				interval = time.Second * 5
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customDefaultComponentName, testNamespace, true)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteComponent(customDefaultComponentName, testNamespace, true)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				// Test removal of PipelineRun
 				Eventually(func() error {
 					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customDefaultComponentName, applicationName, testNamespace, "")
@@ -554,7 +560,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("After updating image visibility to private, it should not trigger another PipelineRun", func() {
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				// Wait for one minute so that all the pipelineruns deleted successfully
 				Eventually(func() bool {
 					componentPipelineRun, _ := f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
@@ -611,7 +619,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			var componentObj appservice.ComponentSpec
 
 			BeforeAll(func() {
-				Expect(f.AsKubeAdmin.HasController.DeleteComponent(customBranchComponentName, testNamespace, true)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteComponent(customBranchComponentName, testNamespace, true)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 
 				timeout = 1 * time.Minute
 				interval = 1 * time.Second

@@ -67,8 +67,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		AfterAll(func() {
 			if !CurrentSpecReport().Failed() {
-				Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(Succeed())
-				Expect(f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(testNamespace, time.Minute*2)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 			}
 
 			// Delete new branches created by PaC and a testing branch used as a component's base branch
@@ -185,7 +189,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			}
 			It("only one component is changed", func() {
 				//Delete all the pipelineruns in the namespace before sending PR
-				Expect(f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)).To(Succeed())
+				Eventually(func() error {
+					return f.AsKubeAdmin.TektonController.DeleteAllPipelineRunsInASpecificNamespace(testNamespace)
+				}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				//Create the ref, add the file and create the PR
 				err = f.AsKubeAdmin.CommonController.Github.CreateRef(multiComponentGitSourceRepoName, multiComponentDefaultBranch, mergeResultSha, multiComponentPRBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -246,8 +252,12 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			AfterAll(func() {
 				if !CurrentSpecReport().Failed() {
-					Expect(fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*2)).To(Succeed())
-					Expect(fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*2)).To(Succeed())
+					Eventually(func() error {
+						return fw.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*2)
+					}, 2*time.Minute, 10*time.Second).Should(Succeed())
+					Eventually(func() error {
+						return fw.AsKubeAdmin.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*2)
+					}, 2*time.Minute, 10*time.Second).Should(Succeed())
 				}
 			})
 
