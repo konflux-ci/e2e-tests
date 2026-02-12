@@ -730,3 +730,10 @@
   regexp: 'Repo forking failed: error checking repository .* GET https://api.github.com/repos/.*: 503 No server is currently available'
   test_dir:
   - run-kflux-prd-rh03-2026_02_10T15_58_41_209000000_00_00
+- caused_by: gitlab.com
+  id: gitlab_com_502_bad_gateway_during_task_retrieval
+  note: ''
+  reason: GitLab.com 502 Bad Gateway during task retrieval
+  regexp: 'fatal: unable to access ''https://gitlab.com/.*'': The requested URL returned error: 502'
+  test_dir:
+  - run-kfluxfedorap01-2026_02_12T08_56_18_317000000_00_00
