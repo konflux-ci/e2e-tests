@@ -77,7 +77,7 @@ func getPaCPull(annotations map[string]string) (string, error) {
 			logging.Logger.Debug("Found PaC merge request URL: %s", data)
 			return data, nil
 		} else {
-			return "", fmt.Errorf("failed parsing state: %s", buildStatusValue)
+			return "", fmt.Errorf("failed parsing merge-url: %s", buildStatusValue)
 		}
 	} else {
 		return "", fmt.Errorf("failed parsing: %s", buildStatusValue)
@@ -183,7 +183,7 @@ func getPaCPullNumber(f *framework.Framework, namespace, name string) (int, erro
 			return false, nil
 		}
 		if pull == "" {
-			logging.Logger.Debug("PaC component %s in namespace %s do not have PR yet", name, namespace)
+			logging.Logger.Debug("PaC component %s in namespace %s does not have PR yet", name, namespace)
 			return false, nil
 		}
 
@@ -394,7 +394,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		return logging.Logger.Fail(62, "Type assertion failed on component name: %+v", iface)
 	}
 
-	// Validate component build service account created
+	// Validate component was onboarded
 	_, err = logging.Measure(
 		ctx,
 		validateComponent,
@@ -434,7 +434,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		ctx.ComponentName,
 	)
 	if err != nil {
-		return logging.Logger.Fail(65, "Component failed validation: %v", err)
+		return logging.Logger.Fail(65, "Component failed providing initial PR: %v", err)
 	}
 
 	// Get merge request number
