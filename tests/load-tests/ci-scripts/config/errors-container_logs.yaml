@@ -799,3 +799,10 @@
   regexp: Timeout, server 10\.[0-9]+\.[0-9]+\.[0-9]+ not responding\.
   test_dir:
   - run-kflux-ocp-p01-2026_02_13T04_50_26_662000000_00_00
+- caused_by: quay.io
+  id: quay_io_dns_lookup_timed_out
+  note: ''
+  reason: Quay.io DNS lookup timed out
+  regexp: 'pinging container registry quay.io: Get "https://quay.io/v2/": dial tcp: lookup quay.io: i/o timeout'
+  test_dir:
+  - run-stone-stage-p01-2026_02_13T09_51_32_506000000_00_00
