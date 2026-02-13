@@ -781,14 +781,21 @@
 - caused_by: mirrors.fedoraproject.org
   id: mock_build_failed_to_download_metadata_due_to_zchunk_lead_error
   note: ''
-  reason: Mock build failed to download metadata from mirrors.fedoraproject.org due to zchunk lead error
+  reason: 'DNF metadata download failed: Unable to read zchunk lead'
   regexp: 'Librepo error: Checksum error .*fedora.*primary.xml.zck: Unable to read zchunk lead'
   test_dir:
   - run-stone-prd-rh01-2026_02_10T12_44_33_768000000_00_00
-- caused_by: fedoraproject.org
+- caused_by: mirrors.fedoraproject.org
   id: dnf_metadata_download_failed_unable_to_read_zchunk_lead
   note: ''
   reason: 'DNF metadata download failed: Unable to read zchunk lead'
-  regexp: 'Error: Unable to read zchunk lead'
+  regexp: '.librepo. lr_yum_check_checksum_of_md_record: Checksum check .* Error: Unable to read zchunk lead.*ERROR Command returned error: Failed to download metadata'
   test_dir:
   - run-stone-prd-rh01-2026_02_11T16_06_43_322000000_00_00
+- caused_by: MPC
+  id: ssh_connection_to_mpc_vm_timeouted
+  note: ''
+  reason: SSH connection to MPC VM timeouted
+  regexp: Timeout, server 10\.[0-9]+\.[0-9]+\.[0-9]+ not responding\.
+  test_dir:
+  - run-kflux-ocp-p01-2026_02_13T04_50_26_662000000_00_00
