@@ -324,6 +324,50 @@ func utilityRepoTemplatingComponentCleanup(f *framework.Framework, namespace, ap
 	return nil
 }
 
+// Check that ImageRepository CR was created before the MR/PR was created.
+// This is in regards to KONFLUX-9428.
+func checkImageRepositoryCreatedBeforePR(ctx *types.PerComponentContext, mergeRequestNumber int) error {
+	imageRepo, err := ctx.Framework.AsKubeDeveloper.ImageController.GetImageRepositoryByComponent(ctx.ParentContext.ParentContext.Namespace, ctx.ComponentName)
+	if err != nil {
+		return fmt.Errorf("unable to get ImageRepository for component %s: %v", ctx.ComponentName, err)
+	}
+	imageRepoCreation := imageRepo.CreationTimestamp.Time
+
+	var prCreation time.Time
+	if strings.Contains(ctx.ParentContext.ParentContext.ComponentRepoUrl, "gitlab.") {
+		repoId, err := getRepoIdFromRepoUrl(ctx.ParentContext.ParentContext.ComponentRepoUrl)
+		if err != nil {
+			return fmt.Errorf("failed to get repo ID from URL: %v", err)
+		}
+		mr, err := ctx.Framework.AsKubeAdmin.CommonController.Gitlab.GetMergeRequest(repoId, mergeRequestNumber)
+		if err != nil {
+			return fmt.Errorf("failed to get MR %d: %v", mergeRequestNumber, err)
+		}
+		if mr.CreatedAt != nil {
+			prCreation = *mr.CreatedAt
+		}
+	} else {
+		repoName, err := getRepoNameFromRepoUrl(ctx.ParentContext.ParentContext.ComponentRepoUrl)
+		if err != nil {
+			return fmt.Errorf("failed to get repo name from URL: %v", err)
+		}
+		pr, err := ctx.Framework.AsKubeAdmin.CommonController.Github.GetPullRequest(repoName, mergeRequestNumber)
+		if err != nil {
+			return fmt.Errorf("failed to get PR %d: %v", mergeRequestNumber, err)
+		}
+		if pr.CreatedAt != nil {
+			prCreation = *pr.CreatedAt
+		}
+	}
+
+	if imageRepoCreation.After(prCreation) {
+		return fmt.Errorf("ImageRepository created after PR/MR: ImageRepo %v, PR %v", imageRepoCreation, prCreation)
+	}
+	logging.Logger.Debug("ImageRepository and PR/MR creation time looks OK: %v <= %v", imageRepoCreation, prCreation)
+
+	return nil
+}
+
 func HandleComponent(ctx *types.PerComponentContext) error {
 	if ctx.ParentContext.ParentContext.Opts.JourneyReuseComponents && ctx.ParentContext.JourneyRepeatIndex > 0 {
 		// This is a reused component. We need to get the name from the component from the first journey.
@@ -443,6 +487,12 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 		return logging.Logger.Fail(66, "Type assertion failed on pull: %+v", iface)
 	}
 
+	// Check that ImageRepository CR was created before the MR/PR
+	err = checkImageRepositoryCreatedBeforePR(ctx, mergeRequestNumber)
+	if err != nil {
+		return logging.Logger.Fail(67, "Creation time check failed for IR and PR: %v", err)
+	}
+
 	// If this is supposed to be a multi-arch build, we do not care about
 	// current build, we just merge the PR, update pipelines and trigger
 	// actual multi-arch build
@@ -473,7 +523,7 @@ func HandleComponent(ctx *types.PerComponentContext) error {
 			placeholders,
 		)
 		if err != nil {
-			return logging.Logger.Fail(67, "Repo-templating workflow component cleanup failed: %v", err)
+			return logging.Logger.Fail(68, "Repo-templating workflow component cleanup failed: %v", err)
 		}
 
 	}
