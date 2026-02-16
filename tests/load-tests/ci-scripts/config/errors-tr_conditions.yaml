@@ -203,3 +203,10 @@
   reason: SKIP
   regexp: step-build.*exited with code 125
   test_dir: []
+- caused_by: cluster
+  id: taskrun_pod_exceeded_available_resources
+  note: ''
+  reason: TaskRun Pod exceeded available resources
+  regexp: '"message": "TaskRun Pod exceeded available resources", "reason": "ExceededNodeResources"'
+  test_dir:
+  - run-kflux-prd-rh03-2026_02_15T16_16_58_697000000_00_00

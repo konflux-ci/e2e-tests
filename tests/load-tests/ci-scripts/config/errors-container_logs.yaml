@@ -806,3 +806,52 @@
   regexp: 'pinging container registry quay.io: Get "https://quay.io/v2/": dial tcp: lookup quay.io: i/o timeout'
   test_dir:
   - run-stone-stage-p01-2026_02_13T09_51_32_506000000_00_00
+- caused_by: quay.io
+  id: image_pull_failed_because_quay_io_unexpected_end_of_json_input
+  note: ''
+  reason: Image pull failed because quay.io unexpected end of JSON input
+  regexp: 'Error parsing image name .*: decoding bearer token .*: unexpected end of JSON input'
+  test_dir:
+  - run-kflux-ocp-p01-2026_02_13T18_50_37_559000000_00_00
+- caused_by: quay.io
+  id: conforma_validation_failed_to_fetch_policy_because_quay_io_mismatch_content_length
+  note: ''
+  reason: Conforma validation failed to fetch policy because quay.io mismatch Content-Length
+  regexp: 'Error: pulling policy: failed to perform .Fetch. on source: GET .https://quay.io/.* mismatch Content-Length'
+  test_dir:
+  - run-stone-stg-rh01-2026_02_14T13_39_19_063000000_00_00
+- caused_by: quay.io
+  id: clamav_scan_upload_failed_because_quay_io_401_unauthorized
+  note: ''
+  reason: Clamav scan upload failed because quay.io 401 Unauthorized
+  regexp: 'Error response from registry:.*https://quay.io/.* response status code 401: Unauthorized'
+  test_dir:
+  - run-kflux-prd-rh02-2026_02_14T13_25_43_925000000_00_00
+- caused_by: quay.io
+  id: preflight_check_failed_because_quay_io_returned_invalid_character
+  note: ''
+  reason: Preflight check failed because quay.io returned invalid character <
+  regexp: 'Error: invalid manifest.: invalid character ''<'' looking for beginning of value'
+  test_dir:
+  - run-stone-prod-p02-2026_02_14T13_18_50_515000000_00_00
+- caused_by: quay.io
+  id: preflight_check_failed_because_quay_io_unexpected_end_of_json_input
+  note: ''
+  reason: Preflight check failed because quay.io unexpected end of JSON input
+  regexp: 'Error: failed to pull remote container: unexpected end of JSON input'
+  test_dir:
+  - run-kflux-prd-rh02-2026_02_14T19_11_19_760000000_00_00
+- caused_by: quay.io
+  id: trusted_artifact_upload_failed_because_quay_io_504_gateway_timeout
+  note: ''
+  reason: Trusted artifact upload failed because quay.io 504 Gateway Timeout
+  regexp: 'Error response from registry:.*PUT .https://quay.io/.*: response status code 504: Gateway Timeout'
+  test_dir:
+  - run-stone-prod-p02-2026_02_14T19_01_17_266000000_00_00
+- caused_by: quay.io
+  id: multi_arch_build_failed_because_cdn01_quay_io_connection_reset_by_peer_or_timeout
+  note: ''
+  reason: Multi-arch build failed because cdn01.quay.io connection reset by peer or timeout
+  regexp: 'Error: copying system image from manifest list:.*cdn01.quay.io.*(connection reset by peer|net/http: TLS handshake timeout)'
+  test_dir:
+  - run-stone-stg-rh01-2026_02_16T02_09_17_722000000_00_00

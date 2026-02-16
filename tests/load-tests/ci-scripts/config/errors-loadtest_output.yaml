@@ -206,7 +206,7 @@
   id: timeout_getting_pac_pull_number_when_validating_component
   note: ''
   reason: Timeout getting PaC pull number when validating component
-  regexp: 'Component failed providing initial PR: Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded'
+  regexp: 'Component failed (providing initial PR|validation): Unable to get PaC pull number for component .* in namespace .*: context deadline exceeded'
   test_dir:
   - run-stone-prod-p02-2026_01_08T17_44_57_997000000_00_00
 - caused_by: github.com
@@ -737,3 +737,17 @@
   regexp: 'fatal: unable to access ''https://gitlab.com/.*'': The requested URL returned error: 502'
   test_dir:
   - run-kfluxfedorap01-2026_02_12T08_56_18_317000000_00_00
+- caused_by: quay.io
+  id: pipeline_can_t_be_run_because_bundle_resolution_failed_with_invalid_character
+  note: ''
+  reason: Pipeline can't be Run because bundle resolution failed with invalid character <
+  regexp: 'Pipeline [^ ]+ can''t be Run; it contains Tasks that don''t exist: Couldn''t retrieve Task .*: cannot retrieve the oci image: invalid character ''<'' looking for beginning of value'
+  test_dir:
+  - run-kflux-rhel-p01-2026_02_14T13_41_55_374000000_00_00
+- caused_by: github.com
+  id: repo_templating_cleanup_failed_because_github_com_net_http_tls_handshake_timeout
+  note: ''
+  reason: 'Repo-templating cleanup failed because github.com net/http: TLS handshake timeout'
+  regexp: 'Repo-templating workflow component cleanup failed:.*github.com.*net/http: TLS handshake timeout'
+  test_dir:
+  - run-kflux-rhel-p01-2026_02_15T02_40_13_111000000_00_00
