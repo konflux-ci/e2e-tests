@@ -15,7 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
-	gh "github.com/google/go-github/v44/github"
+	gh "github.com/google/go-github/v83/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
