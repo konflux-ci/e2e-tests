@@ -1252,6 +1252,16 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
+	extraFilter := strings.TrimSpace(os.Getenv("E2E_EXTRA_LABEL_FILTER"))
+	if extraFilter != "" {
+		if strings.Contains(extraFilter, "||") {
+			labelsToRun = fmt.Sprintf("(%s) && (%s)", labelsToRun, extraFilter)
+		} else {
+			labelsToRun = fmt.Sprintf("(%s) && %s", labelsToRun, extraFilter)
+		}
+		klog.Infof("Extra label filter applied: running tests with label filter '%s'", labelsToRun)
+	}
+
 	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color", "--fail-on-empty",
 		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}

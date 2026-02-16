@@ -2,6 +2,7 @@ package git
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	gitlab2 "github.com/xanzy/go-gitlab"
@@ -92,6 +93,13 @@ func (g *GitLabClient) MergePullRequest(repository string, prNumber int) (*PullR
 	}, nil
 }
 
+func (g *GitLabClient) UpdatePullRequestBranch(repository string, prNumber int) error {
+	// GitLab handles MR branch updates via rebase
+	opts := gitlab2.RebaseMergeRequestOptions{}
+	_, err := g.GetClient().MergeRequests.RebaseMergeRequest(repository, prNumber, &opts)
+	return err
+}
+
 func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base string) (*PullRequest, error) {
 	opts := gitlab2.CreateMergeRequestOptions{
 		Title:        gitlab2.Ptr(title),
@@ -129,8 +137,14 @@ func (g *GitLabClient) DeleteBranchAndClosePullRequest(repository string, prNumb
 }
 
 func (g *GitLabClient) ForkRepository(sourceRepoName, targetRepoName string) error {
-	sourceComponents := strings.Split(sourceRepoName, "/")
-	targetComponents := strings.Split(targetRepoName, "/")
+	sourceComponents := strings.SplitN(sourceRepoName, "/", 2)
+	targetComponents := strings.SplitN(targetRepoName, "/", 2)
+	if len(sourceComponents) != 2 || sourceComponents[0] == "" || sourceComponents[1] == "" {
+		return fmt.Errorf("source repo name must be \"org/name\", got %q", sourceRepoName)
+	}
+	if len(targetComponents) != 2 || targetComponents[0] == "" || targetComponents[1] == "" {
+		return fmt.Errorf("target repo name must be \"org/name\", got %q", targetRepoName)
+	}
 	_, err := g.GitlabClient.ForkRepository(sourceComponents[0], sourceComponents[1], targetComponents[0], targetComponents[1])
 	if err != nil {
 		return err

@@ -12,6 +12,9 @@ linters:
     rules:
       - path: (.+)\.go$
         text: composites
+      # Allow dot imports (Ginkgo/Gomega DSL) when file has //nolint:staticcheck
+      - linters: [staticcheck]
+        text: "ST1001:"
     paths:
       - third_party$
       - builtin$
