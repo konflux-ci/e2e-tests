@@ -1252,6 +1252,24 @@ func CleanWorkload() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
+	// E2E_EXTRA_LABEL_FILTER allows appending additional Ginkgo label expressions
+	// to narrow down test execution. Accepts any valid Ginkgo label expression.
+	// Examples:
+	//   E2E_EXTRA_LABEL_FILTER=github                   -> only GitHub provider tests
+	//   E2E_EXTRA_LABEL_FILTER=gitlab                   -> only GitLab provider tests
+	//   E2E_EXTRA_LABEL_FILTER=multi-component          -> only multi-component tests
+	//   E2E_EXTRA_LABEL_FILTER=github && pac-build      -> GitHub PaC build tests only
+	//   E2E_EXTRA_LABEL_FILTER=github || gitlab         -> GitHub or GitLab tests
+	extraFilter := strings.TrimSpace(os.Getenv("E2E_EXTRA_LABEL_FILTER"))
+	if extraFilter != "" {
+		if strings.Contains(extraFilter, "||") {
+			labelsToRun = fmt.Sprintf("(%s) && (%s)", labelsToRun, extraFilter)
+		} else {
+			labelsToRun = fmt.Sprintf("(%s) && %s", labelsToRun, extraFilter)
+		}
+		klog.Infof("Extra label filter applied: running tests with label filter '%s'", labelsToRun)
+	}
+
 	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color",
 		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}

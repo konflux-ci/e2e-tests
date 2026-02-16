@@ -214,11 +214,11 @@ const (
 	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
 	DefaultImageTagExpiration string = "6h"
 
-	PipelineRunPollingInterval = 10 * time.Second
+	PipelineRunPollingInterval = 20 * time.Second
 
-	// Increased to 1.5 hrs from 10 min due to KFLUXBUGS-24 or SRVKP-4240,
-	// and since now we're frequently hitting the worst case
-	ChainsAttestationTimeout = 90 * time.Minute
+	// Reduced from 90 min: if attestation hasn't happened in 20 min, it won't.
+	// 90 min held the entire AfterAll block hostage on failure.
+	ChainsAttestationTimeout = 20 * time.Minute
 
 	JsonStageUsersPath = "users.json"
 

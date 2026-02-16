@@ -92,6 +92,13 @@ func (g *GitLabClient) MergePullRequest(repository string, prNumber int) (*PullR
 	}, nil
 }
 
+func (g *GitLabClient) UpdatePullRequestBranch(repository string, prNumber int) error {
+	// GitLab handles MR branch updates via rebase
+	opts := gitlab2.RebaseMergeRequestOptions{}
+	_, err := g.GetClient().MergeRequests.RebaseMergeRequest(repository, prNumber, &opts)
+	return err
+}
+
 func (g *GitLabClient) CreatePullRequest(repository, title, body, head, base string) (*PullRequest, error) {
 	opts := gitlab2.CreateMergeRequestOptions{
 		Title:        gitlab2.Ptr(title),

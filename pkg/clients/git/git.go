@@ -38,6 +38,7 @@ type Client interface {
 	GetFile(repository, pathToFile, branchName string) (*RepositoryFile, error)
 	CreatePullRequest(repository, title, body, head, base string) (*PullRequest, error)
 	MergePullRequest(repository string, prNumber int) (*PullRequest, error)
+	UpdatePullRequestBranch(repository string, prNumber int) error
 	DeleteBranchAndClosePullRequest(repository string, prNumber int) error
 	CleanupWebhooks(repository, clusterAppDomain string) error
 	ForkRepository(sourceRepoName, targetRepoName string) error

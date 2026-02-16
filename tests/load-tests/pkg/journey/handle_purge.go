@@ -12,12 +12,12 @@ import (
 func purgeStage(f *framework.Framework, namespace string) error {
 	var err error
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*5)
+	err = f.AsKubeDeveloper.HasController.DeleteAllApplicationsInASpecificNamespace(namespace, time.Minute*2)
 	if err != nil {
 		return fmt.Errorf("error when deleting applications in namespace %s: %v", namespace, err)
 	}
 
-	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*5)
+	err = f.AsKubeDeveloper.HasController.DeleteAllComponentsInASpecificNamespace(namespace, time.Minute*2)
 	if err != nil {
 		return fmt.Errorf("error when deleting components in namespace %s: %v", namespace, err)
 	}
