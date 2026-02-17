@@ -284,7 +284,7 @@ class StatsProcessor:
             ),
             "error_messages": self.error_messages,
             "error_caused_by": self.caused_by_list,
-            "error_caused_by_simple": ", ".join(self.caused_by_list),
+            "error_caused_by_simple": ", ".join(set(self.caused_by_list)),
         }
 
         print(f"Errors detected: {len(self.error_messages)}")
