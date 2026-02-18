@@ -3,8 +3,8 @@ package integration
 import (
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
 	"github.com/google/go-github/v44/github"
@@ -750,7 +750,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("failing to get snapshot integration test status detail %s/%s", groupSnapshot.Namespace, groupSnapshot.Name)
 					}
 
-					if !strings.Contains(statusDetail.Details, "denied the request: validation failed: expected exactly one, got neither: spec.pipelineRef, spec.pipelineSpec.") && !strings.Contains(statusDetail.Details, "denied the request: expected exactly one, got neither: pipelineRef, pipelineSpec.") {
+					// Accept Tekton webhook, Tekton short form, or Kueue defaulter webhook rejection messages
+					invalidResolutionMsg := "expected exactly one, got neither"
+					validRefs := strings.Contains(statusDetail.Details, "spec.pipelineRef, spec.pipelineSpec") || strings.Contains(statusDetail.Details, "pipelineRef, pipelineSpec")
+					if !strings.Contains(statusDetail.Details, "denied the request") || !strings.Contains(statusDetail.Details, invalidResolutionMsg) || !validRefs {
 						return fmt.Errorf("failing to find the integration test status detail %s/%s for invalid resolution, but found status details %s", groupSnapshot.Namespace, groupSnapshot.Name, statusDetail.Details)
 					}
 
