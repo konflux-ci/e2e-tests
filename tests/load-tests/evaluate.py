@@ -307,6 +307,12 @@ def main():
             stats[m]["pass"]["when"] = count_stats_when(stats_raw[m]["pass"]["when"])
             stats[m]["fail"]["when"] = count_stats_when(stats_raw[m]["fail"]["when"])
 
+        s = stats[m]["pass"]["duration"]["samples"] + stats[m]["fail"]["duration"]["samples"]
+        if s == 0:
+            stats[m]["error_rate"] = None
+        else:
+            stats[m]["error_rate"] = stats[m]["fail"]["duration"]["samples"] / s
+
     for k, v in stats_passes.items():
         if v.complete(expected_metrics):
             kpi_successes += 1
