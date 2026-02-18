@@ -751,3 +751,17 @@
   regexp: 'Repo-templating workflow component cleanup failed:.*github.com.*net/http: TLS handshake timeout'
   test_dir:
   - run-kflux-rhel-p01-2026_02_15T02_40_13_111000000_00_00
+- caused_by: github.com
+  id: github_api_request_failed_due_to_timeout
+  note: ''
+  reason: GitHub API request failed due to timeout
+  regexp: 'failed to get .*: Get "https://api.github.com/.*": dial tcp .*: i/o timeout'
+  test_dir:
+  - run-kflux-prd-rh02-2026_02_18T05_22_52_981000000_00_00
+- caused_by: cluster
+  id: release_plan_creation_failed_due_to_resource_quota_conflict
+  note: ''
+  reason: Release Plan creation failed due to resource quota conflict
+  regexp: 'Release Plan failed creation: unable to create the releasePlan [^ ]+ in [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified'
+  test_dir:
+  - run-kflux-prd-rh02-2026_02_17T19_23_09_562000000_00_00

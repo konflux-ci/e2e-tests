@@ -855,3 +855,17 @@
   regexp: 'Error: copying system image from manifest list:.*cdn01.quay.io.*(connection reset by peer|net/http: TLS handshake timeout)'
   test_dir:
   - run-stone-stg-rh01-2026_02_16T02_09_17_722000000_00_00
+- caused_by: MPC
+  id: build_via_ssh_failed_due_to_user_namespace_error
+  note: ''
+  reason: Build via SSH failed due to user namespace error
+  regexp: 'Build via ssh Error: cannot re-exec process to join the existing user namespace'
+  test_dir:
+  - run-stone-prod-p02-2026_02_18T01_58_48_487000000_00_00
+- caused_by: fedoraproject.org
+  id: rpm_build_failed_because_dnf_could_not_locate_packages_metadata_issue
+  note: ''
+  reason: RPM build failed because DNF could not locate packages (metadata issue)
+  regexp: 'ERROR: Can''t get location for [a-zA-Z0-9_.-]+'
+  test_dir:
+  - run-stone-prd-rh01-2026_02_17T08_00_14_656000000_00_00
