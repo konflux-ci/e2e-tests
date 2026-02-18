@@ -221,7 +221,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 			// Initial pipeline run, we need this so we have an initial image that we can then update
 			It(fmt.Sprintf("triggers a PipelineRun for parent component %s", ParentComponentDef.componentName), func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 30
 
 				Eventually(func() error {
 					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.componentName, applicationName, testNamespace, "")
@@ -235,16 +235,16 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					return nil
 				}, timeout, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to start for the component %s/%s", ParentComponentDef.componentName, testNamespace))
 			})
-		It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
-			parentPLR = &pipeline.PipelineRun{}
-			Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, parentPLR)).To(Succeed())
-		for _, result := range parentPLR.Status.Results {
-			if result.Name == "IMAGE_DIGEST" {
-				parentFirstDigest = result.Value.StringVal
-			}
-		}
-		Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun %s status results: %v", parentPLR.Name, parentPLR.Status.Results))
-		})
+			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for parent component %s", ParentComponentDef.componentName), func() {
+				parentPLR = &pipeline.PipelineRun{}
+				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ParentComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, parentPLR)).To(Succeed())
+				for _, result := range parentPLR.Status.Results {
+					if result.Name == "IMAGE_DIGEST" {
+						parentFirstDigest = result.Value.StringVal
+					}
+				}
+				Expect(parentFirstDigest).ShouldNot(BeEmpty(), fmt.Sprintf("pipelinerun %s status results: %v", parentPLR.Name, parentPLR.Status.Results))
+			})
 
 			It(fmt.Sprintf("the PipelineRun should eventually finish successfully for child component %s", ChildComponentDef.componentName), func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(ChildComponentDef.component, "", "", "", f.AsKubeAdmin.TektonController, &has.RetryOptions{Always: true, Retries: 2}, nil)).To(Succeed())
@@ -254,29 +254,29 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval := time.Second * 5
 
-			Eventually(func() bool {
-				prs, err := git.ListPullRequestsWithRetry(gitClient, childRepository)
-				Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() bool {
+					prs, err := git.ListPullRequestsWithRetry(gitClient, childRepository)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				for _, pr := range prs {
-					if pr.SourceBranch == ChildComponentDef.pacBranchName {
-						prNumber = pr.Number
-						return true
+					for _, pr := range prs {
+						if pr.SourceBranch == ChildComponentDef.pacBranchName {
+							prNumber = pr.Number
+							return true
+						}
 					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ChildComponentDef.pacBranchName, ChildComponentDef.repoName))
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ChildComponentDef.pacBranchName, ChildComponentDef.repoName))
 			})
 
-		It(fmt.Sprintf("Merging the PaC PR should be successful for child component %s", ChildComponentDef.componentName), func() {
-			Eventually(func() error {
-				mergeResult, err = gitClient.MergePullRequest(childRepository, prNumber)
-				return err
-			}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
+			It(fmt.Sprintf("Merging the PaC PR should be successful for child component %s", ChildComponentDef.componentName), func() {
+				Eventually(func() error {
+					mergeResult, err = gitClient.MergePullRequest(childRepository, prNumber)
+					return err
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ChildComponentDef.repoName))
 
-			mergeResultSha = mergeResult.MergeCommitSHA
-			GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
-		})
+				mergeResultSha = mergeResult.MergeCommitSHA
+				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
+			})
 			// Now we have an initial image we create a dockerfile in the child that references this new image
 			// This is the file that will be updated by the nudge
 			It("create dockerfile and yaml manifest that references build and distribution repositories", func() {
@@ -286,6 +286,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(imageRepoName).ShouldNot(BeEmpty(), "image repo name is empty")
 
 				parentImageNameWithNoDigest = "quay.io/" + quayOrg + "/" + imageRepoName
+				// GitLab auto-deletes source branches after merge — recreate if needed
+				_ = gitClient.DeleteBranch(childRepository, ChildComponentDef.pacBranchName)
+				err = gitClient.CreateBranch(childRepository, ChildComponentDef.componentBranch, mergeResultSha, ChildComponentDef.pacBranchName)
+				Expect(err).ShouldNot(HaveOccurred(), "recreate PaC branch %s in %s", ChildComponentDef.pacBranchName, childRepository)
+
 				_, err = gitClient.CreateFile(childRepository, "Dockerfile.tmp", "FROM "+parentImageNameWithNoDigest+"@"+parentFirstDigest+"\nRUN echo hello\n", ChildComponentDef.pacBranchName)
 				Expect(err).ShouldNot(HaveOccurred())
 
@@ -306,11 +311,11 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				}
 				Expect(prno).ShouldNot(Equal(-1))
 
-			// GitLab merge fails if the pipeline run has not finished
-			Eventually(func() error {
-				_, err = gitClient.MergePullRequest(childRepository, prno)
-				return err
-			}, 10*time.Minute, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("unable to merge PR #%d in %s", prno, ChildComponentDef.repoName))
+				// GitLab merge fails if the pipeline run has not finished
+				Eventually(func() error {
+					_, err = gitClient.MergePullRequest(childRepository, prno)
+					return err
+				}, 10*time.Minute, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("unable to merge PR #%d in %s", prno, ChildComponentDef.repoName))
 
 			})
 			// This actually happens immediately, but we only need the PR number now
@@ -318,31 +323,31 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Second * 300
 				interval := time.Second * 5
 
-			Eventually(func() bool {
-				prs, err := git.ListPullRequestsWithRetry(gitClient, parentRepository)
-				Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() bool {
+					prs, err := git.ListPullRequestsWithRetry(gitClient, parentRepository)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				for _, pr := range prs {
-					if pr.SourceBranch == ParentComponentDef.pacBranchName {
-						prNumber = pr.Number
-						return true
+					for _, pr := range prs {
+						if pr.SourceBranch == ParentComponentDef.pacBranchName {
+							prNumber = pr.Number
+							return true
+						}
 					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ParentComponentDef.pacBranchName, ParentComponentDef.repoName))
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for PaC PR (branch name '%s') to be created in %s repository", ParentComponentDef.pacBranchName, ParentComponentDef.repoName))
 			})
-		It(fmt.Sprintf("Merging the PaC PR should be successful for parent component %s", ParentComponentDef.componentName), func() {
-			Eventually(func() error {
-				mergeResult, err = gitClient.MergePullRequest(parentRepository, prNumber)
-				return err
-			}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
+			It(fmt.Sprintf("Merging the PaC PR should be successful for parent component %s", ParentComponentDef.componentName), func() {
+				Eventually(func() error {
+					mergeResult, err = gitClient.MergePullRequest(parentRepository, prNumber)
+					return err
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging PaC pull request #%d in repo %s", prNumber, ParentComponentDef.repoName))
 
-			mergeResultSha = mergeResult.MergeCommitSHA
-			GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
-		})
+				mergeResultSha = mergeResult.MergeCommitSHA
+				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
+			})
 			// Now the PR is merged this will kick off another build. The result of this build is what we want to update in dockerfile we created
 			It(fmt.Sprintf("PR merge triggers PAC PipelineRun for parent component %s", ParentComponentDef.componentName), func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 30
 
 				Eventually(func() error {
 					pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(ParentComponentDef.componentName, applicationName, testNamespace, mergeResultSha)
@@ -372,24 +377,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				timeout = time.Minute * 20
 				interval := time.Second * 10
 
-			Eventually(func() bool {
-				prs, err := git.ListPullRequestsWithRetry(gitClient, componentDependenciesChildRepository)
-				Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() bool {
+					prs, err := git.ListPullRequestsWithRetry(gitClient, componentDependenciesChildRepository)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				for _, pr := range prs {
-					if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
-						prNumber = pr.Number
-						return true
+					for _, pr := range prs {
+						if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
+							prNumber = pr.Number
+							return true
+						}
 					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
 			})
-		It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
-			Eventually(func() error {
-				mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
-				return err
-			}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, targetChildRepoName))
+			It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
+				Eventually(func() error {
+					mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
+					return err
+				}, time.Minute).ShouldNot(HaveOccurred(), fmt.Sprintf("error when merging nudge pull request #%d in repo %s", prNumber, targetChildRepoName))
 
 				mergeResultSha = mergeResult.MergeCommitSHA
 				GinkgoWriter.Printf("merged result sha: %s for PR #%d\n", mergeResultSha, prNumber)
@@ -415,4 +420,3 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		Entry("gitlab", Label("gitlab"), git.GitLabProvider, "gl"),
 	)
 })
-

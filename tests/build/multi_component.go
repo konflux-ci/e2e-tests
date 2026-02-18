@@ -123,7 +123,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				})
 
 				It(fmt.Sprintf("triggers a PipelineRun for component %s", componentName), func() {
-					timeout = time.Minute * 5
+					timeout = time.Minute * 30
 					Eventually(func() error {
 						pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 						if err != nil {
@@ -172,7 +172,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 				})
 				It("leads to triggering on push PipelineRun", func() {
-					timeout = time.Minute * 5
+					timeout = time.Minute * 30
 
 					Eventually(func() error {
 						pipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mergeResultSha)

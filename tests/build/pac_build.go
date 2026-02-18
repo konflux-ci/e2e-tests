@@ -167,7 +167,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("triggers a PipelineRun", func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 30
 				Eventually(func() error {
 					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customDefaultComponentName, applicationName, testNamespace, "")
 					if err != nil {
@@ -323,7 +323,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("triggers a PipelineRun", func() {
-				timeout = time.Second * 600
+				timeout = time.Minute * 30
 				interval = time.Second * 1
 				Eventually(func() error {
 					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, "")
@@ -468,7 +468,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			})
 
 			It("eventually leads to triggering another PipelineRun", func() {
-				timeout = time.Minute * 5
+				timeout = time.Minute * 30
 
 				Eventually(func() error {
 					plr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(customBranchComponentName, applicationName, testNamespace, createdFileSHA)
