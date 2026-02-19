@@ -22,11 +22,14 @@ import (
 	"flag"
 
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func init() {
 
 	klog.SetLogger(ginkgo.GinkgoLogr)
+	ctrl.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter)))
 
 	verbosity := 1
 	if v, err := strconv.ParseUint(os.Getenv("KLOG_VERBOSITY"), 10, 8); err == nil {

@@ -13,7 +13,7 @@ var (
 	quayApiUrl = "https://quay.io/api/v1"
 	// quayOrg    = utils.GetEnv("IMAGE_CONTROLLER_QUAY_ORG", "hacbs-release-tests")
 	quayToken  = utils.GetEnv("IMAGE_CONTROLLER_QUAY_ORG_TOKEN", "")
-	quayClient = quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayToken, quayApiUrl)
+	quayClient = quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayToken, quayApiUrl)
 )
 
 // repoURL format example: quay.io/redhat-appstudio-qe/dcmetromap

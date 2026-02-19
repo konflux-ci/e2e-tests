@@ -206,13 +206,30 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 	app := component.Spec.Application
 	pr := &pipeline.PipelineRun{}
 
+	// Fail fast if the PipelineRun is never created.
+	// Without this, we burn the full 30-minute completion timeout
+	// just polling for a resource that may never appear.
+	const pipelineRunCreationTimeout = 5 * time.Minute
+
 	for {
+		creationDeadline := time.Now().Add(pipelineRunCreationTimeout)
+		prFound := false
+
 		err := wait.PollUntilContextTimeout(context.Background(), constants.PipelineRunPollingInterval, 30*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 			pr, err = h.GetComponentPipelineRunWithType(component.GetName(), app, component.GetNamespace(), pipelineType, sha, eventType)
 
 			if err != nil {
+				if !prFound && time.Now().After(creationDeadline) {
+					return false, fmt.Errorf("PipelineRun was not created for Component %s/%s within %v",
+						component.GetNamespace(), component.GetName(), pipelineRunCreationTimeout)
+				}
 				ginkgo.GinkgoWriter.Printf("PipelineRun has not been created yet for the Component %s/%s\n", component.GetNamespace(), component.GetName())
 				return false, nil
+			}
+
+			if !prFound {
+				prFound = true
+				ginkgo.GinkgoWriter.Printf("PipelineRun %s found for Component %s/%s\n", pr.Name, component.GetNamespace(), component.GetName())
 			}
 
 			ginkgo.GinkgoWriter.Printf("PipelineRun %s reason: %s\n", pr.Name, pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason())
@@ -236,7 +253,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 		})
 
 		if err != nil {
-			if pr == nil {
+			if !prFound {
 				return fmt.Errorf("PipelineRun cannot be created for the Component %s/%s", component.GetNamespace(), component.GetName())
 			}
 			ginkgo.GinkgoWriter.Printf("attempt %d/%d: PipelineRun %q failed: %+v", attempts, r.Retries+1, pr.GetName(), err)
@@ -254,6 +271,10 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
 				return fmt.Errorf("unable to retrigger pipelinerun for component %s:%s: %+v", component.GetNamespace(), component.GetName(), err)
 			}
+			// Clear event-type filter after retrigger: the retrigger mechanism (e.g. git push)
+			// may produce a PipelineRun with a different event-type than the original (e.g.
+			// "push" instead of "incoming"). The new sha is sufficient to identify the right PLR.
+			eventType = ""
 			attempts++
 		} else {
 			break
@@ -502,33 +523,32 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			return "", err
 		}
 	}
-	watch, err := h.PipelineClient().TektonV1().PipelineRuns(component.GetNamespace()).Watch(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return "", fmt.Errorf("error when initiating watch for new PipelineRun after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
-	}
-	newPRFound := false
+	// Poll for the new PipelineRun instead of using a watch to avoid a race
+	// condition where the PipelineRun is created between the retrigger action
+	// and the watch setup (which would cause the watch to miss the event).
+	deadline := time.After(5 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-time.After(5 * time.Minute):
+		case <-deadline:
 			return "", fmt.Errorf("timed out waiting for new PipelineRun to appear after retriggering it for component %s:%s", component.GetNamespace(), component.GetName())
-		case event := <-watch.ResultChan():
-			if event.Object == nil {
+		case <-ticker.C:
+			pipelineRuns, listErr := h.PipelineClient().TektonV1().PipelineRuns(component.GetNamespace()).List(context.Background(), metav1.ListOptions{})
+			if listErr != nil {
+				ginkgo.GinkgoWriter.Printf("failed to list PipelineRuns while waiting for retrigger: %v\n", listErr)
 				continue
 			}
-			newPR, ok := event.Object.(*pipeline.PipelineRun)
-			if !ok {
-				continue
+			for i := range pipelineRuns.Items {
+				newPR := &pipelineRuns.Items[i]
+				if pr.GetGenerateName() == newPR.GetGenerateName() && pr.GetName() != newPR.GetName() {
+					ginkgo.GinkgoWriter.Printf("New PipelineRun %s found after retrigger for component %s/%s\n", newPR.GetName(), component.GetNamespace(), component.GetName())
+					return sha, nil
+				}
 			}
-			if pr.GetGenerateName() == newPR.GetGenerateName() && pr.GetName() != newPR.GetName() {
-				newPRFound = true
-			}
-		}
-		if newPRFound {
-			break
 		}
 	}
-
-	return sha, nil
 }
 
 func (h *HasController) CheckImageRepositoryExists(namespace, componentName string) wait.ConditionFunc {

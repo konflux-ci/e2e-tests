@@ -338,25 +338,38 @@ var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel), func()
 				})
 			})
 
-			ginkgo.When("push pipelinerun is retriggered", func() {
-				ginkgo.It("should eventually succeed", func() {
-					gomega.Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), buildcontrollers.BuildRequestAnnotationName, buildcontrollers.BuildRequestTriggerPaCBuildAnnotationValue, userNamespace)).To(gomega.Succeed())
-					// Check the pipelinerun is triggered
-					gomega.Eventually(func() error {
-						testPipelinerun, err = fw.AsKubeAdmin.HasController.GetComponentPipelineRunWithType(component.GetName(), appSpec.ApplicationName, userNamespace, "build", "", "incoming")
-						if err != nil {
-							ginkgo.GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", userNamespace, component.GetName())
-							return err
+		ginkgo.When("push pipelinerun is retriggered", func() {
+			ginkgo.It("should eventually succeed", func() {
+				// Record existing PLR name so we can distinguish old from new after retrigger
+				existingPLRName := ""
+				if testPipelinerun != nil {
+					existingPLRName = testPipelinerun.GetName()
+				}
+
+				gomega.Expect(fw.AsKubeAdmin.HasController.SetComponentAnnotation(component.GetName(), buildcontrollers.BuildRequestAnnotationName, buildcontrollers.BuildRequestTriggerPaCBuildAnnotationValue, userNamespace)).To(gomega.Succeed())
+				// Check the pipelinerun is triggered
+				gomega.Eventually(func() error {
+					prs, err := fw.AsKubeAdmin.HasController.GetComponentPipelineRunsWithType(component.GetName(), appSpec.ApplicationName, userNamespace, "build", "", "incoming")
+					if err != nil {
+						ginkgo.GinkgoWriter.Printf("PipelineRun is not been retriggered yet for the component %s/%s\n", userNamespace, component.GetName())
+						return err
+					}
+					// Look for a NEW PipelineRun (different name from the existing one)
+					for i := range *prs {
+						candidate := &(*prs)[i]
+						if candidate.GetName() != existingPLRName && candidate.HasStarted() {
+							testPipelinerun = candidate
+							ginkgo.GinkgoWriter.Printf("New PipelineRun %s found after retrigger (old: %s)\n", testPipelinerun.GetName(), existingPLRName)
+							return nil
 						}
-						if !testPipelinerun.HasStarted() {
-							return fmt.Errorf("pipelinerun %s/%s hasn't been started yet", testPipelinerun.GetNamespace(), testPipelinerun.GetName())
-						}
-						return nil
-					}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", userNamespace, component.GetName()))
-					// Should succeed
-					gomega.Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, testPipelinerun)).To(gomega.Succeed())
-				})
+					}
+					return fmt.Errorf("no new PipelineRun found yet (existing: %s)", existingPLRName)
+				}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", userNamespace, component.GetName()))
+			// Should succeed — incoming filter is correct since the annotation trigger creates incoming PLRs;
+			// components.go handles clearing the filter if the internal retry changes event type
+			gomega.Expect(fw.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", fw.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, testPipelinerun)).To(gomega.Succeed())
 			})
+		})
 
 			ginkgo.When("Integration Test PipelineRun is created", ginkgo.Label(upstreamKonfluxTestLabel), func() {
 				ginkgo.It("should eventually complete successfully", func() {
