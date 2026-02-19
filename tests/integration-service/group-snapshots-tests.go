@@ -822,10 +822,14 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 						return fmt.Errorf("failing to get snapshot integration test status detail %s/%s", groupSnapshot.Namespace, groupSnapshot.Name)
 					}
 
-					// Accept Tekton webhook, Tekton short form, or Kueue defaulter webhook rejection messages
+					// Accept Tekton webhook, Tekton short form, or Kueue defaulter webhook rejection messages.
+					// Normalize whitespace so multi-line API error messages still match.
+					detailsNorm := strings.Join(strings.Fields(statusDetail.Details), " ")
 					invalidResolutionMsg := "expected exactly one, got neither"
-					validRefs := strings.Contains(statusDetail.Details, "spec.pipelineRef, spec.pipelineSpec") || strings.Contains(statusDetail.Details, "pipelineRef, pipelineSpec")
-					if !strings.Contains(statusDetail.Details, "denied the request") || !strings.Contains(statusDetail.Details, invalidResolutionMsg) || !validRefs {
+					validRefs := strings.Contains(detailsNorm, "spec.pipelineRef, spec.pipelineSpec") ||
+						strings.Contains(detailsNorm, "pipelineRef, pipelineSpec") ||
+						(strings.Contains(detailsNorm, "pipelineRef") && strings.Contains(detailsNorm, "pipelineSpec"))
+					if !strings.Contains(detailsNorm, "denied the request") || !strings.Contains(detailsNorm, invalidResolutionMsg) || !validRefs {
 						return fmt.Errorf("failing to find the integration test status detail %s/%s for invalid resolution, but found status details %s", groupSnapshot.Namespace, groupSnapshot.Name, statusDetail.Details)
 					}
 
