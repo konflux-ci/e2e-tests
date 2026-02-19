@@ -46,6 +46,8 @@ load_envs() {
         [MULTI_PLATFORM_IBM_API_KEY]="${konflux_ci_secrets_file}/multi-platform-ibm-api-key"
         [DOCKER_IO_AUTH]="${konflux_ci_secrets_file}/docker_io"
         [GITLAB_BOT_TOKEN]="${konflux_ci_secrets_file}/gitlab-bot-token"
+        [CODEBERG_BOT_TOKEN]="${konflux_ci_secrets_file}/codeberg-bot-token"
+        [SMEE_CHANNEL]="${konflux_ci_secrets_file}/smee-channel"
     )
 
     for var in "${!config_envs[@]}"; do

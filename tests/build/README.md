@@ -23,7 +23,7 @@ __Note:__ For now, it is only supported on x86_64 Linux platforms
 
 Build the image with your local changes and push to your own `quay.io` repo, like `quay.io/susdas/build-controller:bugfix`
 
-Replace the custom image and tag [here](https://github.com/konflux-ci/konflux-ci/blob/28e9b85f8943aaed03e9ba74899086f502d8543f/konflux-ci/build-service/core/kustomization.yaml#L14-L15) before installing konflux. 
+Replace the custom image and tag [here](https://github.com/konflux-ci/konflux-ci/blob/28e9b85f8943aaed03e9ba74899086f502d8543f/konflux-ci/build-service/core/kustomization.yaml#L14-L15) before installing konflux.
 
 If you have already installed konflux locally, then to apply `build-service` changes, run below command
 ```
@@ -93,6 +93,14 @@ export GITLAB_QE_ORG=<gitlab_org>
 # Same as GITLAB_BOT_TOKEN used in https://github.com/konflux-ci/e2e-tests/blob/main/default.env
 export GITLAB_BOT_TOKEN=<gitlab_bot_token>
 ```
+
+9. For running Codeberg/Forgejo tests, set the following environment variables:
+```
+export CODEBERG_QE_ORG=konflux-qe
+export CODEBERG_BOT_TOKEN=<codeberg_bot_token>
+```
+
+The initial test repository is available at: https://codeberg.org/konflux-qe/devfile-sample-hello-world
 
 ### Running the tests
 
