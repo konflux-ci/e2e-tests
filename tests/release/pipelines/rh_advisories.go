@@ -62,12 +62,6 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			managedFw = releasecommon.NewFramework(managedWorkspace)
 			managedNamespace = managedFw.UserNamespace
 
-			pyxisFieldEnvMap := map[string]string{
-				"key":  constants.PYXIS_STAGE_KEY_ENV,
-				"cert": constants.PYXIS_STAGE_CERT_ENV,
-			}
-			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
-
 			atlasFieldEnvMap := map[string]string{
 				"sso_account": constants.ATLAS_STAGE_ACCOUNT_ENV,
 				"sso_token":   constants.ATLAS_STAGE_TOKEN_ENV,
@@ -78,6 +72,12 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 			}
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-staging-sso-secret", atlasFieldEnvMap)
 			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "atlas-retry-s3-staging-secret", atlasAWSFieldEnvMap)
+
+			pyxisFieldEnvMap := map[string]string{
+				"key":  constants.PYXIS_STAGE_KEY_ENV,
+				"cert": constants.PYXIS_STAGE_CERT_ENV,
+			}
+			releasecommon.CreateOpaqueSecret(managedFw, managedNamespace, "pyxis", pyxisFieldEnvMap)
 
 			err = managedFw.AsKubeAdmin.CommonController.LinkSecretToServiceAccount(managedNamespace, releasecommon.RedhatAppstudioUserSecret, releasecommon.ReleasePipelineServiceAccountDefault, true)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -173,6 +173,25 @@ var _ = framework.ReleasePipelinesSuiteDescribe("e2e tests for rh-advisories pip
 				re, err := regexp.Compile(pattern)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(re.MatchString(advisoryURL)).To(gomega.BeTrue(), fmt.Sprintf("Advisory_url %s is not valid", advisoryURL))
+			})
+
+			It("verifies that Atlas SBOM URLs in Release artifacts are valid", func() {
+				releaseCR, err = devFw.AsKubeDeveloper.ReleaseController.GetRelease("", snapshotPush.Name, devNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				var artifacts releasecommon.RHAdvisoriesArtifacts
+				err := json.Unmarshal(releaseCR.Status.Artifacts.Raw, &artifacts)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(artifacts.SBOMs.Product).To(HaveLen(1), fmt.Sprintf("%+v", artifacts))
+				for _, atlas_url := range artifacts.SBOMs.Product {
+					releasecommon.VerifyAtlasURL(atlas_url)
+				}
+
+				// expect two single-arch image SBOMs
+				Expect(artifacts.SBOMs.Component).To(HaveLen(2), fmt.Sprintf("%+v", artifacts))
+				for _, atlas_url := range artifacts.SBOMs.Component {
+					releasecommon.VerifyAtlasURL(atlas_url)
+				}
 			})
 		})
 	})

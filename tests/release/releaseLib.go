@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+	"github.com/google/uuid"
 
 	ginkgo "github.com/onsi/ginkgo/v2"
 	gomega "github.com/onsi/gomega"
@@ -322,4 +324,29 @@ func CreateOpaqueSecret(
 
 	_, err = fw.AsKubeAdmin.CommonController.UpdateSecret(namespace, secret)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+}
+
+/// Subset of Release artifacts of the rh-advisories pipeline
+type RHAdvisoriesArtifacts struct {
+	SBOMs SBOMArtifacts `json:"sboms,omitempty"`
+}
+
+/// Artifact fields containing Atlas URL slices of released SBOMs
+type SBOMArtifacts struct {
+	/// URLs of released product-level SBOMs
+	Product []string `json:"product,omitempty"`
+
+	/// URLs of released component-level SBOMs
+	Component []string `json:"component,omitempty"`
+}
+
+/// Verify that the Atlas URL is valid (stage release instance of Atlas + uuid4 of the released SBOM)
+func VerifyAtlasURL(url string) {
+	prefix := "https://atlas.release.stage.devshift.net/sboms/urn:uuid:"
+	Expect(strings.HasPrefix(url, prefix)).To(BeTrue(), fmt.Sprintf("Atlas URL %s has invalid prefix", url))
+
+	uuidStr := strings.TrimPrefix(url, prefix)
+	u, err := uuid.Parse(uuidStr)
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Could not parse UUID %s uuidStr", uuidStr))
+	Expect(u.Version()).To(BeEquivalentTo(4), fmt.Sprintf("UUID %s is not version 4", uuidStr))
 }
