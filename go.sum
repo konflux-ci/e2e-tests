@@ -2441,13 +2441,13 @@ github.com/openshift-pipelines/pipelines-as-code v0.27.2 h1:K9+QIzODBkzFSLxmN58b
 github.com/openshift-pipelines/pipelines-as-code v0.27.2/go.mod h1:xNTkipEDKA3FmSAPqe1Vwd54dUhvGR5ES11WzordL4M=
 github.com/openshift/api v0.0.0-20210831091943-07e756545ac1/go.mod h1:RsQCVJu4qhUawxxDP7pGlwU3IA4F01wYm3qKEu29Su8=
 github.com/openshift/api v0.0.0-20211028023115-7224b732cc14/go.mod h1:RsQCVJu4qhUawxxDP7pGlwU3IA4F01wYm3qKEu29Su8=
-github.com/openshift/api v0.0.0-20260112161841-5b45879294d5 h1:gTQDjLvKyzhq9lRlPw3UYewVj4lThdBSFWQJYy0WtkA=
-github.com/openshift/api v0.0.0-20260112161841-5b45879294d5/go.mod h1:d5uzF0YN2nQQFA0jIEWzzOZ+edmo6wzlGLvx5Fhz4uY=
+github.com/openshift/api v0.0.0-20260218112846-22c744831738 h1:ryjfGaPzyLWHx7VMzMKV/AYihiF5sqAeRuAXt+KZwxQ=
+github.com/openshift/api v0.0.0-20260218112846-22c744831738/go.mod h1:d5uzF0YN2nQQFA0jIEWzzOZ+edmo6wzlGLvx5Fhz4uY=
 github.com/openshift/build-machinery-go v0.0.0-20210712174854-1bb7fd1518d3/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/build-machinery-go v0.0.0-20210806203541-4ea9b6da3a37/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20210831095141-e19a065e79f7/go.mod h1:D6P8RkJzwdkBExQdYUnkWcePMLBiTeCCr8eQIQ7y8Dk=
-github.com/openshift/client-go v0.0.0-20260108185524-48f4ccfc4e13 h1:6rd4zSo2UaWQcAPZfHK9yzKVqH0BnMv1hqMzqXZyTds=
-github.com/openshift/client-go v0.0.0-20260108185524-48f4ccfc4e13/go.mod h1:YvOmPmV7wcJxpfhTDuFqqs2Xpb3M3ovsM6Qs/i2ptq4=
+github.com/openshift/client-go v0.0.0-20260219131751-7e63ce155298 h1:V8uz/2Z4hh+49TUxl0nYs0sDn1fB7lTdSMDKAa6TFY8=
+github.com/openshift/client-go v0.0.0-20260219131751-7e63ce155298/go.mod h1:rtH0BhilT6+jn3nWybANEumaBO1vWCKaY8QpwipRy/Y=
 github.com/openshift/library-go v0.0.0-20220211144658-96cd7a701be1/go.mod h1:5TSPiu4ZEPW5NwUspgqYqjSD/wF86JWGy+x8jB+9oB4=
 github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc h1:j+upvKc1uLzuL+q/JXie8+IMohOooTCaEC9w+4d1Ztk=
 github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc/go.mod h1:AMZwYwSdbvALDl3QobEzcJ2IeDO7DYLsr42izKzh524=
