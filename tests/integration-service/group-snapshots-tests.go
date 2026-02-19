@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -19,6 +20,9 @@ import (
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots for monorepo and multiple repos", ginkgo.Label("integration-service", "group-snapshot-creation"), func() {
@@ -46,6 +50,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 	ginkgo.AfterEach(framework.ReportFailure(&f))
 
 	ginkgo.Describe("with status reporting of Integration tests in CheckRuns", ginkgo.Ordered, func() {
+		// Lock configuration for preventing concurrent test runs from colliding on the same GitHub repository.
+		// Multiple jobs running simultaneously can trigger race condition when registering Repository CRDs
+		// for the same repository URL. This lock ensures only one test uses the repository at a time.
+		const repoLockName = "test-lock-group-snapshot-multi-component"
+		const repoLockNamespace = "default"
+		const staleLockTimeout = 45 * time.Minute
+
 		ginkgo.BeforeAll(func() {
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
 				ginkgo.Skip("Skipping this test due to configuration issue with Spray proxy")
@@ -58,6 +69,58 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			if utils.IsPrivateHostname(f.OpenshiftConsoleHost) {
 				ginkgo.Skip("Using private cluster (not reachable from Github), skipping...")
 			}
+
+			// Acquire a cluster-wide lock to prevent multiple CI jobs from using the same
+			// Repository simultaneously.
+			gomega.Eventually(func() error {
+				existingLock, getErr := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().
+					ConfigMaps(repoLockNamespace).
+					Get(context.Background(), repoLockName, metav1.GetOptions{})
+
+				if getErr == nil {
+					// Lock exists check if it's stale (from a crashed test)
+					lockTime, parseErr := time.Parse(time.RFC3339, existingLock.Data["timestamp"])
+					if parseErr == nil && time.Since(lockTime) > staleLockTimeout {
+						// Lock is stale delete it and try again
+						ginkgo.GinkgoWriter.Printf("Found stale lock from namespace %s (age: %v), cleaning up...\n",
+							existingLock.Data["owner"], time.Since(lockTime))
+						_ = f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().
+							ConfigMaps(repoLockNamespace).
+							Delete(context.Background(), repoLockName, metav1.DeleteOptions{})
+						return fmt.Errorf("cleaned up stale lock, retrying acquisition")
+					}
+
+					// Lock is held by an active test - wait
+					ginkgo.GinkgoWriter.Printf("Repository lock held by namespace %s since %s (age: %v), waiting...\n",
+						existingLock.Data["owner"], existingLock.Data["timestamp"], time.Since(lockTime))
+					return fmt.Errorf("repository lock held by another test")
+				}
+
+				// No lock exists (or was just deleted) - try to create one
+				lockCM := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      repoLockName,
+						Namespace: repoLockNamespace,
+					},
+					Data: map[string]string{
+						"owner":     testNamespace,
+						"timestamp": time.Now().Format(time.RFC3339),
+					},
+				}
+
+				_, createErr := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().
+					ConfigMaps(repoLockNamespace).
+					Create(context.Background(), lockCM, metav1.CreateOptions{})
+
+				if k8sErrors.IsAlreadyExists(createErr) {
+					// Another test grabbed the lock between our Get and Create
+					return fmt.Errorf("lock acquired by another test, retrying")
+				}
+				return createErr
+			}, 60*time.Minute, 30*time.Second).Should(gomega.Succeed(),
+				"Timed out waiting to acquire repository lock - another test may be stuck")
+
+			ginkgo.GinkgoWriter.Printf("Successfully acquired repository lock for namespace %s\n", testNamespace)
 
 			applicationName = createApp(*f, testNamespace)
 
@@ -121,6 +184,15 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			err = f.AsKubeAdmin.CommonController.Github.DeleteRef(componentRepoNameForGroupIntegration, multiComponentPRBranchName)
 			if err != nil {
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring(referenceDoesntExist))
+			}
+
+			// Release repository lock
+			if err := f.AsKubeAdmin.CommonController.KubeInterface().CoreV1().
+				ConfigMaps(repoLockNamespace).
+				Delete(context.Background(), repoLockName, metav1.DeleteOptions{}); err != nil {
+				if !k8sErrors.IsNotFound(err) {
+					ginkgo.GinkgoWriter.Printf("Failed to release repository lock: %v\n", err)
+				}
 			}
 		})
 
