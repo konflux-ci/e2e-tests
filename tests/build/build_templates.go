@@ -671,7 +671,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					})
 				})
 
-				ginkgo.PContext("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
+				ginkgo.Context("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
 					ecPipelines := []string{
 						"pipelines/enterprise-contract.yaml",
 					}
