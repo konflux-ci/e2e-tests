@@ -869,3 +869,10 @@
   regexp: 'ERROR: Can''t get location for [a-zA-Z0-9_.-]+'
   test_dir:
   - run-stone-prd-rh01-2026_02_17T08_00_14_656000000_00_00
+- caused_by: quay.io
+  id: quay_io_returned_500_internal_server_error
+  note: ''
+  reason: Quay.io returned 500 Internal Server Error
+  regexp: 'Error response from registry: recognizable error message not found: GET "https://quay.io/v2/.*": response status code 500: Internal Server Error'
+  test_dir:
+  - quay-500-error
