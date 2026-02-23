@@ -527,7 +527,8 @@
   note: ''
   reason: Pipeline failed
   regexp: 'Build Pipeline Run failed run:.*Message:Tasks Completed: [0-9]+ \(Failed: [1-9]+,'
-  test_dir: []
+  test_dir:
+  - run-kfluxfedorap01-2026_02_22T10_56_18_664000000_00_00
 - caused_by: pipelines-controller
   id: couldnt_get_task_via_bundles_resolver_because_can_not_validate_referenced_object
   note: ''
@@ -765,3 +766,52 @@
   regexp: 'Release Plan failed creation: unable to create the releasePlan [^ ]+ in [^ ]+: Operation cannot be fulfilled on resourcequotas [^ ]+: the object has been modified'
   test_dir:
   - run-kflux-prd-rh02-2026_02_17T19_23_09_562000000_00_00
+- caused_by: cluster
+  id: build_pipeline_run_failed_because_kueue_missing_linux_arm64_annotation
+  note: ''
+  reason: Build Pipeline Run failed because kueue missing linux/arm64 annotation
+  regexp: 'FAIL\(71\): Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .*ValidatingAdmissionPolicy .no-skip\.kueue\.konflux-ci\.dev. .*denied request: TaskRun with PLATFORM param set to linux/arm64 must have the annotation .kueue\.konflux-ci\.dev/resource-linux/arm64.'
+  test_dir:
+  - run-stone-stg-rh01-2026_02_19T17_09_20_248000000_00_00
+- caused_by: gitlab.cee.redhat.com
+  id: repo_forking_failed_because_gitlab_cee_redhat_com_context_deadline_exceeded
+  note: ''
+  reason: Repo forking failed because gitlab.cee.redhat.com context deadline exceeded
+  regexp: 'FAIL\(80\): Repo forking failed: error waiting for project [^ ]+ \(ID: [0-9]+\) fork to complete: context deadline exceeded'
+  test_dir:
+  - run-kflux-ocp-p01-2026_02_19T16_15_23_758000000_00_00
+- caused_by: github.com
+  id: repo_forking_failed_because_api_github_com_returned_5xx_error_on_delete
+  note: ''
+  reason: Repo forking failed because api.github.com returned 5xx error on delete
+  regexp: 'FAIL\(80\): Repo forking failed: error deleting repository [^ ]+: DELETE https://api\.github\.com/repos/[^ ]+: 50[02] .*'
+  test_dir:
+  - run-kflux-prd-rh03-2026_02_20T16_01_34_794000000_00_00
+- caused_by: gitlab.cee.redhat.com
+  id: build_pipeline_run_failed_because_gitlab_cee_redhat_com_returned_500_when_fetching_pipeline_task
+  note: ''
+  reason: Build Pipeline Run failed because gitlab.cee.redhat.com returned 500 when fetching pipeline task
+  regexp: 'FAIL\(71\): Build Pipeline Run failed run: PipelineRun for component [^ ]+ in namespace [^ ]+ failed: .*Reason:CouldntGetTask.*Couldn''t retrieve Task .resolver type git.*url = https://gitlab\.cee\.redhat\.com/.*RPC failed; HTTP 500 curl 22 The requested URL returned error: 500.*'
+  test_dir:
+  - run-kflux-rhel-p01-2026_02_21T11_39_18_561000000_00_00
+- caused_by: github.com
+  id: repo_templating_workflow_component_cleanup_failed_because_github_pr_merge_405_base_branch_was_modified
+  note: ''
+  reason: Repo-templating workflow component cleanup failed because GitHub PR merge 405 Base branch was modified
+  regexp: 'FAIL\(68\): Repo-templating workflow component cleanup failed: merging [0-9]+ failed: error when merging pull request number [0-9]+ for the repo [^ ]+: PUT https://api\.github\.com/repos/[^ ]+/pulls/[0-9]+/merge: 405 Base branch was modified\.'
+  test_dir:
+  - run-stone-prd-rh01-2026_02_19T23_58_56_361000000_00_00
+- caused_by: gitlab.cee.redhat.com
+  id: repo_templating_workflow_component_cleanup_failed_because_gitlab_returned_500_error_on_post_receive_hook_during_pac_update
+  note: ''
+  reason: Repo-templating workflow component cleanup failed because GitLab returned 500 error on post_receive hook during PaC update
+  regexp: 'FAIL\(68\): Repo-templating workflow component cleanup failed: error templating PaC files: failed to update file [^ ]+ in repo [^ ]+ revision [^ ]+: failed to update/create file: PUT https://gitlab\.cee\.redhat\.com/api/v4/projects/[^ ]+/repository/files/[^ ]+: 400 .message: .* Internal API error \(500\)\.'
+  test_dir:
+  - run-stone-prod-p01-2026_02_21T13_42_18_772000000_00_00
+- caused_by: gitlab.cee.redhat.com
+  id: repo_forking_failed_because_gitlab_cee_redhat_com_returned_500_error_when_getting_project
+  note: ''
+  reason: Repo forking failed because gitlab.cee.redhat.com returned 500 error when getting project
+  regexp: 'FAIL\(80\): Repo forking failed: error getting project [^ ]+: GET https://gitlab\.cee\.redhat\.com/api/v4/projects/[^ ]+: 500 .*'
+  test_dir:
+  - run-stone-prod-p02-2026_02_21T11_50_36_990000000_00_00
