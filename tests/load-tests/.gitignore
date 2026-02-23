@@ -7,11 +7,13 @@ load-tests.*.json
 output.json
 users*.json
 
+run-me*.sh
+
 loadtest
 
 OLD/
 run-*/
 videos/
 collected-data/
-mystoneinst/
+mystoneinst
 secrets/
