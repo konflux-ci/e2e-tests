@@ -8,6 +8,8 @@ import (
 type ForgejoClient struct {
 	client *forgejo.Client
 	org    string
+	apiURL string
+	token  string
 }
 
 // NewForgejoClient creates a new Forgejo client
@@ -20,6 +22,8 @@ func NewForgejoClient(accessToken, baseURL, org string) (*ForgejoClient, error) 
 	return &ForgejoClient{
 		client: client,
 		org:    org,
+		apiURL: baseURL,
+		token:  accessToken,
 	}, nil
 }
 

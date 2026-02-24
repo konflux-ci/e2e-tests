@@ -65,6 +65,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 		var gitClient git.Client
 		var componentDependenciesChildRepository string
+		var gitProviderAnnotation map[string]string
 
 		BeforeAll(func() {
 			f, err = framework.NewFramework(utils.GetGeneratedNamespace("build-e2e"))
@@ -110,6 +111,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred())
 				// Fork the child repo
 				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", gitlabOrg, componentDependenciesChildRepoName), childRepository)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				componentDependenciesChildRepository = childRepository
+
+			case git.ForgejoProvider:
+				gitClient = git.NewForgejoClient(f.AsKubeAdmin.CommonController.Forgejo)
+
+				parentRepository = fmt.Sprintf("%s/%s", forgejoOrg, ParentComponentDef.repoName)
+				ParentComponentDef.gitRepo = fmt.Sprintf(forgejoUrlFormat, parentRepository)
+
+				childRepository = fmt.Sprintf("%s/%s", forgejoOrg, ChildComponentDef.repoName)
+				ChildComponentDef.gitRepo = fmt.Sprintf(forgejoUrlFormat, childRepository)
+
+				// Fork the parent repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", forgejoOrg, componentDependenciesParentRepoName), parentRepository)
+				Expect(err).ShouldNot(HaveOccurred())
+				// Fork the child repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", forgejoOrg, componentDependenciesChildRepoName), childRepository)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				componentDependenciesChildRepository = childRepository
@@ -165,13 +184,27 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// get the build pipeline bundle annotation
 			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
+			if gitProvider == git.ForgejoProvider {
+				gitProviderAnnotation = map[string]string{"git-provider": "forgejo"}
+			}
+
 			if gitProvider == git.GitLabProvider {
 				gitlabToken := utils.GetEnv(constants.GITLAB_BOT_TOKEN_ENV, "")
 				Expect(gitlabToken).ShouldNot(BeEmpty())
 
 				secretAnnotations := map[string]string{}
 
-				err = build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
+				err = build.CreateGitlabBuildSecret(f, "gitlab-pac-secret", secretAnnotations, gitlabToken)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+
+			if gitProvider == git.ForgejoProvider {
+				forgejoToken := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
+				Expect(forgejoToken).ShouldNot(BeEmpty())
+
+				secretAnnotations := map[string]string{}
+
+				err = build.CreateCodebergBuildSecret(f, "forgejo-pac-secret", secretAnnotations, forgejoToken)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
@@ -216,7 +249,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					if comp.repoName == targetParentRepoName {
 						componentObj.BuildNudgesRef = []string{ChildComponentDef.componentName}
 					}
-					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+					comp.component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, true, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation), gitProviderAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
 				}
 			})

@@ -48,6 +48,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 		var buildPipelineAnnotation map[string]string
 
 		var helloWorldRepository string
+		var gitProviderAnnotation map[string]string
 
 		BeforeAll(func() {
 			if os.Getenv(constants.SKIP_PAC_TESTS_ENV) == "true" {
@@ -88,6 +89,10 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// get the build pipeline bundle annotation
 			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
+			if gitProvider == git.ForgejoProvider {
+				gitProviderAnnotation = map[string]string{"git-provider": "forgejo"}
+			}
+
 			err = gitClient.CreateBranch(helloWorldRepository, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -123,7 +128,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation), gitProviderAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -312,14 +317,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 				// Create a component with Git Source URL, a specified git branch and marking delete-repo=true
-				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				component, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation), gitProviderAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			AfterAll(func() {
-				// Close Pruge PR if exists
+				// Close Purge PR if exists
 				err = gitClient.DeleteBranchAndClosePullRequest(helloWorldRepository, purgePrNumber)
 				if err != nil {
-					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404")))
+					Expect(err.Error()).To(Or(ContainSubstring("Reference does not exist"), ContainSubstring("404"), ContainSubstring("The target couldn't be found")))
 				}
 			})
 
@@ -697,7 +702,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					},
 				}
 
-				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation), gitProviderAnnotation))
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 

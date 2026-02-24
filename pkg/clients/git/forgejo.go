@@ -93,6 +93,10 @@ func (f *ForgejoClient) CreatePullRequest(repository, title, body, head, base st
 	}, nil
 }
 
+func (f *ForgejoClient) UpdatePullRequestBranch(repository string, prNumber int) error {
+	return f.ForgejoClient.UpdatePullRequestBranch(repository, int64(prNumber))
+}
+
 func (f *ForgejoClient) CleanupWebhooks(repository, clusterAppDomain string) error {
 	return f.DeleteWebhooks(repository, clusterAppDomain)
 }

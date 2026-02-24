@@ -132,6 +132,33 @@ func (fc *ForgejoClient) MergePullRequest(projectID string, prNumber int64) (*fo
 	return pr, nil
 }
 
+// UpdatePullRequestBranch updates a pull request branch by merging the base branch into it
+func (fc *ForgejoClient) UpdatePullRequestBranch(projectID string, prNumber int64) error {
+	owner, repo := splitProjectID(projectID)
+
+	// The forgejo SDK doesn't expose this endpoint, so we call the API directly
+	// POST /repos/{owner}/{repo}/pulls/{index}/update
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/pulls/%d/update", fc.apiURL, owner, repo, prNumber)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request for updating PR branch #%d: %w", prNumber, err)
+	}
+	req.Header.Set("Authorization", "token "+fc.token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update pull request branch for PR #%d: %w", prNumber, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code when updating PR branch #%d: %d", prNumber, resp.StatusCode)
+	}
+
+	return nil
+}
+
 // ClosePullRequest closes a pull request without merging
 func (fc *ForgejoClient) ClosePullRequest(projectID string, prNumber int64) error {
 	owner, repo := splitProjectID(projectID)
@@ -158,7 +185,7 @@ func (fc *ForgejoClient) CreateFile(projectID, pathToFile, content, branchName s
 			Message:    "e2e test commit message",
 			BranchName: branchName,
 		},
-		Content: content,
+		Content: base64.StdEncoding.EncodeToString([]byte(content)),
 	}
 
 	fileResp, _, err := fc.client.CreateFile(owner, repo, pathToFile, opts)
@@ -222,32 +249,52 @@ func (fc *ForgejoClient) DeleteWebhooks(projectID, clusterAppDomain string) erro
 	return nil
 }
 
-// ForkRepository forks a repository
+// ForkRepository creates a copy of a repository by migrating (cloning) it instead of forking.
+// Forgejo only allows one fork per repo per account, which prevents parallel test execution.
+// Using MigrateRepo creates an independent repository with the same content, bypassing this limitation.
 func (fc *ForgejoClient) ForkRepository(sourceProjectID, targetProjectID string) (*forgejo.Repository, error) {
 	sourceOwner, sourceRepo := splitProjectID(sourceProjectID)
 	targetOwner, targetRepo := splitProjectID(targetProjectID)
 
-	opts := forgejo.CreateForkOption{
-		Organization: &targetOwner,
-		Name:         &targetRepo,
-	}
+	cloneAddr := fmt.Sprintf("%s/%s/%s.git", fc.apiURL, sourceOwner, sourceRepo)
 
-	var forkedRepo *forgejo.Repository
+	var migratedRepo *forgejo.Repository
+	var lastErr error
 
 	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		forkedRepo, _, err = fc.client.CreateFork(sourceOwner, sourceRepo, opts)
+		var resp *forgejo.Response
+		migratedRepo, resp, err = fc.client.MigrateRepo(forgejo.MigrateRepoOption{
+			RepoName:  targetRepo,
+			RepoOwner: targetOwner,
+			CloneAddr: cloneAddr,
+			Service:   forgejo.GitServiceForgejo,
+			AuthToken: fc.token,
+		})
 		if err != nil {
-			fmt.Printf("Failed to fork %s, trying again: %v\n", sourceProjectID, err)
+			lastErr = err
+			statusCode := 0
+			if resp != nil && resp.Response != nil {
+				statusCode = resp.StatusCode
+			}
+			fmt.Printf("Failed to migrate %s to %s (HTTP status: %d): %v\n", sourceProjectID, targetProjectID, statusCode, err)
+
+			// Non-retryable errors: return immediately instead of waiting for timeout
+			if statusCode == http.StatusNotFound || statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
+				return false, fmt.Errorf("error migrating project %s to %s (HTTP %d): %w", sourceProjectID, targetProjectID, statusCode, err)
+			}
 			return false, nil
 		}
 		return true, nil
 	}, time.Second*10, time.Minute*5)
 
 	if err != nil {
-		return nil, fmt.Errorf("error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
+		if lastErr != nil {
+			return nil, fmt.Errorf("error migrating project %s to %s (last error: %v): %w", sourceProjectID, targetProjectID, lastErr, err)
+		}
+		return nil, fmt.Errorf("error migrating project %s to %s: %w", sourceProjectID, targetProjectID, err)
 	}
 
-	return forkedRepo, nil
+	return migratedRepo, nil
 }
 
 // DeleteRepository deletes a repository if it exists
