@@ -248,7 +248,7 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if err = t.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName); err != nil {
 				return fmt.Errorf("failed to remove the finalizer from pipelinerun %s:%s in order to retrigger it: %+v", pr.GetNamespace(), pr.GetName(), err)
 			}
-			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil {
+			if err = h.PipelineClient().TektonV1().PipelineRuns(pr.GetNamespace()).Delete(context.Background(), pr.GetName(), metav1.DeleteOptions{}); err != nil && !k8sErrors.IsNotFound(err) {
 				return fmt.Errorf("failed to delete PipelineRun %q from %q namespace with error: %v", pr.GetName(), pr.GetNamespace(), err)
 			}
 			if sha, err = h.RetriggerComponentPipelineRun(component, pr); err != nil {
