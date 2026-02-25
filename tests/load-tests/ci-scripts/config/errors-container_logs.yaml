@@ -878,7 +878,7 @@
   - quay-500-error
 - caused_by: task
   id: check_noarch_py_failed_because_rpmdiff_is_missing
-  note: ''
+  note: 'https://issues.redhat.com/browse/RHELBLD-18053'
   reason: check_noarch.py failed because rpmdiff is missing
   regexp: 'FileNotFoundError: .Errno 2. No such file or directory: .rpmdiff.'
   test_dir:
