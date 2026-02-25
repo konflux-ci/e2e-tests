@@ -90,7 +90,7 @@ METRICS_REUSE_COMPONENTS = [
 
 
 class SinglePass:
-    """Structure to record data about one specific pass through loadtest workload, identified by an identier (touple with loadtest's per user, per application and per component thread index and repeats counter."""
+    """Structure to record data about one specific pass through loadtest workload, identified by an identifier (tuple with loadtest's per user, per application and per component thread index and repeats counter."""
 
     def __init__(self):
         self._metrics = {}
@@ -219,7 +219,7 @@ def main():
 
     rows_incomplete = []
 
-    # Prepopulate stats_raw data structure
+    # Pre-populate stats_raw data structure
     for m in expected_metrics:
         stats_raw[m] = {
             "pass": {"duration": [], "when": []},
