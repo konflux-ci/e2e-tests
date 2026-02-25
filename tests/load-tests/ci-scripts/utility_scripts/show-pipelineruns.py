@@ -13,7 +13,6 @@ import re
 import sys
 import yaml
 import time
-import re
 import csv
 
 import matplotlib.pyplot
@@ -306,7 +305,7 @@ class Something:
 
         try:
             self.tr_statuses[tr["spec"]["statusMessage"]] += 1
-        except KeyError as e:
+        except KeyError:
             self.tr_statuses["Missing spec.statusMessage"] += 1
 
         try:
