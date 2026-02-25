@@ -876,3 +876,10 @@
   regexp: 'Error response from registry: recognizable error message not found: GET "https://quay.io/v2/.*": response status code 500: Internal Server Error'
   test_dir:
   - quay-500-error
+- caused_by: task
+  id: check_noarch_py_failed_because_rpmdiff_is_missing
+  note: ''
+  reason: check_noarch.py failed because rpmdiff is missing
+  regexp: 'FileNotFoundError: .Errno 2. No such file or directory: .rpmdiff.'
+  test_dir:
+  - run-stone-prd-rh01-2026_02_24T09_12_54_500000000_00_00
