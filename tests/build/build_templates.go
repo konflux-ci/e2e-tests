@@ -721,17 +721,18 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 
 							pr, err := f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
-							defer func(pr *tektonpipeline.PipelineRun) {
-								err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
-								if err != nil {
-									ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
-								}
-								// Avoid blowing up PipelineRun usage
-								err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
-								if err != nil {
-									gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
-								}
-							}(pr)
+							// Skipping the cleanup to debug the intermittent issue
+							// defer func(pr *tektonpipeline.PipelineRun) {
+							// 	err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+							// 	if err != nil {
+							// 		ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+							// 	}
+							// 	// Avoid blowing up PipelineRun usage
+							// 	err := f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.Name, pr.Namespace)
+							// 	if err != nil {
+							// 		gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
+							// 	}
+							// }(pr)
 
 							err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
 							gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
@@ -743,6 +744,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 							ginkgo.GinkgoWriter.Printf("The PipelineRun %s in namespace %s has status.conditions: \n%#v\n", pr.Name, pr.Namespace, pr.Status.Conditions)
 
+							// Added log for debugging the intermittent issue
+							ginkgo.GinkgoWriter.Printf("EC PipelineRun %s has labels: %+v\n", pr.Name, pr.Labels)
 							// The UI uses this label to display additional information.
 							gomega.Expect(pr.Labels["build.appstudio.redhat.com/pipeline"]).To(gomega.Equal("enterprise-contract"))
 
