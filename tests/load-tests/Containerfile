@@ -13,7 +13,7 @@ RUN ./loadtest --help
 
 
 # Builder for oc
-# (this is to awoid installing tar to our runner image)
+# (this is to avoid installing tar to our runner image)
 FROM registry.access.redhat.com/ubi10/ubi:latest AS builder_oc
 # Download and install it, try multiple times as this is error prone
 RUN attempt=1; \
