@@ -55,6 +55,13 @@ const (
 	PyxisStageImagesApiEndpoint     string = "https://pyxis.preprod.api.redhat.com/v1/images/id/"
 	GitLabRunFileUpdatesTestRepo    string = "https://gitlab.cee.redhat.com/hacbs-release-tests/app-interface"
 
+	// Self-hosted Quay constants
+	QuayInternalHost         string = "quay-service.quay"
+	QuayRobotCredentialsName string = "quay-robot-credentials"
+	QuayAdminTokenName       string = "quay-admin-token"
+	QuayTestConfigName       string = "quay-test-config"
+	QuayNamespace            string = "quay"
+
 	// EC constants
 	EcPolicyLibPath     = "github.com/enterprise-contract/ec-policies//policy/lib"
 	EcPolicyReleasePath = "github.com/enterprise-contract/ec-policies//policy/release"
