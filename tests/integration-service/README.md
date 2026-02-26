@@ -97,6 +97,7 @@ Checkpoints:
 - Verifying that the Build PipelineRun is reflected correctly in the MR's CommitStatus.
 - Ensuring the successful Integration PipelineRun is reported as "Pass" in the MR's CommitStatus.
 - Ensuring that the MR notes show the successful status of the integration test.
+- Validating that at least one MR note contains the final integration test result (pass/fail or scenario name).
 - Merge MR and repeat three tests above.
 
 ### 4. Happy Path Tests within `group-snapshots-tests.go`

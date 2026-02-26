@@ -30,7 +30,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 	var err error
 
 	var mrID int
-	// var mrNote *gitlab.Note
 	var mrSha, projectID, gitlabToken string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
@@ -243,6 +242,30 @@ var _ = framework.IntegrationServiceSuiteDescribe("Gitlab Status Reporting of In
 
 			ginkgo.It("eventually leads to the integration test PipelineRun's Fail status reported at MR commit status", func() {
 				gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(integrationTestScenarioFail.Name, projectID, mrSha, mrID)).To(gomega.Equal(integrationPipelineRunCommitStatusFail))
+			})
+
+			ginkgo.It("validates at least one MR note contains the final integration test result", func() {
+				gomega.Eventually(func() bool {
+					notes, _, err := f.AsKubeAdmin.CommonController.Gitlab.GetClient().Notes.ListMergeRequestNotes(projectID, mrID, nil)
+					if err != nil {
+						ginkgo.GinkgoWriter.Printf("failed to list MR notes: %v\n", err)
+						return false
+					}
+					for _, note := range notes {
+						if note.System {
+							continue
+						}
+						body := note.Body
+						if strings.Contains(body, integrationTestScenarioPass.Name) || strings.Contains(body, integrationTestScenarioFail.Name) {
+							return true
+						}
+						if strings.Contains(body, "integration") &&
+							(strings.Contains(body, "pass") || strings.Contains(body, "fail") || strings.Contains(body, "success") || strings.Contains(body, "failed")) {
+							return true
+						}
+					}
+					return false
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(), fmt.Sprintf("no MR note found containing integration test result for MR #%d in project %s", mrID, componentRepoNameForStatusReporting))
 			})
 
 			ginkgo.It("merging the PR should be successful", func() {
