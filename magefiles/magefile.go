@@ -1293,12 +1293,6 @@ func DisasterRecoveryWorkflow() error {
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
-	return runTestsWithTimeout(labelsToRun, junitReportFile, "90m")
-}
-
-// runTestsWithTimeout is like runTests but accepts a custom ginkgo timeout.
-// Use this for test suites that need longer than the default 90 minutes.
-func runTestsWithTimeout(labelsToRun, junitReportFile, timeout string) error {
 	extraFilter := strings.TrimSpace(os.Getenv("E2E_EXTRA_LABEL_FILTER"))
 	if extraFilter != "" {
 		if strings.Contains(extraFilter, "||") {

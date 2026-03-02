@@ -210,7 +210,7 @@ func init() {
 		Org:                 gitlabOrg,
 		SourceRepoProjectID: helloWorldComponentGitLabProjectID,
 		TokenEnvVar:         constants.GITLAB_BOT_TOKEN_ENV,
-		SecretName:          "gitlab-pac-secret",
+		SecretName:          "pipelines-as-code-secret",
 
 		CreateClient: func(f *framework.Framework) git.Client {
 			return git.NewGitlabClient(f.AsKubeAdmin.CommonController.Gitlab)
@@ -222,7 +222,7 @@ func init() {
 				return fmt.Errorf("GitLab token environment variable %s is not set", constants.GITLAB_BOT_TOKEN_ENV)
 			}
 			secretAnnotations := map[string]string{}
-			return build.CreateGitlabBuildSecret(f, "gitlab-pac-secret", secretAnnotations, gitlabToken)
+			return build.CreateGitlabBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, gitlabToken)
 		},
 
 		BuildTargetRepoName: func(baseRepoName string) string {
@@ -231,39 +231,6 @@ func init() {
 
 		BuildTargetRepoURL: func(org, repoName string) string {
 			return fmt.Sprintf(gitlabUrlFormat, repoName)
-		},
-	})
-
-	// Register Forgejo (Codeberg) provider
-	RegisterGitProvider(&GitProviderConfig{
-		Provider:            git.ForgejoProvider,
-		Prefix:              "fj",
-		LabelName:           "forgejo",
-		URLFormat:           forgejoUrlFormat,
-		Org:                 forgejoOrg,
-		SourceRepoProjectID: helloWorldComponentForgejoProjectID,
-		TokenEnvVar:         constants.CODEBERG_BOT_TOKEN_ENV,
-		SecretName:          "forgejo-pac-secret",
-
-		CreateClient: func(f *framework.Framework) git.Client {
-			return git.NewForgejoClient(f.AsKubeAdmin.CommonController.Forgejo)
-		},
-
-		SetupBuildSecret: func(f *framework.Framework) error {
-			forgejoToken := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
-			if forgejoToken == "" {
-				return fmt.Errorf("forgejo token environment variable %s is not set", constants.CODEBERG_BOT_TOKEN_ENV)
-			}
-			secretAnnotations := map[string]string{}
-			return build.CreateCodebergBuildSecret(f, "forgejo-pac-secret", secretAnnotations, forgejoToken)
-		},
-
-		BuildTargetRepoName: func(baseRepoName string) string {
-			return fmt.Sprintf("%s/%s", forgejoOrg, baseRepoName+"-"+util.GenerateRandomString(6))
-		},
-
-		BuildTargetRepoURL: func(org, repoName string) string {
-			return fmt.Sprintf(forgejoUrlFormat, repoName)
 		},
 	})
 
