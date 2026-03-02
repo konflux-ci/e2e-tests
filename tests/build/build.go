@@ -440,6 +440,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", ginkgo.Label("bu
 				case git.GitLabProvider:
 					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, prHeadSha, prNumber)).To(gomega.Equal(constants.CheckrunConclusionSuccess))
+				case git.ForgejoProvider:
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					gomega.Expect(f.AsKubeAdmin.HasController.Forgejo.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, prHeadSha, int64(prNumber))).To(gomega.Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -505,6 +508,9 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", ginkgo.Label("bu
 				case git.GitLabProvider:
 					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
 					gomega.Expect(f.AsKubeAdmin.HasController.GitLab.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, createdFileSHA, prNumber)).To(gomega.Equal(constants.CheckrunConclusionSuccess))
+				case git.ForgejoProvider:
+					expectedStatusName := fmt.Sprintf("%s-%s", customBranchComponentName, "on-pull-request")
+					gomega.Expect(f.AsKubeAdmin.HasController.Forgejo.GetCommitStatusConclusion(expectedStatusName, helloWorldRepository, createdFileSHA, int64(prNumber))).To(gomega.Equal(constants.CheckrunConclusionSuccess))
 				}
 			})
 		})
@@ -696,6 +702,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", ginkgo.Label("bu
 	},
 		ginkgo.Entry("github", git.GitHubProvider, "gh"),
 		ginkgo.Entry("gitlab", git.GitLabProvider, "gl"),
+		ginkgo.Entry("forgejo", git.ForgejoProvider, "fj"),
 	)
 
 	ginkgo.Describe("test pac with multiple components using same repository", ginkgo.Ordered, ginkgo.Label("pac-build", "multi-component"), func() {
@@ -1353,6 +1360,24 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", ginkgo.Label("bu
 				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 				componentDependenciesChildRepository = childRepository
+
+			case git.ForgejoProvider:
+				gitClient = git.NewForgejoClient(f.AsKubeAdmin.CommonController.Forgejo)
+
+				parentRepository = fmt.Sprintf("%s/%s", forgejoOrg, ParentComponentDef.repoName)
+				ParentComponentDef.gitRepo = fmt.Sprintf(forgejoUrlFormat, parentRepository)
+
+				childRepository = fmt.Sprintf("%s/%s", forgejoOrg, ChildComponentDef.repoName)
+				ChildComponentDef.gitRepo = fmt.Sprintf(forgejoUrlFormat, childRepository)
+
+				// Fork the parent repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", forgejoOrg, componentDependenciesParentRepoName), parentRepository)
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+				// Fork the child repo
+				err = gitClient.ForkRepository(fmt.Sprintf("%s/%s", forgejoOrg, componentDependenciesChildRepoName), childRepository)
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+				componentDependenciesChildRepository = childRepository
 			}
 			ParentComponentDef.componentName = fmt.Sprintf("%s-multi-component-parent-%s", gitPrefix, branchString)
 			ChildComponentDef.componentName = fmt.Sprintf("%s-multi-component-child-%s", gitPrefix, branchString)
@@ -1647,6 +1672,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", ginkgo.Label("bu
 	},
 		ginkgo.Entry("github", git.GitHubProvider, "gh"),
 		ginkgo.Entry("gitlab", git.GitLabProvider, "gl"),
+		ginkgo.Entry("forgejo", git.ForgejoProvider, "fj"),
 	)
 })
 
@@ -1675,6 +1701,22 @@ func setupGitProvider(f *framework.Framework, gitProvider git.GitProvider) (git.
 		targetGitlabURL := fmt.Sprintf(gitlabUrlFormat, targetGitLabProjectID)
 		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		return gitClient, targetGitlabURL, targetGitLabProjectID
+	case git.ForgejoProvider:
+		gitClient := git.NewForgejoClient(f.AsKubeAdmin.CommonController.Forgejo)
+
+		forgejoToken := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
+		gomega.Expect(forgejoToken).ShouldNot(gomega.BeEmpty())
+
+		secretAnnotations := map[string]string{}
+
+		err := build.CreateCodebergBuildSecret(f, "pipelines-as-code-secret", secretAnnotations, forgejoToken)
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+		targetForgejoProjectID := fmt.Sprintf("%s/%s", forgejoOrg, helloWorldComponentGitSourceRepoName+"-"+util.GenerateRandomString(6))
+		err = gitClient.ForkRepository(helloWorldComponentForgejoProjectID, targetForgejoProjectID)
+		targetForgejoURL := fmt.Sprintf(forgejoUrlFormat, targetForgejoProjectID)
+		gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+		return gitClient, targetForgejoURL, targetForgejoProjectID
 	}
 	return nil, "", ""
 }
