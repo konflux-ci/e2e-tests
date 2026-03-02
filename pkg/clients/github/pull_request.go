@@ -59,10 +59,32 @@ func (g *Github) ListPullRequestCommentsSince(repository string, prNumber int, s
 func (g *Github) MergePullRequest(repository string, prNumber int) (*github.PullRequestMergeResult, error) {
 	mergeResult, _, err := g.client.PullRequests.Merge(context.Background(), g.organization, repository, prNumber, "", &github.PullRequestOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error when merging pull request number %d for the repo %s: %v", prNumber, repository, err)
+		mergeErr := fmt.Errorf("error when merging pull request number %d for the repo %s: %v", prNumber, repository, err)
+		// If the head branch is out of date (409), trigger a branch update so the next retry can succeed
+		if strings.Contains(err.Error(), "409") {
+			fmt.Printf("[github] PR #%d in %s: head branch out of date, triggering branch update\n", prNumber, repository)
+			if updateErr := g.UpdatePullRequestBranch(repository, prNumber); updateErr != nil {
+				fmt.Printf("[github] failed to update PR #%d branch: %v\n", prNumber, updateErr)
+			}
+		}
+		return nil, mergeErr
 	}
 
 	return mergeResult, nil
+}
+
+// UpdatePullRequestBranch updates the PR branch with the latest changes from the base branch.
+// This is useful when the PR branch is out of date and GitHub returns 409 on merge.
+func (g *Github) UpdatePullRequestBranch(repository string, prNumber int) error {
+	_, _, err := g.client.PullRequests.UpdateBranch(context.Background(), g.organization, repository, prNumber, nil)
+	if err != nil {
+		// UpdateBranch returns AcceptedError (HTTP 202) when the update is queued -- that's fine
+		if _, ok := err.(*github.AcceptedError); ok {
+			return nil
+		}
+		return fmt.Errorf("error when updating branch for pull request number %d in repo %s: %v", prNumber, repository, err)
+	}
+	return nil
 }
 
 func (g *Github) ListCheckRuns(repository string, ref string) ([]*github.CheckRun, error) {

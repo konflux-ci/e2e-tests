@@ -512,7 +512,7 @@ func deleteQuayRepo(componentName string, testNamespace string) error {
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, "https://quay.io/api/v1")
+	quayClient := quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayOrgToken, "https://quay.io/api/v1")
 
 	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, testNamespace))
 	if err != nil {

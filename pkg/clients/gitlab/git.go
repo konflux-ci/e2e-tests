@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,19 @@ import (
 
 	utils "github.com/konflux-ci/e2e-tests/pkg/utils"
 )
+
+const (
+	defaultForkImportTimeoutMinutes = 20
+)
+
+func forkImportTimeout() time.Duration {
+	if m := utils.GetEnv("GITLAB_FORK_IMPORT_TIMEOUT_MINUTES", ""); m != "" {
+		if mins, err := strconv.Atoi(m); err == nil && mins > 0 {
+			return time.Duration(mins) * time.Minute
+		}
+	}
+	return defaultForkImportTimeoutMinutes * time.Minute
+}
 
 // CreateBranch creates a new branch in a GitLab project with the given projectID and newBranchName
 func (gc *GitlabClient) CreateBranch(projectID, newBranchName, defaultBranch string) error {
@@ -387,41 +401,64 @@ func (gc *GitlabClient) ForkRepository(sourceOrgName, sourceName, targetOrgName,
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		forkedProject, resp, err = gc.client.Projects.ForkProject(sourceProjectID, opts)
 		if err != nil {
-			fmt.Printf("Failed to fork %s, trying again: %v\n", sourceProjectID, err)
+			fmt.Printf("[gitlab] fork %s -> %s: API call failed, retrying: %v\n", sourceProjectID, targetProjectID, err)
 			return false, nil
+		}
+		if forkedProject == nil {
+			return false, fmt.Errorf("fork API returned success but project is nil for %s", sourceProjectID)
 		}
 		return true, nil
 	}, time.Second*10, time.Minute*5)
 	if err != nil {
-		return nil, fmt.Errorf("error forking project %s to %s: %w", sourceProjectID, targetProjectID, err)
+		return nil, fmt.Errorf("fork project %s to %s did not succeed within 5m (GitLab fork API): %w", sourceProjectID, targetProjectID, err)
 	}
 
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
+	if forkedProject == nil {
+		return nil, fmt.Errorf("fork project %s to %s: project is nil after fork API success", sourceProjectID, targetProjectID)
+	}
+	if resp != nil && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
 		return nil, fmt.Errorf("unexpected status code when forking project %s: %d", sourceProjectID, resp.StatusCode)
 	}
 
+	var lastImportStatus string
 	err = utils.WaitUntilWithInterval(func() (done bool, err error) {
 		var getErr error
+		var proj *gitlab.Project
 
-		forkedProject, _, getErr = gc.client.Projects.GetProject(forkedProject.ID, nil)
+		proj, _, getErr = gc.client.Projects.GetProject(forkedProject.ID, nil)
 		if getErr != nil {
-			return false, fmt.Errorf("error getting forked project status for %s (ID: %d): %w", forkedProject.Name, forkedProject.ID, getErr)
+			// Treat GetProject errors as transient (e.g. GitLab 500) — retry instead of failing
+			fmt.Printf("[gitlab] fork %s (ID: %d): GetProject error (retrying): %v\n", targetProjectID, forkedProject.ID, getErr)
+			return false, nil
 		}
+		if proj == nil {
+			return false, fmt.Errorf("GetProject returned nil for project ID %d", forkedProject.ID)
+		}
+		forkedProject = proj
 
+		lastImportStatus = forkedProject.ImportStatus
 		switch forkedProject.ImportStatus {
 		case "finished":
 			return true, nil
 		case "failed", "timeout":
-			return false, fmt.Errorf("forking of project %s (ID: %d) failed with import status: %s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
+			return false, fmt.Errorf("fork import failed for project %s (ID: %d): import_status=%s", forkedProject.Name, forkedProject.ID, forkedProject.ImportStatus)
+		default:
+			fmt.Printf("[gitlab] fork %s (ID: %d): waiting for import, status=%q\n", targetProjectID, forkedProject.ID, forkedProject.ImportStatus)
+			return false, nil
 		}
-
-		return false, nil
-	}, time.Second*10, time.Minute*10)
+	}, time.Second*10, forkImportTimeout())
 
 	if err != nil {
-		return nil, fmt.Errorf("error waiting for project %s (ID: %d) fork to complete: %w", targetProjectID, forkedProject.ID, err)
+		projectIDDesc := targetProjectID
+		if forkedProject != nil {
+			projectIDDesc = fmt.Sprintf("%s (ID: %d)", targetProjectID, forkedProject.ID)
+		}
+		return nil, fmt.Errorf("fork import for project %s did not complete within %v (last import_status: %q): %w", projectIDDesc, forkImportTimeout(), lastImportStatus, err)
 	}
 
+	if forkedProject == nil {
+		return nil, fmt.Errorf("fork completed but project %s is nil", targetProjectID)
+	}
 	return forkedProject, nil
 }
 

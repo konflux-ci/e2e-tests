@@ -1,7 +1,11 @@
 package gitlab
 
 import (
+	"net/http"
+
 	gitlabClient "github.com/xanzy/go-gitlab"
+
+	"github.com/konflux-ci/e2e-tests/pkg/utils"
 )
 
 const (
@@ -16,7 +20,15 @@ type GitlabClient struct {
 func NewGitlabClient(accessToken, baseUrl, groupID string) (*GitlabClient, error) {
 	var err error
 	var glc = &GitlabClient{groupID: groupID}
-	glc.client, err = gitlabClient.NewClient(accessToken, gitlabClient.WithBaseURL(baseUrl))
+
+	httpClient := &http.Client{
+		Transport: utils.NewRetryTransport(http.DefaultTransport),
+	}
+
+	glc.client, err = gitlabClient.NewClient(accessToken,
+		gitlabClient.WithBaseURL(baseUrl),
+		gitlabClient.WithHTTPClient(httpClient),
+	)
 	if err != nil {
 		return nil, err
 	}

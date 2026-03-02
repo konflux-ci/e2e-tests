@@ -28,7 +28,7 @@ var (
 	quayApiUrl = "https://quay.io/api/v1"
 	quayOrg    = utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 	quayToken  = utils.GetEnv("DEFAULT_QUAY_ORG_TOKEN", "")
-	quayClient = quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayToken, quayApiUrl)
+	quayClient = quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayToken, quayApiUrl)
 )
 
 type ImageInspectInfo struct {
