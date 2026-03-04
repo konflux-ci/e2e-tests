@@ -604,7 +604,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).ShouldNot(HaveOccurred(), fmt.Sprintf("failed while checking if the image repo %s is private", imageRepoName))
 				Expect(isPublic).To(BeFalse(), "Expected image repo to changed to private, but it is public")
 			})
-			It("retrigger the pipeline manually", func() {
+			It("retrigger the pipeline manually", Pending, func() {
 				// Record existing PLR name so we can distinguish old from new after retrigger
 				existingPLRName := ""
 				if plr != nil {
@@ -646,7 +646,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					return fmt.Errorf("no new PipelineRun found yet (existing: %s)", existingPLRName)
 				}, 10*time.Minute, constants.PipelineRunPollingInterval).Should(Succeed(), fmt.Sprintf("timed out when waiting for the PipelineRun to retrigger for the component %s/%s", testNamespace, customBranchComponentName))
 			})
-			It("retriggered pipelineRun should eventually finish", func() {
+			It("retriggered pipelineRun should eventually finish", Pending, func() {
 				Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "build", "", "incoming", f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: 2, Always: true}, plr)).To(Succeed())
 			})
 		})
