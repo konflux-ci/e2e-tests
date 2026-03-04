@@ -165,6 +165,8 @@ func getDefaultPipeline(pipelineBundleName constants.BuildPipelineType) string {
 		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build:devel")
 	case "docker-build-oci-ta":
 		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta:devel")
+	case "docker-build-oci-ta-min":
+		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta-min:devel")
 	case "docker-build-multi-platform-oci-ta":
 		return utils.GetEnv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV, "quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-multi-platform-oci-ta:devel")
 	case "fbc-builder":
@@ -356,11 +358,17 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 					gomega.Expect(f.AsKubeAdmin.HasController.WaitForComponentPipelineToBeFinished(component, "", "", "",
 						f.AsKubeAdmin.TektonController, &has.RetryOptions{Retries: pipelineCompletionRetries, Always: true}, nil)).To(gomega.Succeed())
-				})
-				ginkgo.It("should push Dockerfile to registry", ginkgo.Label(buildTemplatesTestLabel), func() {
+
 					pr, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 					gomega.Expect(pr).ToNot(gomega.BeNil(), fmt.Sprintf("PipelineRun for the component %s/%s not found", testNamespace, componentName))
+				})
+				ginkgo.It("should push Dockerfile to registry", ginkgo.Label(buildTemplatesTestLabel), func() {
+
+					if pipelineBundleName == constants.DockerBuildOciTAMin {
+						ginkgo.Skip("Skipping DockerBuildOciTAMin build, which does not push Dockerfile to registry")
+						return
+					}
 
 					if pipelineBundleName != constants.FbcBuilder {
 						ensureOriginalDockerfileIsPushed(f.AsKubeAdmin, pr)
@@ -417,6 +425,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					if pipelineBundleName == constants.FbcBuilder {
 						ginkgo.GinkgoWriter.Println("This is FBC build, which does not require source container build.")
 						ginkgo.Skip(fmt.Sprintf("Skiping FBC build %s", pr.GetName()))
+						return
+					}
+
+					if pipelineBundleName == constants.DockerBuildOciTAMin {
+						ginkgo.GinkgoWriter.Println("This is DockerBuildOciTAMin build, which does not require source container build.")
+						ginkgo.Skip(fmt.Sprintf("Skiping DockerBuildOciTAMin build %s", pr.GetName()))
 						return
 					}
 
