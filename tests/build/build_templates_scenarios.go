@@ -49,7 +49,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		Revision:            "47fc22092005aabebce233a9b6eab994a8152bbd",
 		ContextDir:          ".",
 		DockerFilePath:      constants.DockerFilePath,
-		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild, constants.DockerBuildOciTA},
+		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild, constants.DockerBuildOciTA, constants.DockerBuildOciTAMin},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
 		ManifestMediaType:   "oci",
