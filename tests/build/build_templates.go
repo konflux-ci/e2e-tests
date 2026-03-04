@@ -627,9 +627,12 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 
 						tr, err := f.AsKubeAdmin.TektonController.GetTaskRunStatus(f.AsKubeAdmin.CommonController.KubeRest(), pr, "verify-enterprise-contract")
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
-						gomega.Expect(tekton.DidTaskRunSucceed(tr)).To(gomega.BeTrue(), fmt.Sprintf("%q pipeline failed", pr.Name))
+						logs, err := f.AsKubeAdmin.TektonController.GetTaskRunLogs(pr.Name, "verify-enterprise-contract", pr.Namespace)
+						gomega.Expect(err).NotTo(gomega.HaveOccurred())
+						gomega.Expect(tekton.DidTaskRunSucceed(tr)).To(gomega.BeTrue(), fmt.Sprintf("%q pipeline failed, detailed report: \n%v\n", pr.Name, logs["step-detailed-report"]))
 						gomega.Expect(tr.Status.Results).Should(
 							gomega.ContainElements(tekton.MatchTaskRunResultWithJSONPathValue(constants.TektonTaskTestOutputName, "{$.result}", `["SUCCESS"]`)),
+							fmt.Sprintf("detailed report:\n %v", logs["step-detailed-report"]),
 						)
 					})
 
