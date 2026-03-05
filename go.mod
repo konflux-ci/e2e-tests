@@ -180,7 +180,6 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.7.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.22.2 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
@@ -337,6 +336,6 @@ replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-secu
 
 replace github.com/expr-lang/expr => github.com/expr-lang/expr v1.17.7
 
-replace github.com/go-chi/chi/v5 => github.com/go-chi/chi/v5 v5.2.4
+replace github.com/go-chi/chi/v5 => github.com/go-chi/chi/v5 v5.2.5
 
-replace github.com/go-chi/chi => github.com/go-chi/chi/v5 v5.2.4
+replace github.com/go-chi/chi => github.com/go-chi/chi/v5 v5.2.5
