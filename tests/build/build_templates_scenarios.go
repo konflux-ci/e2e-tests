@@ -172,7 +172,7 @@ var componentScenarios = []ComponentScenarioSpec{
 		GitURL:              "https://github.com/konflux-qe-bd/rpm-sample-app",
 		Revision:            "3a3fb169e0c8998b51d7403ba934de5c1f194b1d",
 		ContextDir:          ".",
-		DockerFilePath:      "Containerfile",
+		DockerFilePath:      "Dockerfile",
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      true,
 		PrefetchInput:       "rpm",
