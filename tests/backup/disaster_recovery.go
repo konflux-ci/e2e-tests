@@ -270,10 +270,10 @@ func isPodReady(pod *corev1.Pod) bool {
 	return false
 }
 
-// cleanupTestResources performs best-effort cleanup of DR test resources.
-// It deletes tenant namespaces and associated Velero Backup/Restore CRs.
-// Errors are ignored because resources may have already been cleaned up by
-// other test phases or may not exist if a test failed early.
+// cleanupTestResources deletes DR test resources: tenant namespaces, managed
+// namespaces, and associated Velero Backup/Restore CRs. Errors are logged
+// and collected so that all cleanup steps run even if some fail, then any
+// errors are reported at the end.
 func cleanupTestResources(fw *framework.Framework, tenants []Tenant) {
 	GinkgoHelper()
 
@@ -281,22 +281,37 @@ func cleanupTestResources(fw *framework.Framework, tenants []Tenant) {
 	kubeClient := fw.AsKubeAdmin.CommonController.KubeInterface()
 	restClient := fw.AsKubeAdmin.CommonController.KubeRest()
 
+	var errs []error
 	for _, t := range tenants {
 		By(fmt.Sprintf("Cleaning up namespace %q", t.Namespace))
-		_ = kubeClient.CoreV1().Namespaces().Delete(ctx, t.Namespace, metav1.DeleteOptions{}) //nolint:errcheck
+		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.Namespace, metav1.DeleteOptions{}); err != nil {
+			GinkgoWriter.Printf("WARNING: failed to delete namespace %q: %v\n", t.Namespace, err)
+			errs = append(errs, err)
+		}
 
 		By(fmt.Sprintf("Cleaning up Backup CR %q", t.BackupName))
-		_ = restClient.Delete(ctx, &velerov1.Backup{ //nolint:errcheck
+		if err := restClient.Delete(ctx, &velerov1.Backup{
 			ObjectMeta: metav1.ObjectMeta{Name: t.BackupName, Namespace: VeleroNamespace},
-		})
+		}); err != nil {
+			GinkgoWriter.Printf("WARNING: failed to delete Backup CR %q: %v\n", t.BackupName, err)
+			errs = append(errs, err)
+		}
 
 		restoreName := "restore-" + t.BackupName
 		By(fmt.Sprintf("Cleaning up Restore CR %q", restoreName))
-		_ = restClient.Delete(ctx, &velerov1.Restore{ //nolint:errcheck
+		if err := restClient.Delete(ctx, &velerov1.Restore{
 			ObjectMeta: metav1.ObjectMeta{Name: restoreName, Namespace: VeleroNamespace},
-		})
+		}); err != nil {
+			GinkgoWriter.Printf("WARNING: failed to delete Restore CR %q: %v\n", restoreName, err)
+			errs = append(errs, err)
+		}
 
 		By(fmt.Sprintf("Cleaning up managed namespace %q", t.ManagedNamespace))
-		_ = kubeClient.CoreV1().Namespaces().Delete(ctx, t.ManagedNamespace, metav1.DeleteOptions{}) //nolint:errcheck
+		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.ManagedNamespace, metav1.DeleteOptions{}); err != nil {
+			GinkgoWriter.Printf("WARNING: failed to delete managed namespace %q: %v\n", t.ManagedNamespace, err)
+			errs = append(errs, err)
+		}
 	}
+
+	Expect(errs).Should(BeEmpty(), "cleanup encountered %d errors", len(errs))
 }

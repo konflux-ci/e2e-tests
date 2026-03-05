@@ -11,6 +11,7 @@ import (
 
 	"github.com/onsi/gomega"
 
+	_ "github.com/konflux-ci/e2e-tests/tests/backup"
 	_ "github.com/konflux-ci/e2e-tests/tests/build"
 	_ "github.com/konflux-ci/e2e-tests/tests/enterprise-contract"
 	_ "github.com/konflux-ci/e2e-tests/tests/integration-service"

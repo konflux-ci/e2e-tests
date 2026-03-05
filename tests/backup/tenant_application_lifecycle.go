@@ -84,9 +84,10 @@ func waitForSucceededPRCount(fw *framework.Framework, namespace, pipelineType, c
 			pr := &prList.Items[i]
 			for _, c := range pr.Status.Conditions {
 				if c.Type == "Succeeded" {
-					if c.Status == "True" {
+					switch c.Status {
+					case "True":
 						succeededCount++
-					} else if c.Status == "False" {
+					case "False":
 						GinkgoWriter.Printf(
 							"FAILED %s PipelineRun %s (component: %s) in %s: %s\n",
 							displayType, pr.Name, pr.Labels[componentLabel],
