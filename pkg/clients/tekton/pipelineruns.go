@@ -8,6 +8,7 @@ import (
 
 	"github.com/konflux-ci/e2e-tests/pkg/logs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"knative.dev/pkg/apis"
 
 	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -62,6 +63,48 @@ func (t *TektonController) RunPipeline(g tekton.PipelineRunGenerator, namespace 
 	}
 
 	return t.createAndWait(pr, namespace, taskTimeout)
+}
+
+// RunPipelineWithRetry try to create a pipelineRun with upto 3 retries if the pipeline fails with CouldntGetPipeline error
+func (t *TektonController) RunPipelineWithRetry(g tekton.PipelineRunGenerator, namespace string, taskTimeout int) (*pipeline.PipelineRun, error) {
+	noOfRetries := 3
+	attempts := 1
+	var pr *pipeline.PipelineRun
+	var err error
+	for {
+		pr, err = g.Generate()
+		if err != nil {
+			return nil, err
+		}
+		pvcs := t.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
+		for _, w := range pr.Spec.Workspaces {
+			if w.PersistentVolumeClaim != nil {
+				pvcName := w.PersistentVolumeClaim.ClaimName
+				if _, err := pvcs.Get(context.Background(), pvcName, metav1.GetOptions{}); err != nil {
+					if errors.IsNotFound(err) {
+						err := tekton.CreatePVC(pvcs, pvcName)
+						if err != nil {
+							return nil, err
+						}
+					} else {
+						return nil, err
+					}
+				}
+			}
+		}
+		pr, err = t.createAndWait(pr, namespace, taskTimeout)
+		if attempts == noOfRetries || pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetPipeline" {
+			return pr, err
+		} else {
+			// delete the current pipelinerun and continue to retry
+			err = t.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+			if err != nil {
+				return pr, fmt.Errorf("failed to delete pipelinerun for retrying: %w", err)
+			}
+			attempts++
+			continue
+		}
+	}
 }
 
 // GetPipelineRun returns a pipelineRun with a given name.
