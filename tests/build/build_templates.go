@@ -631,7 +631,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							IgnoreRekor:         true,
 						}
 
-						pr, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						pr, err = f.AsKubeAdmin.TektonController.RunPipelineWithRetry(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						gomega.Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(gomega.Succeed())
@@ -753,7 +753,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							)
 							gomega.Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(gomega.Succeed())
 
-							ecPipelineRun, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+							ecPipelineRun, err = f.AsKubeAdmin.TektonController.RunPipelineWithRetry(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 							err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(ecPipelineRun, constants.E2ETestFinalizerName)
