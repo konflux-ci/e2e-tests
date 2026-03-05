@@ -180,7 +180,6 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.7.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.22.2 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
@@ -291,7 +290,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	go.mongodb.org/mongo-driver v1.17.4 // indirect
+	go.mongodb.org/mongo-driver v1.17.9 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.39.0 // indirect
