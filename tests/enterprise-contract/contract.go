@@ -2,7 +2,6 @@ package enterprisecontract
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
@@ -25,7 +24,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", ginkgo.L
 
 	var namespace string
 	var fwk *framework.Framework
-	var tektonChainsNs = constants.TEKTON_CHAINS_NS
+	var tektonChainsNs string
 
 	ginkgo.AfterEach(framework.ReportFailure(&fwk))
 
@@ -36,9 +35,8 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", ginkgo.L
 		gomega.Expect(fwk.UserNamespace).NotTo(gomega.BeEmpty(), "failed to create sandbox user")
 		namespace = fwk.UserNamespace
 
-		if os.Getenv(constants.TEST_ENVIRONMENT_ENV) == constants.UpstreamTestEnvironment {
-			tektonChainsNs = "tekton-pipelines"
-		}
+		tektonChainsNs, err = fwk.AsKubeAdmin.TektonController.GetTektonChainsNamespace()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 
 	ginkgo.Context("infrastructure is running", ginkgo.Label("pipeline"), func() {
