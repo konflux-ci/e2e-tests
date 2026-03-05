@@ -39,9 +39,6 @@ const (
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
-	// The namespace where Tekton Chains and its secrets are deployed.
-	TEKTON_CHAINS_NS string = "openshift-pipelines" // #nosec
-
 	// User for running the end-to-end Tekton Chains tests
 	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
