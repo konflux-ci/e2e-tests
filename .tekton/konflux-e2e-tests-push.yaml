@@ -506,7 +506,7 @@ spec:
         - name: name
           value: update-infra-deployments
         - name: bundle
-          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+          value: quay.io/konflux-ci/tekton-catalog/task-update-infra-deployments:0.1
         - name: kind
           value: task
         resolver: bundles
@@ -530,7 +530,7 @@ spec:
         - name: name
           value: update-infra-deployments
         - name: bundle
-          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+          value: quay.io/konflux-ci/tekton-catalog/task-update-infra-deployments:0.1
         - name: kind
           value: task
         resolver: bundles
