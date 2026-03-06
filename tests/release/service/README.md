@@ -45,3 +45,19 @@ This test file includes two negative test cases.
 
    Checkpoints:
      - Ensure that Release CR fails on Validation and on Release, with a proper message printed out to the user.
+
+## The happy path with pushing to external registry on self-hosted Quay (push_to_external_registry_self_hosted_quay.go)
+
+This test is designed to run the release pipeline `push-to-external-registry` against a self-hosted Quay instance.
+
+Prerequisites:
+  - A self-hosted Quay instance must be running in the cluster.
+  - The `init-quay` task must have run, creating:
+    - A `quay-test-config` ConfigMap in the Quay namespace (with `quay-internal-host`, `image-digest`, and `dest-repo`).
+    - A `quay-robot-credentials` Secret in the Quay namespace.
+    - A `quay-admin-token` Secret in the Quay namespace.
+
+Checkpoints:
+  - A Release CR is created in the dev namespace.
+  - The release PipelineRun succeeds in the managed namespace.
+  - The Release is marked as succeeded.

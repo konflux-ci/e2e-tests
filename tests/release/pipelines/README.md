@@ -54,3 +54,4 @@ Checkpoints:
   - The release PipelineRun is successfully created in the managed namespace.
   - The release PipelineRun is expected to pass.
   - The Release passes.
+
