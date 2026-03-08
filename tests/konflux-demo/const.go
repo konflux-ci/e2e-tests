@@ -11,7 +11,7 @@ const (
 	mergePRTimeout              = time.Minute * 1
 	pipelineRunStartedTimeout   = time.Minute * 5
 	pullRequestCreationTimeout  = time.Minute * 5
-	releasePipelineTimeout      = time.Minute * 15
+	releasePipelineTimeout      = time.Minute * 60
 	snapshotTimeout             = time.Minute * 4
 	releaseTimeout              = time.Minute * 4
 	testPipelineTimeout         = time.Minute * 15
