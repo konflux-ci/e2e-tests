@@ -83,7 +83,7 @@ const (
 	// The framework's GitHub client resolves the full path using the
 	// GITHUB_E2E_ORGANIZATION_ENV environment variable. The repo must exist
 	// as a fork in that organization for triggerBuildsAndVerify to work.
-	MathWizzRepoName = "MathWizz_QA_demo_application"
+	MathWizzRepoName = "DR_test_MathWizz"
 
 	// MathWizzDefaultBranch is the default branch of the MathWizz repo.
 	MathWizzDefaultBranch = "main"
@@ -322,3 +322,40 @@ const (
 	VeleroReadyTimeout = 5 * time.Minute
 	VeleroReadyPoll    = 10 * time.Second
 )
+
+// ---------------------------------------------------------------------------
+// Backup integrity validation
+// ---------------------------------------------------------------------------
+
+const (
+	// BackupItemCount is the exact number of Kubernetes resources Velero
+	// should back up for a single tenant namespace. This value is determined
+	// empirically by running the test suite and inspecting
+	// Backup.Status.Progress.ItemsBackedUp. Update this constant whenever
+	// the test application (MathWizz) or IncludedResources list changes.
+	//
+	// Calculated estimate based on a MathWizz tenant with 3 Components:
+	//   1 Namespace + 1 Application + 3 Components + 1 ITS + ~3 SAs +
+	//   ~10 Secrets + ~3 RoleBindings + 3 PaC Repos + 3 ImageRepos +
+	//   1 ReleasePlan + ~3 Snapshots ≈ 32
+	//
+	// TODO: Verify empirically on a dev cluster and adjust if needed.
+	BackupItemCount = 32
+
+	// BackupTarballSize is the expected size in bytes of the Velero backup
+	// tarball stored in MinIO for a single tenant namespace. Like
+	// BackupItemCount, this value is determined empirically by running the
+	// test suite and inspecting the tarball via MinIO's StatObject. Update
+	// this constant whenever the test application or IncludedResources changes.
+	//
+	// Educated guess: 32 items × ~1.5 KB avg serialized JSON per resource,
+	// compressed to ~60% in a tar.gz ≈ ~28 KB.
+	//
+	// TODO: Verify empirically on a dev cluster and adjust.
+	BackupTarballSize int64 = 28000
+)
+
+// VeleroBackupTarballPathFmt is the S3 object key pattern for the backup
+// tarball. Velero writes the compressed backup data at this path inside the
+// bucket. Both %s placeholders are the backup name.
+const VeleroBackupTarballPathFmt = "backups/%s/%s.tar.gz"

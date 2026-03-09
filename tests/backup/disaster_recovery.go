@@ -10,9 +10,12 @@ package backup
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	imagecontrollerv1alpha1 "github.com/konflux-ci/image-controller/api/v1alpha1"
+	"github.com/minio/minio-go/v7"
+	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
@@ -46,16 +49,152 @@ func createBackup(fw *framework.Framework, t Tenant) {
 
 	By(fmt.Sprintf("Waiting for Backup CR %q to reach Completed phase (timeout: %s)", t.BackupName, BackupTimeout))
 
+	completedBackup := &velerov1.Backup{}
 	Eventually(func() (velerov1.BackupPhase, error) {
-		got := &velerov1.Backup{}
 		err := fw.AsKubeAdmin.CommonController.KubeRest().Get(context.Background(),
-			client.ObjectKey{Name: t.BackupName, Namespace: VeleroNamespace}, got)
+			client.ObjectKey{Name: t.BackupName, Namespace: VeleroNamespace}, completedBackup)
 		if err != nil {
 			return "", err
 		}
-		return got.Status.Phase, nil
+		return completedBackup.Status.Phase, nil
 	}, BackupTimeout, BackupPollInterval).Should(Equal(velerov1.BackupPhaseCompleted),
 		"Backup CR %q did not reach Completed phase within %s", t.BackupName, BackupTimeout)
+
+	validateBackupIntegrity(fw, completedBackup)
+}
+
+// validateBackupIntegrity asserts that a completed Velero Backup is not hollow.
+// It performs three checks:
+//
+//  1. Zero backup errors — the backup ran without any resource-level failures.
+//  2. Exact item count — the number of backed-up items matches BackupItemCount,
+//     the empirically determined count for a single MathWizz tenant namespace.
+//  3. Tarball size — the backup archive stored in MinIO matches
+//     BackupTarballSize, the empirically determined size for a single tenant.
+//
+// Connection details for MinIO are read dynamically from the BSL CR and its
+// referenced credential Secret.
+func validateBackupIntegrity(fw *framework.Framework, backup *velerov1.Backup) {
+	GinkgoHelper()
+
+	backupName := backup.Name
+	By(fmt.Sprintf("Validating backup integrity for %q", backupName))
+
+	// Check 1: zero errors.
+	By(fmt.Sprintf("Verifying Backup %q has zero errors", backupName))
+	Expect(backup.Status.Errors).Should(Equal(0),
+		"Backup %q completed with %d errors", backupName, backup.Status.Errors)
+
+	// Check 2: exact item count.
+	By(fmt.Sprintf("Verifying Backup %q backed up exactly %d items", backupName, BackupItemCount))
+	Expect(backup.Status.Progress).ShouldNot(BeNil(),
+		"Backup %q has nil Progress — Velero did not report item counts", backupName)
+	Expect(backup.Status.Progress.ItemsBackedUp).Should(Equal(BackupItemCount),
+		"Backup %q backed up %d items, expected exactly %d",
+		backupName, backup.Status.Progress.ItemsBackedUp, BackupItemCount)
+
+	// Check 3: tarball size.
+	By(fmt.Sprintf("Verifying backup tarball size in MinIO for %q", backupName))
+	tarballSize := getBackupTarballSize(fw, backup)
+	GinkgoWriter.Printf("Backup %q: tarball=%d bytes\n", backupName, tarballSize)
+	Expect(tarballSize).Should(Equal(BackupTarballSize),
+		"Backup %q tarball is %d bytes, expected %d",
+		backupName, tarballSize, BackupTarballSize)
+}
+
+// getBackupTarballSize queries MinIO (the S3-compatible object store deployed
+// by the development overlay on ephemeral test clusters) and returns the size
+// in bytes of the backup tarball.
+//
+// Connection details are read dynamically from the first Available BSL in the
+// openshift-adp namespace:
+//   - Bucket name and prefix from BSL.Spec.ObjectStorage
+//   - MinIO endpoint from BSL.Spec.Config["s3Url"]
+//   - Credentials from the Secret referenced by BSL.Spec.Credential
+func getBackupTarballSize(fw *framework.Framework, backup *velerov1.Backup) int64 {
+	GinkgoHelper()
+	ctx := context.Background()
+	restClient := fw.AsKubeAdmin.CommonController.KubeRest()
+
+	// Find the first Available BSL to read MinIO connection details.
+	bslList := &velerov1.BackupStorageLocationList{}
+	Expect(restClient.List(ctx, bslList, client.InNamespace(VeleroNamespace))).
+		Should(Succeed(), "failed to list BackupStorageLocations")
+	Expect(bslList.Items).ShouldNot(BeEmpty(), "no BackupStorageLocations found in %s", VeleroNamespace)
+
+	var bsl *velerov1.BackupStorageLocation
+	for i := range bslList.Items {
+		if bslList.Items[i].Status.Phase == velerov1.BackupStorageLocationPhaseAvailable {
+			bsl = &bslList.Items[i]
+			break
+		}
+	}
+	Expect(bsl).ShouldNot(BeNil(), "no Available BackupStorageLocation found in %s", VeleroNamespace)
+
+	// Extract MinIO connection parameters from the BSL.
+	bucket := bsl.Spec.ObjectStorage.Bucket
+	prefix := bsl.Spec.ObjectStorage.Prefix
+	s3URL := bsl.Spec.Config["s3Url"]
+	Expect(s3URL).ShouldNot(BeEmpty(), "BSL %q has no s3Url in Config", bsl.Name)
+	Expect(bucket).ShouldNot(BeEmpty(), "BSL %q has no bucket configured", bsl.Name)
+
+	// Read credentials from the Secret referenced by the BSL.
+	Expect(bsl.Spec.Credential).ShouldNot(BeNil(),
+		"BSL %q has no credential reference", bsl.Name)
+	credSecret := &corev1.Secret{}
+	Expect(restClient.Get(ctx, client.ObjectKey{
+		Name:      bsl.Spec.Credential.Name,
+		Namespace: VeleroNamespace,
+	}, credSecret)).Should(Succeed(),
+		"failed to get credential Secret %q for BSL %q", bsl.Spec.Credential.Name, bsl.Name)
+
+	// OADP's Velero AWS plugin stores credentials in the AWS credentials file
+	// format ("[default]\naws_access_key_id = ...\naws_secret_access_key = ...")
+	// regardless of whether the backend is MinIO. Parse the access key and
+	// secret key from the referenced key in the Secret.
+	credData := credSecret.Data[bsl.Spec.Credential.Key]
+	Expect(credData).ShouldNot(BeEmpty(),
+		"credential Secret %q key %q is empty", bsl.Spec.Credential.Name, bsl.Spec.Credential.Key)
+	accessKey, secretKey := parseVeleroCredentialFile(string(credData))
+
+	// Strip the scheme — minio-go takes host:port, not a full URL.
+	// MinIO runs as an in-cluster Service on ephemeral test clusters, so
+	// TLS is never used (Secure: false).
+	endpoint := strings.TrimPrefix(strings.TrimPrefix(s3URL, "https://"), "http://")
+
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  miniocreds.NewStaticV4(accessKey, secretKey, ""),
+		Secure: false,
+	})
+	Expect(err).ShouldNot(HaveOccurred(), "failed to create MinIO client for endpoint %q", endpoint)
+
+	// Construct the object key for the backup tarball.
+	objectKey := fmt.Sprintf(VeleroBackupTarballPathFmt, backup.Name, backup.Name)
+	if prefix != "" {
+		objectKey = prefix + "/" + objectKey
+	}
+
+	// StatObject returns the tarball metadata including Size.
+	stat, err := minioClient.StatObject(ctx, bucket, objectKey, minio.StatObjectOptions{})
+	Expect(err).ShouldNot(HaveOccurred(),
+		"failed to stat backup tarball %q in bucket %q", objectKey, bucket)
+
+	return stat.Size
+}
+
+// parseVeleroCredentialFile extracts aws_access_key_id and aws_secret_access_key
+// from the AWS credentials file format that OADP's Velero AWS plugin uses for
+// all S3-compatible backends, including MinIO.
+func parseVeleroCredentialFile(data string) (accessKey, secretKey string) {
+	for _, line := range strings.Split(data, "\n") {
+		line = strings.TrimSpace(line)
+		if after, ok := strings.CutPrefix(line, "aws_access_key_id"); ok {
+			accessKey = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(after), "="))
+		} else if after, ok := strings.CutPrefix(line, "aws_secret_access_key"); ok {
+			secretKey = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(after), "="))
+		}
+	}
+	return accessKey, secretKey
 }
 
 // restoreFromBackup creates a Velero Restore CR for the given tenant and polls
