@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 )
 
-var _ = framework.BackupSuiteDescribe("DR Same-Version Backup/Restore", Label("backup-suite"), Serial, func() {
+var _ = framework.BackupSuiteDescribe("DR Same-Version Backup/Restore", Label("backup-suite"), Serial, Ordered, func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework

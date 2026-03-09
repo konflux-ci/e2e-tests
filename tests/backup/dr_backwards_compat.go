@@ -37,7 +37,7 @@ import (
 )
 
 var _ = framework.BackupSuiteDescribe("DR Backwards-Compat",
-	Label("backwards-compat"), Serial, func() {
+	Label("backwards-compat"), Serial, Ordered, func() {
 		defer GinkgoRecover()
 
 		var fw *framework.Framework
@@ -193,7 +193,7 @@ func performKonfluxUpgrade(fw *framework.Framework) {
 
 	var previewBranchRef *plumbing.Reference
 	err = branches.ForEach(func(ref *plumbing.Reference) error {
-		if !strings.Contains("main", ref.Name().String()) {
+		if !strings.Contains(ref.Name().String(), "main") {
 			previewBranchRef = ref
 		}
 		return nil
@@ -242,7 +242,7 @@ func performKonfluxUpgrade(fw *framework.Framework) {
 	By("Waiting for ArgoCD to sync all applications after upgrade")
 	ic, err := installation.NewAppStudioInstallController()
 	Expect(err).ShouldNot(HaveOccurred(), "failed to initialize installation controller")
-	ic.CheckOperatorsReady()
+	Expect(ic.CheckOperatorsReady()).Should(Succeed(), "operators not ready after upgrade")
 
 	// Verify backup infrastructure survived the upgrade. Only Velero and BSL,
 	// not the full validateDREnvironment — the upgrade is tested elsewhere.

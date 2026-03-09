@@ -12,8 +12,6 @@ package backup
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
@@ -42,7 +40,9 @@ func validateOADPOperator(fw *framework.Framework) {
 	By("Validating OADP operator health: pods running in " + VeleroNamespace)
 
 	ctx := context.Background()
-	pods, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(VeleroNamespace).List(ctx, metav1.ListOptions{})
+	pods, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(VeleroNamespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=openshift-adp-operator-controller-manager",
+	})
 	Expect(err).ShouldNot(HaveOccurred(), "failed to list pods in %s", VeleroNamespace)
 	Expect(pods.Items).ShouldNot(BeEmpty(), "no pods found in %s — OADP operator may not be installed", VeleroNamespace)
 
@@ -109,13 +109,6 @@ func validateBSLAvailable(fw *framework.Framework) {
 func validateGitHubRepo(fw *framework.Framework) {
 	GinkgoHelper()
 	By("Validating GitHub repo is reachable: " + MathWizzRepo)
-
-	httpClient := &http.Client{Timeout: 30 * time.Second}
-	resp, err := httpClient.Get(MathWizzRepo)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to reach MathWizz repo at %s", MathWizzRepo)
-	defer resp.Body.Close()
-	Expect(resp.StatusCode).Should(Equal(http.StatusOK),
-		"MathWizz repo returned %d instead of 200", resp.StatusCode)
 
 	By(fmt.Sprintf("Validating repo structure: %d component Dockerfiles exist", len(Components)))
 	ghClient := fw.AsKubeAdmin.HasController.Github

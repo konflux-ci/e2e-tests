@@ -177,6 +177,7 @@ func setupReleaseInfra(fw *framework.Framework, t Tenant) {
 // ReleasePlanAdmission. Each MathWizz component maps to the DR release
 // image push repository.
 func buildReleaseMappingData() []byte {
+	GinkgoHelper()
 	components := make([]map[string]interface{}, 0, len(Components))
 	for _, comp := range Components {
 		components = append(components, map[string]interface{}{
@@ -190,11 +191,7 @@ func buildReleaseMappingData() []byte {
 			"components": components,
 		},
 	})
-	// buildReleaseMappingData is called with static data; panic on marshal
-	// failure indicates a bug in the mapping construction, not a runtime error.
-	if err != nil {
-		panic(fmt.Sprintf("failed to marshal release mapping data: %v", err))
-	}
+	Expect(err).ShouldNot(HaveOccurred(), "failed to marshal release mapping data")
 	return data
 }
 
@@ -270,5 +267,5 @@ func rotateSATokens(fw *framework.Framework, namespace string) {
 		}
 		return len(newTokens)
 	}, SATokenTimeout, SATokenPoll).Should(Equal(deletedCount),
-		fmt.Sprintf("expected at least %d new SA token Secrets in namespace %s", deletedCount, namespace))
+		fmt.Sprintf("expected exactly %d new SA token Secrets in namespace %s", deletedCount, namespace))
 }
