@@ -90,7 +90,7 @@ const (
 
 	// Component names shared across all tenants. These map 1:1 to the
 	// microservices in the MathWizz monorepo that have real source code builds.
-	CompWebServer     = "mathwizz-web-server"
+	CompWebServer     = "mathwizz-web-server" // #nosec
 	CompHistoryWorker = "mathwizz-history-worker"
 	CompFrontend      = "mathwizz-frontend"
 
@@ -199,11 +199,11 @@ const (
 
 	// DRCosignSecretName holds the cosign public key used to verify image
 	// signatures in the Enterprise Contract policy.
-	DRCosignSecretName = "cosign-public-key"
+	DRCosignSecretName = "cosign-public-key" // #nosec
 
 	// DRQuayAuthSecret holds Quay registry authentication credentials for the
 	// release pipeline to push released images.
-	DRQuayAuthSecret = "hacbs-release-tests-token"
+	DRQuayAuthSecret = "hacbs-release-tests-token" // #nosec
 
 	// DRReleaseCatalogTAQuaySecret holds Quay credentials for the release
 	// service catalog trusted artifacts.

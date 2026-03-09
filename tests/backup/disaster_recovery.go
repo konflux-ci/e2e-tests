@@ -156,6 +156,8 @@ func getBackupTarballSize(fw *framework.Framework, backup *velerov1.Backup) int6
 	Expect(credData).ShouldNot(BeEmpty(),
 		"credential Secret %q key %q is empty", bsl.Spec.Credential.Name, bsl.Spec.Credential.Key)
 	accessKey, secretKey := parseVeleroCredentialFile(string(credData))
+	Expect(accessKey).ShouldNot(BeEmpty(), "could not parse aws_access_key_id from BSL credential")
+	Expect(secretKey).ShouldNot(BeEmpty(), "could not parse aws_secret_access_key from BSL credential")
 
 	// Strip the scheme — minio-go takes host:port, not a full URL.
 	// MinIO runs as an in-cluster Service on ephemeral test clusters, so
