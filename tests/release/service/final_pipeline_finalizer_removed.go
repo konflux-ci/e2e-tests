@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	ecp "github.com/conforma/crds/api/v1alpha1"
@@ -41,6 +42,10 @@ const (
 	managedNamespaceSuccess = "final-finalizer-managed-success"
 	rpaNameFailure          = releasecommon.TargetReleasePlanAdmissionName
 	rpaNameSuccess          = releasecommon.TargetReleasePlanAdmissionName + "-success"
+
+	// release-service manager pod label (control-plane: controller-manager)
+	releaseServiceManagerLabelKey   = "control-plane"
+	releaseServiceManagerLabelValue = "controller-manager"
 )
 
 // scenarioParams is used by postReleaseVerification to find the right Release and managed namespace.
@@ -89,6 +94,33 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service final pipeline fi
 		})
 	})
 })
+
+// printReleaseServiceManagerImage finds the release-service manager pod and prints its container image(s)
+// so test runs can verify the correct version is deployed. Tries RELEASE_SERVICE_MANAGER_NAMESPACE env,
+// then "release-service", then "system".
+func printReleaseServiceManagerImage(fw *framework.Framework) {
+	candidates := []string{os.Getenv("RELEASE_SERVICE_MANAGER_NAMESPACE"), "release-service", "system"}
+	var tried []string
+	for _, ns := range candidates {
+		if ns == "" {
+			continue
+		}
+		tried = append(tried, ns)
+		podList, err := fw.AsKubeAdmin.CommonController.ListPods(ns, releaseServiceManagerLabelKey, releaseServiceManagerLabelValue, 5)
+		if err != nil || len(podList.Items) == 0 {
+			continue
+		}
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			ginkgo.GinkgoWriter.Printf("Release-service manager pod: namespace=%s name=%s\n", pod.Namespace, pod.Name)
+			for _, c := range pod.Spec.Containers {
+				ginkgo.GinkgoWriter.Printf("  container %s image: %s\n", c.Name, c.Image)
+			}
+		}
+		return
+	}
+	ginkgo.GinkgoWriter.Printf("Release-service manager pod not found (tried namespaces: %v)\n", tried)
+}
 
 // setupFinalPipelineFinalizerSuite creates one dev namespace with one Application, one tenant SA,
 // one PVC, one Snapshot, and two ReleasePlans (failure and success). It creates two managed
@@ -196,7 +228,6 @@ func setupFinalPipelineFinalizerSuite() {
 			{Name: "revision", Value: pipelineExamplesRev},
 			{Name: "pathInRepo", Value: "pipelines/simple_pipeline.yaml"},
 		},
-		UseEmptyDir: true,
 	}
 
 	// Two ReleasePlans in dev namespace (same final pipeline, different targets)
@@ -232,12 +263,15 @@ func getReleaseByRPName(fw *framework.Framework, devNamespace, releasePlanName s
 func postReleaseVerification(p scenarioParams) {
 	var _ = ginkgo.Describe("Post-release verification", func() {
 		ginkgo.AfterEach(func() {
-			if ginkgo.CurrentSpecReport().Failed() && releaseCR != nil {
-				release, getErr := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseCR.GetName(), "", devNamespace)
-				if getErr == nil {
-					releaseYaml, marshalErr := yaml.Marshal(release)
-					if marshalErr == nil {
-						ginkgo.GinkgoWriter.Printf("Release CR (spec failed):\n%s\n", string(releaseYaml))
+			if ginkgo.CurrentSpecReport().Failed() {
+				printReleaseServiceManagerImage(fw)
+				if releaseCR != nil {
+					release, getErr := fw.AsKubeAdmin.ReleaseController.GetRelease(releaseCR.GetName(), "", devNamespace)
+					if getErr == nil {
+						releaseYaml, marshalErr := yaml.Marshal(release)
+						if marshalErr == nil {
+							ginkgo.GinkgoWriter.Printf("Release CR (spec failed):\n%s\n", string(releaseYaml))
+						}
 					}
 				}
 			}
