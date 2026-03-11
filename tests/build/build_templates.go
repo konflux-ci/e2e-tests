@@ -349,7 +349,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 			pipelineBundleName := scenario.PipelineBundleNames[0]
 			var pr *tektonpipeline.PipelineRun
 
-			ginkgo.Context(fmt.Sprintf("scenario %s", scenario.Name), func() {
+			ginkgo.Context(fmt.Sprintf("scenario %s (%s)", scenario.Name, pipelineBundleName), func() {
 
 				ginkgo.It(fmt.Sprintf("should eventually finish successfully for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), ginkgo.Label(buildTemplatesTestLabel, sourceBuildTestLabel), func() {
 					component, err := f.AsKubeAdmin.HasController.GetComponent(componentName, testNamespace)
