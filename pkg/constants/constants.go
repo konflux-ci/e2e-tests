@@ -108,6 +108,9 @@ const (
 	// Bundle ref for custom docker-build-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE"
 
+	// Bundle ref for custom docker-build-oci-ta-min, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE"
+
 	// Bundle ref for custom docker-build-multi-platform-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE"
 
@@ -268,6 +271,7 @@ const (
 
 	DockerBuild                   BuildPipelineType = "docker-build"
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
+	DockerBuildOciTAMin           BuildPipelineType = "docker-build-oci-ta-min"
 	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
 	FbcBuilder                    BuildPipelineType = "fbc-builder"
 

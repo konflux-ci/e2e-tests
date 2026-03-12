@@ -32,6 +32,8 @@ func GetBuildPipelineBundleAnnotation(buildPipelineName constants.BuildPipelineT
 		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV)
 	case constants.DockerBuildOciTA:
 		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV)
+	case constants.DockerBuildOciTAMin:
+		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE_ENV)
 	case constants.DockerBuildMultiPlatformOciTa:
 		bundleVersion = os.Getenv(constants.CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV)
 	case constants.FbcBuilder:
