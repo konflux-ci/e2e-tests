@@ -30,7 +30,7 @@ require (
 	github.com/konflux-ci/integration-service v0.0.0-20260108133201-e2f5559a9544
 	github.com/konflux-ci/operator-toolkit v0.0.0-20251118152634-b4f41f073069
 	github.com/konflux-ci/release-service v0.0.0-20260113075649-fff62d349fa9
-	github.com/magefile/mage v1.14.0
+	github.com/magefile/mage v1.16.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.12.5
 	github.com/onsi/ginkgo/v2 v2.27.4
@@ -180,7 +180,6 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.7.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.22.2 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
