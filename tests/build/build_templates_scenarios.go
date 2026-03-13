@@ -203,9 +203,9 @@ var componentScenarios = []ComponentScenarioSpec{
 	{
 		Name:                "from-scratch",
 		GitURL:              "https://github.com/konflux-qe-bd/docker-file-from-scratch",
-		Revision:            "34de8caa4952b6214700699e6df4bb53d6f799e6",
+		Revision:            "a3ea25fc3a1523db84ff96ee9958f637aea3abcd",
 		ContextDir:          ".",
-		DockerFilePath:      "Dockerfile",
+		DockerFilePath:      "Containerfile",
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},
 		EnableHermetic:      false,
 		PrefetchInput:       "",
