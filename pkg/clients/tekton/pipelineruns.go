@@ -72,28 +72,8 @@ func (t *TektonController) RunPipelineWithRetry(g tekton.PipelineRunGenerator, n
 	var pr *pipeline.PipelineRun
 	var err error
 	for {
-		pr, err = g.Generate()
-		if err != nil {
-			return nil, err
-		}
-		pvcs := t.KubeInterface().CoreV1().PersistentVolumeClaims(pr.Namespace)
-		for _, w := range pr.Spec.Workspaces {
-			if w.PersistentVolumeClaim != nil {
-				pvcName := w.PersistentVolumeClaim.ClaimName
-				if _, err := pvcs.Get(context.Background(), pvcName, metav1.GetOptions{}); err != nil {
-					if errors.IsNotFound(err) {
-						err := tekton.CreatePVC(pvcs, pvcName)
-						if err != nil {
-							return nil, err
-						}
-					} else {
-						return nil, err
-					}
-				}
-			}
-		}
-		pr, err = t.createAndWait(pr, namespace, taskTimeout)
-		if attempts == noOfRetries || pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetPipeline" {
+		pr, err = t.RunPipeline(g, namespace, taskTimeout)
+		if err != nil || attempts == noOfRetries || pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetReason() != "CouldntGetPipeline" {
 			return pr, err
 		} else {
 			// delete the current pipelinerun and continue to retry
