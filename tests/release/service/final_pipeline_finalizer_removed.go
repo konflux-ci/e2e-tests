@@ -117,6 +117,10 @@ func printReleaseServiceManagerImage(fw *framework.Framework) {
 			for _, c := range pod.Spec.Containers {
 				ginkgo.GinkgoWriter.Printf("  container %s image: %s\n", c.Name, c.Image)
 			}
+			podLogs := fw.AsKubeAdmin.CommonController.GetPodLogs(pod)
+			for name, log := range podLogs {
+				ginkgo.GinkgoWriter.Printf("Release-service manager pod log (%s):\n%s\n", name, string(log))
+			}
 		}
 		return
 	}
