@@ -369,6 +369,10 @@ func assertFinalizerRemovedFromFinalPipeline(fw *framework.Framework, devNamespa
 		finalizers := finalPipelineRun.GetFinalizers()
 		if len(finalizers) > 0 {
 			ginkgo.GinkgoWriter.Printf("Final PipelineRun %s/%s finalizers: %v\n", finalPipelineRun.GetNamespace(), finalPipelineRun.GetName(), finalizers)
+			prYaml, marshalErr := yaml.Marshal(finalPipelineRun)
+			if marshalErr == nil {
+				ginkgo.GinkgoWriter.Printf("Final PipelineRun (full YAML):\n%s\n", string(prYaml))
+			}
 		}
 		for _, f := range finalizers {
 			if f == "appstudio.redhat.com/release-finalizer" {
