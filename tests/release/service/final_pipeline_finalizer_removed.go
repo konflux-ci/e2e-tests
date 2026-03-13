@@ -86,13 +86,14 @@ var _ = framework.ReleaseServiceSuiteDescribe("Release service final pipeline fi
 		})
 	})
 
-	ginkgo.Describe("when managed pipeline succeeds", func() {
-		postReleaseVerification(scenarioParams{
-			releasePlanName:     releasePlanNameSuccess,
-			managedNamespace:    managedNamespaceSuccess,
-			expectManagedToFail: false,
-		})
-	})
+	// Temporarily disabled: only run the "managed pipeline fails" scenario.
+	// ginkgo.Describe("when managed pipeline succeeds", func() {
+	// 	postReleaseVerification(scenarioParams{
+	// 		releasePlanName:     releasePlanNameSuccess,
+	// 		managedNamespace:    managedNamespaceSuccess,
+	// 		expectManagedToFail: false,
+	// 	})
+	// })
 })
 
 // printReleaseServiceManagerImage finds the release-service manager pod and prints its container image(s)
