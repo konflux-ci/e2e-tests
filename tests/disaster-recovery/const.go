@@ -17,7 +17,7 @@
 // the Velero CLI method, and Tenant 2 (MosheKipod) restores via the oc command method.
 // This tests both documented SOP restore procedures in parallel without doubling runtime.
 // All tenants build the same MathWizz application (3 Components from a monorepo).
-package backup
+package disaster_recovery
 
 import (
 	"time"

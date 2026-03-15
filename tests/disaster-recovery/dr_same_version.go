@@ -11,7 +11,7 @@
 // This proves that backup/restore works correctly within a single Konflux
 // version — complementing the backwards-compat test which proves cross-version
 // backup/restore.
-package backup
+package disaster_recovery
 
 import (
 	"sync"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 )
 
-var _ = framework.BackupSuiteDescribe("DR Same-Version Backup/Restore", Label("backup-suite"), Serial, Ordered, func() {
+var _ = framework.DisasterRecoverySuiteDescribe("DR Same-Version Backup/Restore", Label("disaster-recovery"), Serial, Ordered, func() {
 	defer GinkgoRecover()
 
 	var fw *framework.Framework

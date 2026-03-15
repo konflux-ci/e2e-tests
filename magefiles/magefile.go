@@ -1176,6 +1176,23 @@ func (ci CI) TestUpgrade() error {
 	return nil
 }
 
+// TestDisasterRecovery runs the DR backup/restore e2e suite in CI.
+func (ci CI) TestDisasterRecovery() error {
+	if err := ci.init(); err != nil {
+		return fmt.Errorf("error when running ci init: %v", err)
+	}
+
+	if err := PreflightChecks(); err != nil {
+		return fmt.Errorf("error when running preflight checks: %v", err)
+	}
+
+	if err := setRequiredEnvVars(); err != nil {
+		return fmt.Errorf("error when setting up required env vars: %v", err)
+	}
+
+	return DisasterRecoveryWorkflow()
+}
+
 // Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
 func (Local) TestUpgrade() error {
 	if err := PreflightChecks(); err != nil {
@@ -1251,7 +1268,37 @@ func CleanWorkload() error {
 	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
 }
 
+// DisasterRecoveryWorkflow orchestrates the DR backup/restore e2e test
+// flow. It deploys an older Konflux version, runs the backwards-compatibility
+// test (which upgrades Konflux mid-test via performKonfluxUpgrade), then runs
+// the same-version test on the upgraded cluster.
+//
+// Both test scenarios run on a single ROSA cluster in sequence. The backwards-
+// compat test uses a 180m ginkgo timeout because it includes tenant creation,
+// pipeline execution, backup, cluster upgrade, restore, and verification.
+func DisasterRecoveryWorkflow() error {
+	ic, err := BootstrapClusterForUpgrade()
+	if err != nil {
+		klog.Errorf("failed to bootstrap cluster for disaster recovery tests: %s", err)
+		return err
+	}
+
+	err = CheckClusterAfterUpgrade(ic)
+	if err != nil {
+		klog.Errorf("cluster not ready after bootstrap: %s", err)
+		return err
+	}
+
+	return runTestsWithTimeout("disaster-recovery", "disaster-recovery-report.xml", "360m")
+}
+
 func runTests(labelsToRun string, junitReportFile string) error {
+	return runTestsWithTimeout(labelsToRun, junitReportFile, "90m")
+}
+
+// runTestsWithTimeout is like runTests but accepts a custom ginkgo timeout.
+// Use this for test suites that need longer than the default 90 minutes.
+func runTestsWithTimeout(labelsToRun, junitReportFile, timeout string) error {
 	extraFilter := strings.TrimSpace(os.Getenv("E2E_EXTRA_LABEL_FILTER"))
 	if extraFilter != "" {
 		if strings.Contains(extraFilter, "||") {
@@ -1263,7 +1310,7 @@ func runTests(labelsToRun string, junitReportFile string) error {
 	}
 
 	ginkgoArgs := []string{"-p", "-v", "--output-interceptor-mode=none", "--no-color", "--fail-on-empty",
-		"--timeout=90m", "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
+		"--timeout=" + timeout, "--json-report=e2e-report.json", fmt.Sprintf("--output-dir=%s", artifactDir),
 		"--junit-report=" + junitReportFile, "--label-filter=" + labelsToRun}
 
 	if os.Getenv("GINKGO_PROCS") != "" {

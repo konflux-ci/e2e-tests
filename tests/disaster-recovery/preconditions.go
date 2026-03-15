@@ -7,7 +7,7 @@
 //
 // NOTE: Helper functions call GinkgoHelper() so that assertion failures report
 // the caller's location in the test spec, not the helper's internal line.
-package backup
+package disaster_recovery
 
 import (
 	"context"

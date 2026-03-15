@@ -6,7 +6,7 @@
 // failures report the caller's location in the test spec, not the helper's
 // internal line number. This is a Ginkgo feature analogous to t.Helper() in
 // the standard testing package.
-package backup
+package disaster_recovery
 
 import (
 	"context"

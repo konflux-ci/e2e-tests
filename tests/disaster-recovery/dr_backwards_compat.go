@@ -17,7 +17,7 @@
 // CheckOperatorsReady are pure Go functions. See performKonfluxUpgrade
 // below for why this helper exists alongside the magefiles upgrade
 // infrastructure.
-package backup
+package disaster_recovery
 
 import (
 	"fmt"
@@ -36,8 +36,8 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 )
 
-var _ = framework.BackupSuiteDescribe("DR Backwards-Compat",
-	Label("backwards-compat"), Serial, Ordered, func() {
+var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
+	Label("disaster-recovery"), Serial, Ordered, func() {
 		defer GinkgoRecover()
 
 		var fw *framework.Framework
