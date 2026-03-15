@@ -268,17 +268,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			ginkgo.It("integration pipeline should end up with success", func() {
-				gomega.Eventually(func() error {
-					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentA.Name, applicationName, testNamespace, "")
-					if err != nil {
-						ginkgo.GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentA %s/%s\n", testNamespace, componentA.Name)
-						return err
-					}
-					if !integrationPipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
-					}
-					return nil
-				}, longTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentA %s/%s", testNamespace, componentA.Name))
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(),
+					fmt.Sprintf("timed out waiting for integration pipeline to succeed for componentA %s/%s", testNamespace, componentA.Name))
 			})
 		})
 
@@ -368,17 +359,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			ginkgo.It("integration pipeline should end up with success", func() {
-				gomega.Eventually(func() error {
-					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentB.Name, applicationName, testNamespace, "")
-					if err != nil {
-						ginkgo.GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentB %s/%s\n", testNamespace, componentB.Name)
-						return err
-					}
-					if !integrationPipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
-					}
-					return nil
-				}, longTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentB %s/%s", testNamespace, componentB.Name))
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(),
+					fmt.Sprintf("timed out waiting for integration pipeline to succeed for componentB %s/%s", testNamespace, componentB.Name))
 			})
 		})
 
@@ -468,17 +450,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Creation of group snapshots f
 			})
 
 			ginkgo.It("integration pipeline should end up with success", func() {
-				gomega.Eventually(func() error {
-					integrationPipelineRun, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentC.Name, applicationName, testNamespace, "")
-					if err != nil {
-						ginkgo.GinkgoWriter.Printf("Integraiton PipelineRun has not been created yet for the componentC %s/%s\n", testNamespace, componentC.Name)
-						return err
-					}
-					if !integrationPipelineRun.HasStarted() {
-						return fmt.Errorf("integration pipelinerun %s in namespace %s hasn't started yet", integrationPipelineRun.GetName(), integrationPipelineRun.GetNamespace())
-					}
-					return nil
-				}, longTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed(), fmt.Sprintf("timed out when waiting for the build PipelineRun to start for the componentC %s/%s", testNamespace, componentC.Name))
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(),
+					fmt.Sprintf("timed out waiting for integration pipeline to succeed for componentC %s/%s", testNamespace, componentC.Name))
 			})
 		})
 
