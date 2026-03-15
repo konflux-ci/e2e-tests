@@ -39,9 +39,6 @@ const (
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
-	// The namespace where Tekton Chains and its secrets are deployed.
-	TEKTON_CHAINS_NS string = "openshift-pipelines" // #nosec
-
 	// User for running the end-to-end Tekton Chains tests
 	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
@@ -110,6 +107,9 @@ const (
 
 	// Bundle ref for custom docker-build-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_TA_PIPELINE_BUNDLE"
+
+	// Bundle ref for custom docker-build-oci-ta-min, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
+	CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_TA_MIN_PIPELINE_BUNDLE"
 
 	// Bundle ref for custom docker-build-multi-platform-oci-ta, format example: quay.io/redhat-appstudio-qe/test-images:pipeline-bundle-1715584704-fftb
 	CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE_ENV string = "CUSTOM_DOCKER_BUILD_OCI_MULTI_PLATFORM_TA_PIPELINE_BUNDLE"
@@ -271,6 +271,7 @@ const (
 
 	DockerBuild                   BuildPipelineType = "docker-build"
 	DockerBuildOciTA              BuildPipelineType = "docker-build-oci-ta"
+	DockerBuildOciTAMin           BuildPipelineType = "docker-build-oci-ta-min"
 	DockerBuildMultiPlatformOciTa BuildPipelineType = "docker-build-multi-platform-oci-ta"
 	FbcBuilder                    BuildPipelineType = "fbc-builder"
 
