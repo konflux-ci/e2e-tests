@@ -21,6 +21,7 @@ import (
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	jvmbuildservice "github.com/redhat-appstudio/jvm-build-service/pkg/apis/jvmbuildservice/v1alpha1"
 	jvmbuildserviceclientset "github.com/redhat-appstudio/jvm-build-service/pkg/client/clientset/versioned"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 
 	release "github.com/konflux-ci/release-service/api/v1alpha1"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -78,6 +79,7 @@ func init() {
 	utilruntime.Must(userv1.AddToScheme(scheme))
 	utilruntime.Must(imagecontroller.AddToScheme(scheme))
 	utilruntime.Must(pacv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(velerov1.AddToScheme(scheme))
 }
 
 // Kube returns the clientset for Kubernetes upstream.
