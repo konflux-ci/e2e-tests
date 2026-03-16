@@ -207,12 +207,12 @@ func deleteNamespace(fw *framework.Framework, namespace string) {
 }
 
 // listSATokenSecrets returns all ServiceAccount token Secrets in a namespace.
-func listSATokenSecrets(fw *framework.Framework, namespace string) ([]corev1.Secret, error) {
+func listSATokenSecrets(ctx context.Context, fw *framework.Framework, namespace string) ([]corev1.Secret, error) {
 	GinkgoHelper()
 
 	secretList := &corev1.SecretList{}
 	err := fw.AsKubeAdmin.CommonController.KubeRest().List(
-		context.Background(),
+		ctx,
 		secretList,
 		client.InNamespace(namespace),
 	)
