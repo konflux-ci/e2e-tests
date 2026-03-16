@@ -57,12 +57,13 @@ type ComponentDef struct {
 type RestoreMethod string
 
 const (
-	// RestoreMethodVeleroCLI creates a Restore CR via the Go client with
-	// Velero-equivalent parameters.
+	// RestoreMethodVeleroCLI creates a Restore by invoking the velero binary
+	// directly, mirroring the SOP's `velero restore create` procedure.
 	RestoreMethodVeleroCLI RestoreMethod = "velero-cli"
 
-	// RestoreMethodOCCommand creates a Restore CR by applying a YAML manifest
-	// via the Kubernetes client.
+	// RestoreMethodOCCommand creates a Restore CR by generating a JSON
+	// manifest and applying it via `oc apply -f`, mirroring the SOP's
+	// declarative restore procedure.
 	RestoreMethodOCCommand RestoreMethod = "oc-command"
 )
 

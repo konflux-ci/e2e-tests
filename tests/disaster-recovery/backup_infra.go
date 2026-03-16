@@ -240,9 +240,11 @@ func listSATokenSecrets(ctx context.Context, fw *framework.Framework, namespace 
 func rotateSATokens(fw *framework.Framework, namespace string) {
 	GinkgoHelper()
 
+	ctx := context.Background()
+
 	By(fmt.Sprintf("Rotating ServiceAccount tokens in namespace %s", namespace))
 
-	tokens, err := listSATokenSecrets(fw, namespace)
+	tokens, err := listSATokenSecrets(ctx, fw, namespace)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	if len(tokens) == 0 {
@@ -252,7 +254,7 @@ func rotateSATokens(fw *framework.Framework, namespace string) {
 
 	// Delete every SA token secret (old tokens are invalid after restore).
 	for i := range tokens {
-		err = fw.AsKubeAdmin.CommonController.KubeRest().Delete(context.Background(), &tokens[i])
+		err = fw.AsKubeAdmin.CommonController.KubeRest().Delete(ctx, &tokens[i])
 		Expect(err).ShouldNot(HaveOccurred(), "failed to delete SA token Secret %s in namespace %s", tokens[i].Name, namespace)
 	}
 	deletedCount := len(tokens)
@@ -260,7 +262,7 @@ func rotateSATokens(fw *framework.Framework, namespace string) {
 
 	// Wait for the token controller to regenerate at least as many new tokens.
 	Eventually(func() int {
-		newTokens, err := listSATokenSecrets(fw, namespace)
+		newTokens, err := listSATokenSecrets(ctx, fw, namespace)
 		if err != nil {
 			GinkgoWriter.Printf("error listing SA token Secrets in %s: %v\n", namespace, err)
 			return 0

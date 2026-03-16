@@ -9,7 +9,9 @@ package disaster_recovery
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
@@ -199,39 +201,41 @@ func parseVeleroCredentialFile(data string) (accessKey, secretKey string) {
 	return accessKey, secretKey
 }
 
-// restoreFromBackup creates a Velero Restore CR for the given tenant and polls
+// restoreFromBackup creates a Velero Restore for the given tenant and polls
 // until the restore reaches the "Completed" phase. The method parameter selects
-// which code path constructs the Restore CR:
+// which SOP procedure is exercised:
 //
-//   - RestoreMethodVeleroCLI: builds the CR programmatically using setter methods
-//     (mirrors the Velero CLI approach from the SOP).
-//   - RestoreMethodOCCommand: builds the CR as a complete map[string]interface{}
-//     manifest (mirrors the `oc apply -f` approach from the SOP).
-//
-// Both methods produce identical CRs but exercise different construction code
-// paths, validating both SOP procedures.
+//   - RestoreMethodVeleroCLI: invokes the `velero restore create` binary
+//     directly, mirroring the Velero CLI procedure from the SOP.
+//   - RestoreMethodOCCommand: generates a Restore CR manifest as JSON and
+//     applies it via `oc apply -f -`, mirroring the declarative procedure
+//     from the SOP.
 func restoreFromBackup(fw *framework.Framework, t Tenant, method RestoreMethod) {
 	GinkgoHelper()
 
 	restoreName := "restore-" + t.BackupName
-	By(fmt.Sprintf("Creating Velero Restore CR %q from backup %q using %s method", restoreName, t.BackupName, method))
-
-	var restore *velerov1.Restore
+	By(fmt.Sprintf("Creating Velero Restore %q from backup %q using %s method", restoreName, t.BackupName, method))
 
 	switch method {
 	case RestoreMethodVeleroCLI:
-		// Programmatic construction — mirrors the Velero CLI approach.
-		// Fields are set individually, as if using CLI flags.
-		restore = &velerov1.Restore{}
-		restore.Name = restoreName
-		restore.Namespace = VeleroNamespace
-		restore.Spec.BackupName = t.BackupName
-		restore.Spec.IncludedNamespaces = []string{t.Namespace}
-		restore.Spec.IncludedResources = IncludedResources
+		args := []string{
+			"restore", "create", restoreName,
+			"--from-backup", t.BackupName,
+			"--include-namespaces", t.Namespace,
+			"--include-resources", strings.Join(IncludedResources, ","),
+			"--namespace", VeleroNamespace,
+		}
+		cmd := exec.Command("velero", args...)
+		output, err := cmd.CombinedOutput()
+		Expect(err).ShouldNot(HaveOccurred(),
+			"velero restore create failed: %s", string(output))
 
 	case RestoreMethodOCCommand:
-		// Declarative struct literal — mirrors the `oc apply -f` YAML approach.
-		restore = &velerov1.Restore{
+		restore := &velerov1.Restore{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "velero.io/v1",
+				Kind:       "Restore",
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      restoreName,
 				Namespace: VeleroNamespace,
@@ -242,10 +246,15 @@ func restoreFromBackup(fw *framework.Framework, t Tenant, method RestoreMethod) 
 				IncludedResources:  IncludedResources,
 			},
 		}
-	}
+		manifest, err := json.Marshal(restore)
+		Expect(err).ShouldNot(HaveOccurred(), "failed to marshal Restore CR to JSON")
 
-	err := fw.AsKubeAdmin.CommonController.KubeRest().Create(context.Background(), restore)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create Restore CR %q", restoreName)
+		cmd := exec.Command("oc", "apply", "-f", "-")
+		cmd.Stdin = strings.NewReader(string(manifest))
+		output, err := cmd.CombinedOutput()
+		Expect(err).ShouldNot(HaveOccurred(),
+			"oc apply failed: %s", string(output))
+	}
 
 	By(fmt.Sprintf("Waiting for Restore CR %q to reach Completed phase (timeout: %s)", restoreName, RestoreTimeout))
 
