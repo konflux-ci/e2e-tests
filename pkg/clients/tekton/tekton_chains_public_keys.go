@@ -3,15 +3,23 @@ package tekton
 import (
 	"context"
 	"fmt"
+	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetTektonChainsPublicKey returns a TektonChains public key.
 func (t *TektonController) GetTektonChainsPublicKey() ([]byte, error) {
-	namespace, err := t.GetTektonChainsNamespace()
-	if err != nil {
-		return nil, err
+	tektonChainsNS := os.Getenv("TEKTON_CHAINS_NS")
+	var namespace string
+	var err error
+	if tektonChainsNS != "" {
+		namespace = tektonChainsNS
+	} else {
+		namespace, err = t.GetTektonChainsNamespace()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	secretName := "public-key"
