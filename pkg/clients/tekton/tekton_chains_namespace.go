@@ -31,6 +31,7 @@ func (t *TektonController) GetTektonChainsNamespace() (string, error) {
 					LabelSelector: "app=tekton-chains-controller",
 				})
 			if err != nil {
+				fmt.Printf("failed to list chains-controller pod with error from namespace %q: %v\n", ns, err)
 				continue
 			}
 			if len(pods.Items) > 0 {
