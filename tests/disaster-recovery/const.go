@@ -1,4 +1,4 @@
-// Package backup implements the DR (Disaster Recovery) backup/restore e2e test suite
+// Package disaster_recovery implements the DR (Disaster Recovery) backup/restore e2e test suite
 // for Konflux tenant namespaces.
 //
 // The suite validates the single-tenant backup and restore process documented in the

@@ -9,8 +9,10 @@ package disaster_recovery
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"strings"
 
@@ -22,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -162,13 +165,19 @@ func getBackupTarballSize(fw *framework.Framework, backup *velerov1.Backup) int6
 	Expect(secretKey).ShouldNot(BeEmpty(), "could not parse aws_secret_access_key from BSL credential")
 
 	// Strip the scheme — minio-go takes host:port, not a full URL.
-	// MinIO runs as an in-cluster Service on ephemeral test clusters, so
-	// TLS is never used (Secure: false).
+	// Derive TLS from the BSL's s3Url scheme. The dev overlay uses a
+	// self-signed cert (requestAutoCert: true) with insecureSkipTLSVerify,
+	// so we skip certificate validation to match.
+	secure := strings.HasPrefix(s3URL, "https://")
 	endpoint := strings.TrimPrefix(strings.TrimPrefix(s3URL, "https://"), "http://")
 
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // matches BSL insecureSkipTLSVerify
+
 	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  miniocreds.NewStaticV4(accessKey, secretKey, ""),
-		Secure: false,
+		Creds:     miniocreds.NewStaticV4(accessKey, secretKey, ""),
+		Secure:    secure,
+		Transport: transport,
 	})
 	Expect(err).ShouldNot(HaveOccurred(), "failed to create MinIO client for endpoint %q", endpoint)
 
@@ -225,7 +234,7 @@ func restoreFromBackup(fw *framework.Framework, t Tenant, method RestoreMethod) 
 			"--include-resources", strings.Join(IncludedResources, ","),
 			"--namespace", VeleroNamespace,
 		}
-		cmd := exec.Command("velero", args...)
+		cmd := exec.Command("velero", args...) //nolint:gosec // args are internal test constants, not user input
 		output, err := cmd.CombinedOutput()
 		Expect(err).ShouldNot(HaveOccurred(),
 			"velero restore create failed: %s", string(output))
@@ -434,7 +443,7 @@ func cleanupTestResources(fw *framework.Framework, tenants []Tenant) {
 	var errs []error
 	for _, t := range tenants {
 		By(fmt.Sprintf("Cleaning up namespace %q", t.Namespace))
-		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.Namespace, metav1.DeleteOptions{}); err != nil {
+		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.Namespace, metav1.DeleteOptions{}); err != nil && !k8sErrors.IsNotFound(err) {
 			GinkgoWriter.Printf("WARNING: failed to delete namespace %q: %v\n", t.Namespace, err)
 			errs = append(errs, err)
 		}
@@ -442,7 +451,7 @@ func cleanupTestResources(fw *framework.Framework, tenants []Tenant) {
 		By(fmt.Sprintf("Cleaning up Backup CR %q", t.BackupName))
 		if err := restClient.Delete(ctx, &velerov1.Backup{
 			ObjectMeta: metav1.ObjectMeta{Name: t.BackupName, Namespace: VeleroNamespace},
-		}); err != nil {
+		}); err != nil && !k8sErrors.IsNotFound(err) {
 			GinkgoWriter.Printf("WARNING: failed to delete Backup CR %q: %v\n", t.BackupName, err)
 			errs = append(errs, err)
 		}
@@ -451,13 +460,13 @@ func cleanupTestResources(fw *framework.Framework, tenants []Tenant) {
 		By(fmt.Sprintf("Cleaning up Restore CR %q", restoreName))
 		if err := restClient.Delete(ctx, &velerov1.Restore{
 			ObjectMeta: metav1.ObjectMeta{Name: restoreName, Namespace: VeleroNamespace},
-		}); err != nil {
+		}); err != nil && !k8sErrors.IsNotFound(err) {
 			GinkgoWriter.Printf("WARNING: failed to delete Restore CR %q: %v\n", restoreName, err)
 			errs = append(errs, err)
 		}
 
 		By(fmt.Sprintf("Cleaning up managed namespace %q", t.ManagedNamespace))
-		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.ManagedNamespace, metav1.DeleteOptions{}); err != nil {
+		if err := kubeClient.CoreV1().Namespaces().Delete(ctx, t.ManagedNamespace, metav1.DeleteOptions{}); err != nil && !k8sErrors.IsNotFound(err) {
 			GinkgoWriter.Printf("WARNING: failed to delete managed namespace %q: %v\n", t.ManagedNamespace, err)
 			errs = append(errs, err)
 		}
