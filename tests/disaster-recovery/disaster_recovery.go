@@ -172,7 +172,7 @@ func getBackupTarballSize(fw *framework.Framework, backup *velerov1.Backup) int6
 	endpoint := strings.TrimPrefix(strings.TrimPrefix(s3URL, "https://"), "http://")
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // matches BSL insecureSkipTLSVerify
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- matches BSL insecureSkipTLSVerify
 
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:     miniocreds.NewStaticV4(accessKey, secretKey, ""),
@@ -234,7 +234,7 @@ func restoreFromBackup(fw *framework.Framework, t Tenant, method RestoreMethod) 
 			"--include-resources", strings.Join(IncludedResources, ","),
 			"--namespace", VeleroNamespace,
 		}
-		cmd := exec.Command("velero", args...) //nolint:gosec // args are internal test constants, not user input
+		cmd := exec.Command("velero", args...) // #nosec G204 -- args are internal test constants, not user input
 		output, err := cmd.CombinedOutput()
 		Expect(err).ShouldNot(HaveOccurred(),
 			"velero restore create failed: %s", string(output))
