@@ -54,7 +54,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 			// use custom bundle if env defined
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuildOciTAMin)
 
 		})
 

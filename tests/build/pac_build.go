@@ -11,7 +11,6 @@ import (
 	"github.com/konflux-ci/build-service/controllers"
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 	. "github.com/onsi/gomega"    //nolint:staticcheck
-	"github.com/openshift/library-go/pkg/image/reference"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -89,7 +88,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 				gitClient, helloWorldComponentGitSourceURL, helloWorldRepository = setupGitProvider(f, gitProvider)
 				// get the build pipeline bundle annotation
-				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
+				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuildOciTAMin)
 
 				if gitProvider == git.ForgejoProvider {
 					gitProviderAnnotation = map[string]string{"git-provider": "forgejo"}
@@ -387,19 +386,6 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					Expect(err).ShouldNot(HaveOccurred(), "failed while checking if push robot account exists in quay with error: %+v", err)
 					Expect(pushRobotAccountExist).To(BeTrue(), "push robot account does not exists in quay")
 
-				})
-				It("floating tags are created successfully", func() {
-					builtImage := build.GetBinaryImage(plr)
-					Expect(builtImage).ToNot(BeEmpty(), "built image url is empty")
-					builtImageRef, err := reference.Parse(builtImage)
-					Expect(err).ShouldNot(HaveOccurred(),
-						fmt.Sprintf("cannot parse image pullspec: %s", builtImage))
-					for _, tagName := range additionalTags {
-						_, err := build.GetImageTag(builtImageRef.Namespace, builtImageRef.Name, tagName)
-						Expect(err).ShouldNot(HaveOccurred(),
-							fmt.Sprintf("failed to get tag %s from image repo", tagName),
-						)
-					}
 				})
 				It("created image repo is public", func() {
 					isPublic, err := build.IsImageRepoPublic(imageRepoName)

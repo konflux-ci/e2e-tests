@@ -61,7 +61,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			multiComponentPRBranchName = fmt.Sprintf("%s-%s", "pr-branch", util.GenerateRandomString(6))
 
 			// get the build pipeline bundle annotation
-			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
+			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuildOciTAMin)
 
 		})
 
