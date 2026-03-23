@@ -560,8 +560,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							}
 						}
 					})
-
-					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Label(buildTemplatesTestLabel), func() {
+					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
 						// If the Tekton Chains controller is busy, it may take longer than usual for it
 						// to sign and attest the image built in BeforeAll.
 						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
@@ -688,7 +688,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					})
 				})
 
-				ginkgo.Context("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
+				// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+				ginkgo.Context("build-definitions ec pipelines", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
 					ecPipelines := []string{
 						"pipelines/enterprise-contract.yaml",
 					}
