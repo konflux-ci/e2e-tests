@@ -24,9 +24,11 @@ var InfraDeploymentsDefaultRule = rulesengine.Rule{Name: "Infra Deployments Defa
 
 	Actions: []rulesengine.Action{rulesengine.ActionFunc(ExecuteInfraDeploymentsDefaultTestAction)}}
 
-// ExecuteInfraDeploymentsDefaultTestAction excutes all the e2e-tests and component suites
+// ExecuteInfraDeploymentsDefaultTestAction executes all the e2e-tests and component suites.
+// The konflux-demo suite (label "konflux") has been deprecated and moved to
+// https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance
 func ExecuteInfraDeploymentsDefaultTestAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "konflux"
+	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !deprecated"
 	return ExecuteTestAction(rctx)
 }
 
@@ -43,12 +45,7 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
 		&InfraDeploymentsPipelineServiceComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule},
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		// Adding "konflux" to the label filter when component is updated
-		AddLabelToLabelFilter(rctx, "konflux")
-		return nil
-
-	}),
+	Actions: []rulesengine.Action{
 		rulesengine.ActionFunc(ExecuteTestAction)}}
 
 var InfraDeploymentsIntegrationComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Integration component File Change Rule",

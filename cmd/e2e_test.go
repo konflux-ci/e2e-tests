@@ -14,7 +14,8 @@ import (
 	_ "github.com/konflux-ci/e2e-tests/tests/build"
 	_ "github.com/konflux-ci/e2e-tests/tests/enterprise-contract"
 	_ "github.com/konflux-ci/e2e-tests/tests/integration-service"
-	_ "github.com/konflux-ci/e2e-tests/tests/konflux-demo"
+	// DEPRECATED: konflux-demo suite has been moved to https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance
+	// _ "github.com/konflux-ci/e2e-tests/tests/konflux-demo"
 	_ "github.com/konflux-ci/e2e-tests/tests/release/pipelines"
 	_ "github.com/konflux-ci/e2e-tests/tests/release/service"
 	_ "github.com/konflux-ci/e2e-tests/tests/upgrade"

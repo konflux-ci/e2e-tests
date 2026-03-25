@@ -31,6 +31,12 @@ smoke | Critical functionality tests
 serial | Tests which can’t be run in parallel
 security | Security related tests
 
+### Test Lifecycle Labels
+
+Test Types Labels | Description
+--- | ---
+deprecated | Deprecated tests that should never be executed (kept for reference only)
+
 ### Test Stability Labels
 
 Test Types Labels | Description

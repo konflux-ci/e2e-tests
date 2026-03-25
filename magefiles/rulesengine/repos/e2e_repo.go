@@ -56,8 +56,6 @@ var TestFilesOnlyRule = rulesengine.Rule{Name: "E2E PR Test File Diff Execution"
 			&BuildORBuildTemplatesTestFileChangeOnlyRule,
 			&BuildTemplateDependentFileChangeRule,
 			&BuildNonTestFileChangeRule,
-			&KonfluxDemoConfigsFileOnlyChangeRule,
-			&KonfluxDemoTestFileChangedRule,
 			&ReleaseTestTestFilesChangeRule,
 			&IntegrationTestsConstFileChangeRule,
 			&IntegrationTestsFileChangeRule,
@@ -372,13 +370,13 @@ func CheckCmdFilesChanged(rctx *rulesengine.RuleCtx) (bool, error) {
 }
 
 func ExecuteDefaultTestAction(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines"
+	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines && !deprecated"
 	return ExecuteTestAction(rctx)
 
 }
 
 func ExecuteAllTestsExceptUpgradeTestSuite(rctx *rulesengine.RuleCtx) error {
-	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup"
+	rctx.LabelFilter = "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !deprecated"
 	rctx.Timeout = 2*time.Hour + 30*time.Minute
 	return ExecuteTestAction(rctx)
 

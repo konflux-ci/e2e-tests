@@ -26,4 +26,5 @@ const (
 	// test metadata
 	devEnvTestLabel          = "konflux"
 	upstreamKonfluxTestLabel = "upstream-konflux"
+	deprecatedLabel          = "deprecated"
 )
