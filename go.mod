@@ -24,9 +24,9 @@ require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/google/go-github/v44 v44.1.0
 	github.com/h2non/gock v1.2.0
-	github.com/konflux-ci/application-api v0.0.0-20251210122215-555a927cf6d9
+	github.com/konflux-ci/application-api v0.0.0-20260312190025-5154ad273e17
 	github.com/konflux-ci/build-service v0.0.0-20240611083846-2dee6cfe6fe4
-	github.com/konflux-ci/image-controller v0.0.0-20240530145826-3296e4996f6f
+	github.com/konflux-ci/image-controller v0.0.0-20260326133723-f4d6858ab8a0
 	github.com/konflux-ci/integration-service v0.0.0-20260108133201-e2f5559a9544
 	github.com/konflux-ci/operator-toolkit v0.0.0-20251118152634-b4f41f073069
 	github.com/konflux-ci/release-service v0.0.0-20260113075649-fff62d349fa9
@@ -180,7 +180,6 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.7.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/errors v0.22.2 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
