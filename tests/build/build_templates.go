@@ -552,14 +552,15 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					})
-					ginkgo.AfterAll(func() {
-						if !ginkgo.CurrentSpecReport().Failed() {
-							err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
-							if err != nil {
-								gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
-							}
-						}
-					})
+					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+					// ginkgo.AfterAll(func() {
+					// 	if !ginkgo.CurrentSpecReport().Failed() {
+					// 		err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+					// 		if err != nil {
+					// 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
+					// 		}
+					// 	}
+					// })
 					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
 					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
 						// If the Tekton Chains controller is busy, it may take longer than usual for it
