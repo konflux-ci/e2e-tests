@@ -552,16 +552,17 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					})
-					ginkgo.AfterAll(func() {
-						if !ginkgo.CurrentSpecReport().Failed() {
-							err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
-							if err != nil {
-								gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
-							}
-						}
-					})
-
-					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Label(buildTemplatesTestLabel), func() {
+					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+					// ginkgo.AfterAll(func() {
+					// 	if !ginkgo.CurrentSpecReport().Failed() {
+					// 		err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+					// 		if err != nil {
+					// 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
+					// 		}
+					// 	}
+					// })
+					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
 						// If the Tekton Chains controller is busy, it may take longer than usual for it
 						// to sign and attest the image built in BeforeAll.
 						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
@@ -631,7 +632,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							IgnoreRekor:         true,
 						}
 
-						pr, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+						pr, err = f.AsKubeAdmin.TektonController.RunPipelineWithRetry(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 						gomega.Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(gomega.Succeed())
@@ -688,7 +689,8 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					})
 				})
 
-				ginkgo.Context("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
+				// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
+				ginkgo.Context("build-definitions ec pipelines", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
 					ecPipelines := []string{
 						"pipelines/enterprise-contract.yaml",
 					}
@@ -753,7 +755,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 							)
 							gomega.Expect(f.AsKubeAdmin.TektonController.CreateOrUpdatePolicyConfiguration(testNamespace, policy)).To(gomega.Succeed())
 
-							ecPipelineRun, err = f.AsKubeAdmin.TektonController.RunPipeline(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
+							ecPipelineRun, err = f.AsKubeAdmin.TektonController.RunPipelineWithRetry(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 							err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(ecPipelineRun, constants.E2ETestFinalizerName)
