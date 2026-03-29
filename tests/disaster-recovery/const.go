@@ -71,14 +71,16 @@ const (
 // Constants
 // ---------------------------------------------------------------------------
 
+// MathWizzRepo is the monorepo containing all three MathWizz microservices.
+// Each Component points to a different context directory within this repo.
+var MathWizzRepo = "https://github.com/" +
+	utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") +
+	"/DR_test_MathWizz"
+
 const (
 	// VeleroNamespace is the namespace where OADP/Velero components run.
 	// Backup and Restore CRs are created here, not in the tenant namespace.
 	VeleroNamespace = "openshift-adp"
-
-	// MathWizzRepo is the monorepo containing all three MathWizz microservices.
-	// Each Component points to a different context directory within this repo.
-	MathWizzRepo = "https://github.com/redhat-appstudio-qe/DR_test_MathWizz"
 
 	// MathWizzRepoName is the repository name without the GitHub organization.
 	// The framework's GitHub client resolves the full path using the
@@ -244,7 +246,7 @@ var (
 	// pushes released images. Uses the e2e organization from the environment.
 	DRReleasedImagePushRepo = "quay.io/" +
 		utils.GetEnv(constants.QUAY_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe") +
-		"/DR_test_MathWizz"
+		"/dr_test_mathwizz"
 )
 
 // ---------------------------------------------------------------------------
