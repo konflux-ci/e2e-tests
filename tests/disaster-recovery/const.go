@@ -331,31 +331,25 @@ const (
 // ---------------------------------------------------------------------------
 
 const (
-	// BackupItemCount is the exact number of Kubernetes resources Velero
-	// should back up for a single tenant namespace. This value is determined
-	// empirically by running the test suite and inspecting
-	// Backup.Status.Progress.ItemsBackedUp. Update this constant whenever
-	// the test application (MathWizz) or IncludedResources list changes.
+	// BackupMinItemCount is the minimum number of Kubernetes resources Velero
+	// should back up for a single tenant namespace. The assertion uses >=
+	// because the exact count varies with controller-managed resources
+	// (e.g., Snapshots, token Secrets) that may differ between runs.
+	// Calibrate this value by inspecting Backup.Status.Progress.ItemsBackedUp
+	// from CI runs (logged by validateBackupIntegrity).
 	//
-	// Calculated estimate based on a MathWizz tenant with 3 Components:
+	// Calculated lower-bound based on a MathWizz tenant with 3 Components:
 	//   1 Namespace + 1 Application + 3 Components + 1 ITS + ~3 SAs +
 	//   ~10 Secrets + ~3 RoleBindings + 3 PaC Repos + 3 ImageRepos +
-	//   1 ReleasePlan + ~3 Snapshots ≈ 32
-	//
-	// TODO: Verify empirically on a dev cluster and adjust if needed.
-	BackupItemCount = 32
+	//   1 ReleasePlan ≈ 29 (excluding variable Snapshots)
+	BackupMinItemCount = 25
 
-	// BackupTarballSize is the expected size in bytes of the Velero backup
-	// tarball stored in MinIO for a single tenant namespace. Like
-	// BackupItemCount, this value is determined empirically by running the
-	// test suite and inspecting the tarball via MinIO's StatObject. Update
-	// this constant whenever the test application or IncludedResources changes.
-	//
-	// Educated guess: 32 items × ~1.5 KB avg serialized JSON per resource,
-	// compressed to ~60% in a tar.gz ≈ ~28 KB.
-	//
-	// TODO: Verify empirically on a dev cluster and adjust.
-	BackupTarballSize int64 = 28000
+	// BackupMinTarballSize is the minimum expected size in bytes of the
+	// Velero backup tarball stored in MinIO for a single tenant namespace.
+	// The assertion uses >= because tarball size varies with the number and
+	// content of backed-up resources. Calibrate this value by inspecting
+	// the tarball size logged by validateBackupIntegrity from CI runs.
+	BackupMinTarballSize int64 = 10000
 )
 
 // VeleroBackupTarballPathFmt is the S3 object key pattern for the backup

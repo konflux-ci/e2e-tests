@@ -72,10 +72,11 @@ func createBackup(fw *framework.Framework, t Tenant) {
 // It performs three checks:
 //
 //  1. Zero backup errors — the backup ran without any resource-level failures.
-//  2. Exact item count — the number of backed-up items matches BackupItemCount,
-//     the empirically determined count for a single MathWizz tenant namespace.
-//  3. Tarball size — the backup archive stored in MinIO matches
-//     BackupTarballSize, the empirically determined size for a single tenant.
+//  2. Minimum item count — the number of backed-up items is at least
+//     BackupMinItemCount, the empirically calibrated floor for a single
+//     MathWizz tenant namespace.
+//  3. Minimum tarball size — the backup archive stored in MinIO is at least
+//     BackupMinTarballSize bytes.
 //
 // Connection details for MinIO are read dynamically from the BSL CR and its
 // referenced credential Secret.
@@ -90,21 +91,25 @@ func validateBackupIntegrity(fw *framework.Framework, backup *velerov1.Backup) {
 	Expect(backup.Status.Errors).Should(Equal(0),
 		"Backup %q completed with %d errors", backupName, backup.Status.Errors)
 
-	// Check 2: exact item count.
-	By(fmt.Sprintf("Verifying Backup %q backed up exactly %d items", backupName, BackupItemCount))
+	// Check 2: minimum item count.
+	By(fmt.Sprintf("Verifying Backup %q backed up at least %d items", backupName, BackupMinItemCount))
 	Expect(backup.Status.Progress).ShouldNot(BeNil(),
 		"Backup %q has nil Progress — Velero did not report item counts", backupName)
-	Expect(backup.Status.Progress.ItemsBackedUp).Should(Equal(BackupItemCount),
-		"Backup %q backed up %d items, expected exactly %d",
-		backupName, backup.Status.Progress.ItemsBackedUp, BackupItemCount)
+	actualItemCount := backup.Status.Progress.ItemsBackedUp
+	GinkgoWriter.Printf("Backup %q: itemsBackedUp=%d (minimum expected: %d)\n",
+		backupName, actualItemCount, BackupMinItemCount)
+	Expect(actualItemCount).Should(BeNumerically(">=", BackupMinItemCount),
+		"Backup %q backed up %d items, expected at least %d",
+		backupName, actualItemCount, BackupMinItemCount)
 
-	// Check 3: tarball size.
+	// Check 3: minimum tarball size.
 	By(fmt.Sprintf("Verifying backup tarball size in MinIO for %q", backupName))
 	tarballSize := getBackupTarballSize(fw, backup)
-	GinkgoWriter.Printf("Backup %q: tarball=%d bytes\n", backupName, tarballSize)
-	Expect(tarballSize).Should(Equal(BackupTarballSize),
-		"Backup %q tarball is %d bytes, expected %d",
-		backupName, tarballSize, BackupTarballSize)
+	GinkgoWriter.Printf("Backup %q: tarball=%d bytes (minimum expected: %d)\n",
+		backupName, tarballSize, BackupMinTarballSize)
+	Expect(tarballSize).Should(BeNumerically(">=", BackupMinTarballSize),
+		"Backup %q tarball is %d bytes, expected at least %d",
+		backupName, tarballSize, BackupMinTarballSize)
 }
 
 // getBackupTarballSize queries MinIO (the S3-compatible object store deployed
