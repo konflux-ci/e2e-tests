@@ -44,10 +44,19 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// get the build pipeline bundle annotation before creating the component
 			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
-			// Create a component with containerImageSource being defined
+			// Create a component with containerImageSource being defined.
+			// A git source is required by the vcomponent.kb.io webhook,
+			// but skip-initial-checks=true (passed below) prevents a build PipelineRun from triggering.
 			component := appservice.ComponentSpec{
 				ComponentName:  componentName,
 				ContainerImage: containerImageSource,
+				Source: appservice.ComponentSource{
+					ComponentSourceUnion: appservice.ComponentSourceUnion{
+						GitSource: &appservice.GitSource{
+							URL: fmt.Sprintf(githubUrlFormat, githubOrg, pythonComponentRepoName),
+						},
+					},
+				},
 			}
 			_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(component, testNamespace, outputContainerImage, "", applicationName, true, buildPipelineAnnotation)
 			Expect(err).ShouldNot(HaveOccurred())
