@@ -171,6 +171,9 @@ const (
 	// Label for marking a namespace as a tenant namespace
 	TenantLabelKey   string = "konflux-ci.dev/type"
 	TenantLabelValue string = "tenant"
+	// Cost-Center mandatory Label for Tenant namespaces
+	CostCenterLabelKey   string = "cost-center"
+	CostCenterLabelValue string = "000"
 	// Label for marking a namespace with the workspace label
 	WorkspaceLabelKey string = "appstudio.redhat.com/workspace_name"
 
