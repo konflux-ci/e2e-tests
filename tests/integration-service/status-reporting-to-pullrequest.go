@@ -34,7 +34,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var pipelineRun, testPipelinerun, failedPipelineRun *tektonv1.PipelineRun
-	var integrationTestScenarioPass, integrationTestScenarioFail, integrationTestScenarioOptional *integrationv1beta2.IntegrationTestScenario
+	var integrationTestScenarioPass, integrationTestScenarioFail, integrationTestScenarioOptional, integrationTestScenarioWarning *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
 	var mergeResult *github.PullRequestMergeResult
 	var labels, annotations map[string]string
@@ -71,6 +71,8 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			integrationTestScenarioFail, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
 			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 			integrationTestScenarioOptional, err = f.AsKubeAdmin.IntegrationController.CreateOptionalIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoFail, "", []string{})
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+			integrationTestScenarioWarning, err = f.AsKubeAdmin.IntegrationController.CreateIntegrationTestScenario("", applicationName, testNamespace, gitURL, revision, pathInRepoWarning, "", []string{})
 			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 			gomega.Eventually(func() error {
@@ -176,6 +178,11 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				gomega.Expect(testPipelinerun.Labels[snapshotAnnotation]).To(gomega.ContainSubstring(snapshot.Name))
 				gomega.Expect(testPipelinerun.Labels[scenarioAnnotation]).To(gomega.ContainSubstring(integrationTestScenarioOptional.Name))
+
+				testPipelinerun, err = f.AsKubeDeveloper.IntegrationController.WaitForIntegrationPipelineToGetStarted(integrationTestScenarioWarning.Name, snapshot.Name, testNamespace)
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+				gomega.Expect(testPipelinerun.Labels[snapshotAnnotation]).To(gomega.ContainSubstring(snapshot.Name))
+				gomega.Expect(testPipelinerun.Labels[scenarioAnnotation]).To(gomega.ContainSubstring(integrationTestScenarioWarning.Name))
 			})
 		})
 
@@ -184,6 +191,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioOptional, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioWarning, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 		})
 
@@ -214,6 +222,10 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 				gomega.Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioOptional.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(gomega.Equal(constants.CheckrunConclusionNeutral))
 			})
 
+			ginkgo.It("eventually leads to the status reported at Checks tab for the warning Integration PipelineRun", func() {
+				gomega.Expect(f.AsKubeAdmin.CommonController.Github.GetCheckRunConclusion(integrationTestScenarioWarning.Name, componentRepoNameForStatusReporting, prHeadSha, prNumber)).To(gomega.Equal(constants.CheckrunConclusionNeutral))
+			})
+
 			ginkgo.It("checks if the optional Integration Test Scenario status is reported in the Snapshot", func() {
 				gomega.Eventually(func() error {
 					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
@@ -231,6 +243,25 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 
 			ginkgo.It("checks if the finalizer was removed from the optional Integration PipelineRun", func() {
 				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromIntegrationPipeline(integrationTestScenarioOptional, snapshot, testNamespace)).To(gomega.Succeed())
+			})
+
+			ginkgo.It("checks if the warning Integration Test Scenario status is reported in the Snapshot", func() {
+				gomega.Eventually(func() error {
+					snapshot, err = f.AsKubeAdmin.IntegrationController.GetSnapshot(snapshot.Name, "", "", testNamespace)
+					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+					statusDetail, err := f.AsKubeDeveloper.IntegrationController.GetIntegrationTestStatusDetailFromSnapshot(snapshot, integrationTestScenarioWarning.Name)
+					gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+					if statusDetail.Status != intgteststat.IntegrationTestStatusTestWarning {
+						return fmt.Errorf("test status doesn't have expected value %s", intgteststat.IntegrationTestStatusTestWarning)
+					}
+					return nil
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.Succeed())
+			})
+
+			ginkgo.It("checks if the finalizer was removed from the warning Integration PipelineRun", func() {
+				gomega.Expect(f.AsKubeDeveloper.IntegrationController.WaitForFinalizerToGetRemovedFromIntegrationPipeline(integrationTestScenarioWarning, snapshot, testNamespace)).To(gomega.Succeed())
 			})
 
 			ginkgo.It("merging the PR, expected to succeed ", func() {
@@ -260,6 +291,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Status Reporting of Integrati
 			ginkgo.It("verifies that Push PipelineRuns completed", func() {
 				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioPass, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioFail, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
+				gomega.Expect(f.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenarioWarning, snapshot, testNamespace)).To(gomega.Succeed(), fmt.Sprintf("Error when waiting for an integration pipelinerun for snapshot %s/%s to finish", testNamespace, snapshot.GetName()))
 			})
 
 			ginkgo.It("validates the Integration test scenario PipelineRun is reported to merge request CheckRuns, and it pass", func() {
