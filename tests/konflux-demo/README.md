@@ -1,9 +1,15 @@
 # KONFLUX Demo test
 
-### Description
-This test simulates typical user scenario (creation of Application, Component, build of a container image, testing it and releasing it).
+> **DEPRECATED**: This test suite has been deprecated and is no longer executed.
+> The tests have been moved to the [Konflux Conformance Tests](https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance)
+> in the [konflux-ci](https://github.com/konflux-ci/konflux-ci) repository.
+>
+> Please refer to the conformance tests for the latest version of these tests.
 
-It is possible to run this test against "downstream" (deployed via scripts in [infra-deployments](https://github.com/redhat-appstudio/infra-deployments)) and "upstream" (deployed via scripts in [konflux-ci repository](https://github.com/konflux-ci/konflux-ci)) version of Konflux.
+### Description
+This test simulated typical user scenario (creation of Application, Component, build of a container image, testing it and releasing it).
+
+It was possible to run this test against "downstream" (deployed via scripts in [infra-deployments](https://github.com/redhat-appstudio/infra-deployments)) and "upstream" (deployed via scripts in [konflux-ci repository](https://github.com/konflux-ci/konflux-ci)) version of Konflux.
 
 ### Prerequisites for running the build scenario against your own cluster
 

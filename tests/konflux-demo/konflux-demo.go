@@ -39,8 +39,14 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel), func() {
+// Deprecated: This test suite has been moved to https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance
+// Do not run these tests. Use the conformance tests in the konflux-ci repository instead.
+var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel, deprecatedLabel), func() {
 	defer ginkgo.GinkgoRecover()
+
+	ginkgo.BeforeEach(func() {
+		ginkgo.Skip("DEPRECATED: This test suite has been moved to https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance")
+	})
 
 	var timeout, interval time.Duration
 	var userNamespace string

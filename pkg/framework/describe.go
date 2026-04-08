@@ -25,8 +25,10 @@ func IntegrationServiceSuiteDescribe(text string, args ...interface{}) bool {
 	return ginkgo.Describe("[integration-service-suite "+text+"]", args, ginkgo.Ordered)
 }
 
+// Deprecated: KonfluxDemoSuiteDescribe is deprecated. Tests have been moved to
+// https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance
 func KonfluxDemoSuiteDescribe(args ...interface{}) bool {
-	return ginkgo.Describe("[konflux-demo-suite]", args)
+	return ginkgo.Describe("[konflux-demo-suite][DEPRECATED]", args)
 }
 
 func EnterpriseContractSuiteDescribe(text string, args ...interface{}) bool {

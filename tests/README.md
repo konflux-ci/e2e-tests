@@ -9,5 +9,5 @@ Tests folder contains E2E related to several components divided in folders:
 | `integration-service` | [integration-service](https://github.com/konflux-ci/integration-service) | [README.md](/tests/integration-service/README.md) |  |
 | `load-tests` | N/A | [LoadTests.md](/docs/LoadTests.md) |  |
 | `release` | [release-service](https://github.com/konflux-ci/release-service) | [README.md](/tests/release/README.md) |  |
-| `konflux-demo` | N/A | [README.md](/tests/konflux-demo/README.md) | |
+| `konflux-demo` | N/A | [README.md](/tests/konflux-demo/README.md) | **DEPRECATED** - Moved to [konflux-ci conformance tests](https://github.com/konflux-ci/konflux-ci/tree/main/test/go-tests/tests/conformance) |
 | `upgrade` | N/A | [README.md](/tests/upgrade/README.md) | |
