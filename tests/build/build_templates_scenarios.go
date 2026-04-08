@@ -293,6 +293,10 @@ func IsFBCBuildPipeline(pipelineName string) bool {
 	return pipelineName == "fbc-builder"
 }
 
+func IsDockerMinBuildPipeline(pipelineName string) bool {
+	return pipelineName == "docker-build-oci-ta-min"
+}
+
 func GetComponentScenarioDetailsFromGitUrl(gitUrl string) ComponentScenarioSpec {
 	for _, componentScenario := range componentScenarios {
 		//check repo name for both the giturls is same
