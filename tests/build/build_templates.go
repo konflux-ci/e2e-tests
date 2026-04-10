@@ -540,7 +540,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 				ginkgo.It(fmt.Sprintf("should validate tekton taskrun test results for component with Git source URL %s and Pipeline %s", scenario.GitURL, pipelineBundleName), ginkgo.Label(buildTemplatesTestLabel), func() {
 					pr, err := f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, "")
 					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-					gomega.Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder)).To(gomega.Succeed())
+					gomega.Expect(build.ValidateBuildPipelineTestResults(pr, f.AsKubeAdmin.CommonController.KubeRest(), pipelineBundleName == constants.FbcBuilder, pipelineBundleName == constants.DockerBuildOciTAMin)).To(gomega.Succeed())
 				})
 
 				ginkgo.When(fmt.Sprintf("the container image for component with Git source URL %s is created and pushed to container registry", scenario.GitURL), ginkgo.Label("sbom", "slow"), func() {

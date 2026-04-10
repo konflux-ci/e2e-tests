@@ -393,7 +393,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel), func()
 						klog.Errorf("Konflux demo: GetComponentPipelineRun failed: %v", err)
 						gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 					}
-					err = build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest(), false)
+					err = build.ValidateBuildPipelineTestResults(pipelineRun, fw.AsKubeAdmin.CommonController.KubeRest(), false, false)
 					if err != nil {
 						klog.Errorf("Konflux demo: ValidateBuildPipelineTestResults failed for %s: %v", pipelineRun.Name, err)
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())

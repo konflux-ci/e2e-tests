@@ -41,7 +41,7 @@ type Vulnerabilities struct {
 	Low      int `json:"low"`
 }
 
-func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crclient.Client, isFBCBuild bool) error {
+func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crclient.Client, isFBCBuild bool, isDockerMinBuildPipeline bool) error {
 	var imageURL string
 	for _, result := range pipelineRun.Status.Results {
 		if result.Name == "IMAGE_URL" {
@@ -60,6 +60,9 @@ func ValidateBuildPipelineTestResults(pipelineRun *pipeline.PipelineRun, c crcli
 			continue
 		}
 		if isFBCBuild && (taskName == "clair-scan" || taskName == "clamav-scan") {
+			continue
+		}
+		if isDockerMinBuildPipeline && (taskName == "clair-scan") {
 			continue
 		}
 		results, err := fetchTaskRunResults(c, pipelineRun, taskName)
