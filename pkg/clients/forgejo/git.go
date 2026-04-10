@@ -282,6 +282,16 @@ func (fc *ForgejoClient) ForkRepository(sourceProjectID, targetProjectID string)
 			if statusCode == http.StatusNotFound || statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
 				return false, fmt.Errorf("error migrating project %s to %s (HTTP %d): %w", sourceProjectID, targetProjectID, statusCode, err)
 			}
+			// If the repo already exists (409 Conflict), it was likely created by a previous
+			// attempt whose response failed. Fetch the existing repo and treat it as success.
+			if statusCode == http.StatusConflict {
+				existingRepo, _, getErr := fc.client.GetRepo(targetOwner, targetRepo)
+				if getErr != nil {
+					return false, fmt.Errorf("error migrating project %s to %s: repo already exists but failed to fetch it: %w", sourceProjectID, targetProjectID, getErr)
+				}
+				migratedRepo = existingRepo
+				return true, nil
+			}
 			return false, nil
 		}
 		return true, nil
