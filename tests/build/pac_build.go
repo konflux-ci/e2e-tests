@@ -88,6 +88,14 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 			// get the build pipeline bundle annotation
 			buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
 
+			// Wait for the fork's default branch to be available — GitHub forks are async
+			// and the branch may not exist immediately after ForkRepository returns.
+			Eventually(func() (bool, error) {
+				return gitClient.BranchExists(helloWorldRepository, helloWorldComponentDefaultBranch)
+			}, 2*time.Minute, 5*time.Second).Should(BeTrue(), fmt.Sprintf(
+				"timed out waiting for branch '%s' to exist in forked repo '%s'",
+				helloWorldComponentDefaultBranch, helloWorldRepository))
+
 			err = gitClient.CreateBranch(helloWorldRepository, helloWorldComponentDefaultBranch, helloWorldComponentRevision, componentBaseBranchName)
 			Expect(err).ShouldNot(HaveOccurred())
 		})

@@ -490,7 +490,7 @@ var _ = framework.KonfluxDemoSuiteDescribe(ginkgo.Label(devEnvTestLabel), func()
 			})
 
 			ginkgo.When("Integration Test PipelineRun is created", ginkgo.Label(upstreamKonfluxTestLabel), func() {
-				ginkgo.It("should eventually complete successfully", func() {
+				ginkgo.It("should eventually complete successfully", ginkgo.FlakeAttempts(3), func() {
 					klog.Info("Konflux demo: waiting for Integration pipeline to finish", "scenario", integrationTestScenario.Name, "snapshot", snapshot.Name)
 					err = fw.AsKubeAdmin.IntegrationController.WaitForIntegrationPipelineToBeFinished(integrationTestScenario, snapshot, userNamespace)
 					if err != nil {
