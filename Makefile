@@ -31,7 +31,10 @@ ci/test/openshift-upgrade:
 	./mage -v ci:performOpenShiftUpgrade
 
 ci/test/upgrade:
-	./mage -v ci:testUpgrade 
+	./mage -v ci:testUpgrade
+
+ci/test/disaster-recovery:
+	./mage -v ci:testDisasterRecovery
 
 ci/prepare/e2e-branch:
 	./mage -v ci:prepareE2Ebranch
