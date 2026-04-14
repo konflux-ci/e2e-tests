@@ -481,7 +481,8 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			}
 		}
 
-		if gitProvider == "gitlab" {
+		switch gitProvider {
+		case "gitlab":
 			gitlabOrg := utils.GetEnv(constants.GITLAB_QE_ORG_ENV, constants.DefaultGitLabQEOrg)
 			projectID, ok := prLabels["pipelinesascode.tekton.dev/source-project-id"]
 			if !ok {
@@ -496,7 +497,15 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
 			}
 			sha = file.CommitID
-		} else {
+		case "forgejo", "gitea":
+			forgejoOrg := utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg)
+			projectID := fmt.Sprintf("%s/%s", forgejoOrg, repoName)
+			fileResp, err := h.Forgejo.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
+			if err != nil {
+				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)
+			}
+			sha = fileResp.Commit.SHA
+		default:
 			file, err := h.Github.CreateFile(repoName, util.GenerateRandomString(5), "test", branchName)
 			if err != nil {
 				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: %+v", pr.GetName(), pr.GetNamespace(), err)

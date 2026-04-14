@@ -34,7 +34,9 @@ __Note:__ If you have any [config](https://github.com/konflux-ci/build-service/t
 
 ### Prepare the environment needed for running the tests
 
-1. Get the smee channel id created for you while deploying konflux using command `grep value dependencies/smee/smee-channel-id.yaml`
+1. Get the gosmee channel id created for you while deploying konflux using command `grep value dependencies/smee/smee-channel-id.yaml`
+
+**Note:** Use `hook.pipelinesascode.com` (gosmee) instead of `smee.io`. smee.io does not work with Forgejo because webhook signature validation fails.
 ```
 export SMEE_CHANNEL=<smee_channel>
 ```
@@ -75,12 +77,13 @@ export GITHUB_TOKEN=<github_token>
 export QUAY_TOKEN=<quay_token>
 ```
 
-7. For running GitLab related tests, replace `PAC_WEBHOOK_URL` value to public smee server url [here](https://github.com/konflux-ci/konflux-ci/blob/b67f2e3412b00686a0ba66e8c2a697fb1b977e10/konflux-ci/build-service/core/build-service-env-patch.yaml#L11), as shown below
+7. For running GitLab related tests, replace `PAC_WEBHOOK_URL` value to the public gosmee server url [here](https://github.com/konflux-ci/konflux-ci/blob/b67f2e3412b00686a0ba66e8c2a697fb1b977e10/konflux-ci/build-service/core/build-service-env-patch.yaml#L11), as shown below.
+**Note:** Use `hook.pipelinesascode.com` (gosmee) instead of `smee.io`. smee.io does not work with Forgejo because webhook signature validation fails.
 ```diff
            env:
              - name: PAC_WEBHOOK_URL
 -              value: http://pipelines-as-code-controller.pipelines-as-code.svc.cluster.local:8180
-+              value: https://smee.io/eZKOv78ryCsNbUFLFYWd7C5t9K6gZNuzhrxsLDe5
++              value: https://hook.pipelinesascode.com/<your-channel-id>
 
 ```
 After changing the value, run `kubectl apply -k konflux-ci/build-service` for applying changes to the cluster.

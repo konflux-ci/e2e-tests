@@ -147,7 +147,9 @@ const (
 	// The Codeberg base URL used to run e2e tests against (defaults to https://codeberg.org)
 	CODEBERG_API_URL_ENV string = "CODEBERG_API_URL" // #nosec
 
-	// The smee.io channel URL for forwarding webhooks to the test cluster
+	// The gosmee channel URL (hook.pipelinesascode.com) for forwarding webhooks to the test cluster.
+	// Note: smee.io does not work with Forgejo because webhook signature validation fails;
+	// use hook.pipelinesascode.com with gosmee instead.
 	SMEE_CHANNEL_ENV string = "SMEE_CHANNEL"
 
 	// Release service catalog default URL and revision for e2e tests
