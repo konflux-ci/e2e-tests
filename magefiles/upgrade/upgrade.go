@@ -88,7 +88,7 @@ func newStatusHelper(kcs *kubeclient.Clientset, ccs *configv1client.Clientset) (
 		}
 	}
 	if !foundNextVersionChannel {
-		return nil, fmt.Errorf("the channel for updating to next version was not found in the list of desired channels: %+v", clusterVersion.Status.Desired.Channels)
+		klog.Warningf("channel %q not found in desired channels %v; will attempt to switch channel anyway", nextVersionChannel, clusterVersion.Status.Desired.Channels)
 	}
 
 	cm, err := kcs.CoreV1().ConfigMaps("openshift-config-managed").Get(context.Background(), "admin-gates", metav1.GetOptions{})
@@ -96,12 +96,19 @@ func newStatusHelper(kcs *kubeclient.Clientset, ccs *configv1client.Clientset) (
 		return nil, fmt.Errorf("error when getting configmap admin-gates: %+v", err)
 	}
 
-	var adminAckData string
+	var ackKeys []string
 	for k := range cm.Data {
 		if strings.Contains(k, currentMajorMinorVersion) {
-			adminAckData = fmt.Sprintf("{\"data\":{\"%s\":\"true\"}}", k)
-			break
+			ackKeys = append(ackKeys, k)
 		}
+	}
+	var adminAckData string
+	if len(ackKeys) > 0 {
+		parts := make([]string, len(ackKeys))
+		for i, k := range ackKeys {
+			parts[i] = fmt.Sprintf("%q:\"true\"", k)
+		}
+		adminAckData = fmt.Sprintf("{\"data\":{%s}}", strings.Join(parts, ","))
 	}
 
 	klog.Infof("desired major.minor version is %q, desired channel is %q", nextMajorMinorVersion, nextVersionChannel)
