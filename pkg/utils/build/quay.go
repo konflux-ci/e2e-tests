@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/devfile/library/v2/pkg/util"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	quay "github.com/konflux-ci/image-controller/pkg/quay"
@@ -99,11 +100,12 @@ func IsImageRepoPublic(quayImageRepoName string) (bool, error) {
 }
 
 func DoesQuayOrgSupportPrivateRepo() (bool, error) {
+	privateRepoName := constants.SamplePrivateRepoName + "-" + util.GenerateRandomString(4)
 	repositoryRequest := quay.RepositoryRequest{
 		Namespace:   quayOrg,
 		Visibility:  "private",
 		Description: "Test private repository",
-		Repository:  constants.SamplePrivateRepoName,
+		Repository:  privateRepoName,
 	}
 	repo, err := quayClient.CreateRepository(repositoryRequest)
 	if err != nil {
@@ -117,7 +119,7 @@ func DoesQuayOrgSupportPrivateRepo() (bool, error) {
 		return false, fmt.Errorf("%v repository created is nil", repo)
 	}
 	// Delete the created image repo
-	_, err = DeleteImageRepo(constants.SamplePrivateRepoName)
+	_, err = DeleteImageRepo(privateRepoName)
 	if err != nil {
 		return true, fmt.Errorf("error while deleting private image repo: %v", err)
 	}
