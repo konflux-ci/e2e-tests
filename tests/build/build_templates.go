@@ -555,6 +555,10 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
 					// ginkgo.AfterAll(func() {
 					// 	if !ginkgo.CurrentSpecReport().Failed() {
+					//		err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+					//		if err != nil {
+					//			ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+					//		}
 					// 		err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
 					// 		if err != nil {
 					// 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
@@ -634,6 +638,9 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 
 						pr, err = f.AsKubeAdmin.TektonController.RunPipelineWithRetry(generator, testNamespace, int(ecPipelineRunTimeout.Seconds()))
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+						err = f.AsKubeAdmin.TektonController.AddFinalizerToPipelineRun(pr, constants.E2ETestFinalizerName)
+						gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("error while adding finalizer %q to the pipelineRun %q", constants.E2ETestFinalizerName, pr.GetName()))
 
 						gomega.Expect(f.AsKubeAdmin.TektonController.WatchPipelineRun(pr.Name, testNamespace, int(ecPipelineRunTimeout.Seconds()))).To(gomega.Succeed())
 
