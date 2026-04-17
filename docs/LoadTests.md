@@ -5,17 +5,15 @@
 When load-test results are collected (e.g. by `collect-results-probe.sh`), the following happens:
 
 1. **POD and step parsing**  
-   Script `ci-scripts/utility_scripts/get-pod-step-names.py` scans `ARTIFACT_DIR/collected-data/<namespace>/<run_id>/` for log files matching `pod-<POD_ID>-pod-step-<STEP_NAME>.log`. It extracts POD IDs (Tekton Task pods) and step names (containers) and writes:
-   - `ARTIFACT_DIR/pod-step-names.json` – machine-readable list of `{ "namespace", "pod_id", "steps": [...] }`
-   - `ARTIFACT_DIR/pod-step-names.log` – human-readable dump of the same
+   A shell pipeline (find + jq) scans `ARTIFACT_DIR/collected-data/` for `collected-taskrun-*.json` files. From each TaskRun JSON it reads `.metadata.namespace`, `.status.podName`, and `.status.steps[].name`, then aggregates into:
+   - `ARTIFACT_DIR/get-pod-step-names.json` – machine-readable list of `{ "pods": [ { "namespace", "pod_id", "steps": [...] }, ... ] }`
 
-2. **Monitoring config backup and expansion**  
-   - The repo’s `ci-scripts/stage/cluster_read_config.yaml` is copied to `ARTIFACT_DIR/cluster_read_config.yaml_orig`.
-   - `ci-scripts/utility_scripts/append-pod-step-monitoring.py` reads `pod-step-names.json` and appends one `monitor_pod_container(namespace, pod_id, step, ...)` Jinja call per (POD, step) to that config.
+2. **Monitoring config expansion**  
+   `ci-scripts/utility_scripts/append-pod-step-monitoring.py` reads the repo’s `cluster_read_config.yaml` (from the script’s path) and `get-pod-step-names.json`, then appends one `monitor_pod_container(namespace, pod_id, step, ...)` Jinja call per (POD, step).
    - The result is written to `ARTIFACT_DIR/cluster_read_config.yaml_modified`, which is then used for Prometheus monitoring collection (per-pod, per-container CPU and working-set memory).
 
 3. **Artifacts produced**  
-   Under each run’s `ARTIFACT_DIR`: `cluster_read_config.yaml_orig`, `cluster_read_config.yaml_modified`, `pod-step-names.json`, `pod-step-names.log`.
+   Under each run’s `ARTIFACT_DIR`: `get-pod-step-names.json`, `cluster_read_config.yaml_modified`.
 
 ## Running the script
 1. Change your directory to `tests/load-tests`
