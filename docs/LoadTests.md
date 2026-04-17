@@ -4,13 +4,12 @@
 
 When load-test results are collected (e.g. by `collect-results-probe.sh`), the following happens:
 
-1. **POD and step parsing**  
-   A shell pipeline (find + jq) scans `ARTIFACT_DIR/collected-data/` for `collected-taskrun-*.json` files. From each TaskRun JSON it reads `.metadata.namespace`, `.status.podName`, and `.status.steps[].name`, then aggregates into:
-   - `ARTIFACT_DIR/get-pod-step-names.json` – machine-readable list of `{ "pods": [ { "namespace", "pod_id", "steps": [...] }, ... ] }`
+1. **POD, task and step parsing**  
+   A shell pipeline (find + jq) scans `ARTIFACT_DIR/collected-data/` for `collected-taskrun-*.json` files. From each TaskRun JSON it reads `.metadata.namespace`, `.status.podName`, `.metadata.name` (task name), and `.status.steps[].name`, then aggregates into:
+   - `ARTIFACT_DIR/get-pod-step-names.json` – machine-readable list of `{ "pods": [ { "namespace", "pod_id", "task_name", "steps": [...] }, ... ] }`
 
 2. **Monitoring config expansion**  
-   `ci-scripts/utility_scripts/append-pod-step-monitoring.py` reads the repo’s `cluster_read_config.yaml` (from the script’s path) and `get-pod-step-names.json`, then appends one `monitor_pod_container(namespace, pod_id, step, ...)` Jinja call per (POD, step).
-   - The result is written to `ARTIFACT_DIR/cluster_read_config.yaml_modified`, which is then used for Prometheus monitoring collection (per-pod, per-container CPU and working-set memory).
+   `ci-scripts/utility_scripts/append-pod-step-monitoring.py` reads the repo’s `cluster_read_config.yaml` and `get-pod-step-names.json`, then appends one `monitor_task_step(namespace, pod_id, task_name, step_name, ...)` Jinja call per (task, step). Metrics are stored under **task name** (stable across runs) as `measurements.tasks[<task_name>].step[<step_name>].memory` and `.cpu`. The Prometheus query uses container name `step-<step_name>` to match Tekton step containers.
 
 3. **Artifacts produced**  
    Under each run’s `ARTIFACT_DIR`: `get-pod-step-names.json`, `cluster_read_config.yaml_modified`.
