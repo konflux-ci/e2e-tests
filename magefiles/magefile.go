@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
-	gh "github.com/google/go-github/v44/github"
+	gh "github.com/google/go-github/v66/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
@@ -824,7 +824,7 @@ func CleanGitHubWebHooks() error {
 		}
 		for _, wh := range webhookList {
 			dayDuration, _ := time.ParseDuration("24h")
-			if time.Since(wh.GetCreatedAt()) > dayDuration {
+			if time.Since(wh.GetCreatedAt().Time) > dayDuration {
 				klog.Infof("removing webhook: %s, git_organization: %s, git_repository: %s", wh.GetName(), githubOrg, repo)
 				if err := gh.DeleteWebhook(repo, wh.GetID()); err != nil {
 					return fmt.Errorf("failed to delete webhook: %v, repo: %s", wh.Name, repo)

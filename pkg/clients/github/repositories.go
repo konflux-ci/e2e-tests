@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/google/go-github/v44/github"
+	"github.com/google/go-github/v66/github"
 	"github.com/onsi/ginkgo/v2"
 )
 
@@ -185,6 +185,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 
 	forkOptions := &github.RepositoryCreateForkOptions{
 		Organization: targetOrgName,
+		Name:         targetName,
 	}
 
 	err1 := utils.WaitUntilWithInterval(func() (done bool, err error) {
@@ -227,24 +228,10 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 		return nil, fmt.Errorf("failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
 	}
 
-	editedRepo := &github.Repository{
-		Name: github.String(targetName),
-	}
-
-	err3 := utils.WaitUntilWithInterval(func() (done bool, err error) {
-		repo, resp, err = g.client.Repositories.Edit(ctx, targetOrgName, fork.GetName(), editedRepo)
-		if err != nil {
-			if resp.StatusCode == 422 {
-				// This started to happen recently. Docs says 422 is "Validation failed, or the endpoint has been spammed." so we need to be patient.
-				// Error we are getting: "422 Validation Failed [{Resource:Repository Field:name Code:custom Message:name a repository operation is already in progress}]"
-				return false, nil
-			}
-			return false, fmt.Errorf("error renaming %s/%s to %s: %v", targetOrgName, fork.GetName(), targetName, err)
-		}
-		return true, nil
-	}, time.Second * 10, time.Minute * 1)
+	// Get the final repo object to return
+	repo, _, err3 := g.client.Repositories.Get(ctx, targetOrgName, fork.GetName())
 	if err3 != nil {
-		return nil, fmt.Errorf("failed waiting for renaming %s/%s: %v", targetOrgName, targetName, err3)
+		return nil, fmt.Errorf("failed to get fork %s/%s: %v", targetOrgName, fork.GetName(), err3)
 	}
 
 	return repo, nil
