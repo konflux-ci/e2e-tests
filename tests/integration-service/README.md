@@ -27,7 +27,14 @@ This suite verifies the reporting of integration test statuses to GitLab Merge R
 - `https://gitlab.com/redhat-appstudio-qe/hacbs-test-project-integration`
 - `https://github.com/konflux-ci/integration-examples`
 
-### 4. E2E Tests within `group-snapshots-tests.go`
+### 4. E2E Tests within `forgejo-integration-reporting.go`
+This suite verifies the reporting of integration test statuses to Forgejo Merge Requests on Codeberg (same overall flow as the GitLab MR status-reporting suite, against a Forgejo remote). It ensures the integration pipeline result is reflected in the MR's commit status and that a corresponding MR comment is posted.
+
+**Repositories:**
+- `https://codeberg.org/konflux-qe/konflux-test-integration`
+- `https://github.com/konflux-ci/integration-examples`
+
+### 5. E2E Tests within `group-snapshots-tests.go`
 This suite tests the creation of group snapshots for both monorepo and multiple repositories scenarios. It verifies the integration service's ability to handle multiple components across different repository structures, including proper group snapshot creation, component coordination, and snapshot lifecycle management.
 
 **Repositories:**
@@ -35,7 +42,7 @@ This suite tests the creation of group snapshots for both monorepo and multiple 
 - `https://github.com/redhat-appstudio-qe/konflux-test-integration-clone`
 - `https://github.com/konflux-ci/integration-examples`
 
-### 5. E2E Tests within `pipelinerun-resolution.go`
+### 6. E2E Tests within `pipelinerun-resolution.go`
 This suite tests the integration service's pipeline resolution functionality, focusing on ResolutionRequest lifecycle management and ensuring proper cleanup of resolution resources after pipeline execution.
 
 **Repositories:**
@@ -100,7 +107,19 @@ Checkpoints:
 - Validating that at least one MR note contains the final integration test result (pass/fail or scenario name).
 - Merge MR and repeat three tests above.
 
-### 4. Happy Path Tests within `group-snapshots-tests.go`
+### 4. Happy Path Tests within `forgejo-integration-reporting.go`
+Checkpoints:
+- Creating one IntegrationTestScenario expected to pass.
+- Creating a custom branch that triggers a Merge Request (MR) on Codeberg (Forgejo).
+- Triggering a Build PipelineRun and ensuring it completes successfully.
+- Asserting the creation of a PaC (Pipelines as Code) init MR in the component repository.
+- Verifying that the Build PipelineRun is chains-signed and a Snapshot is created.
+- Ensuring the successful Integration PipelineRun is reported as "Pass" in the MR's commit status.
+- Validating that at least one MR comment contains the final integration test result.
+- Merging the MR and confirming a push PipelineRun is triggered.
+- Re-verifying the Integration PipelineRun completes successfully and status is reported on the post-merge commit.
+
+### 5. Happy Path Tests within `group-snapshots-tests.go`
 Checkpoints:
 - Creating multiple components (A, B, C) with different repository structures (monorepo and multi-repo).
 - Verifying that BuildPipelineRuns are triggered for each component and complete successfully.
@@ -114,7 +133,7 @@ Checkpoints:
 - Ensuring that group snapshots reference the correct build PipelineRuns for each component.
 - **Verifying that older snapshots and their associated integration PipelineRuns are cancelled when new group snapshots are created.**
 
-### 5. Happy Path Tests within `pipelinerun-resolution.go`
+### 6. Happy Path Tests within `pipelinerun-resolution.go`
 Checkpoints:
 - Testing for successful creation of applications and components with pipeline resolution.
 - Checking if the BuildPipelineRun is successfully triggered and completed with proper resolution.
