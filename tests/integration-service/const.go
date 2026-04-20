@@ -73,6 +73,5 @@ var (
 	gitlabProjectIDForStatusReporting             = fmt.Sprintf("%s/%s", gitlabOrg, gitlabComponentRepoName)
 	gitlabComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://gitlab.com/%s/%s", gitlabOrg, gitlabComponentRepoName)
 	forgejoOrg                                    = utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg)
-	forgejoProjectIDForStatusReporting            = fmt.Sprintf("%s/%s", forgejoOrg, forgejoComponentRepoName)
-	forgejoComponentGitSourceURLForStatusReporting = fmt.Sprintf("https://codeberg.org/%s/%s", forgejoOrg, forgejoComponentRepoName)
+	forgejoProjectIDForStatusReporting = fmt.Sprintf("%s/%s", forgejoOrg, forgejoComponentRepoName)
 )
