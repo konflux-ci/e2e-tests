@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
-	forgejoapi "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
-
 	"github.com/devfile/library/v2/pkg/util"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/git"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
+
+	forgejoapi "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
 
 	appstudioApi "github.com/konflux-ci/application-api/api/v1alpha1"
 	integrationv1beta2 "github.com/konflux-ci/integration-service/api/v1beta2"
@@ -29,14 +30,17 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 	var err error
 
 	var mrID int
-	var mrSha, projectID, forgejoToken string
+	var mrSha, forgejoToken string
 	var snapshot *appstudioApi.Snapshot
 	var component *appstudioApi.Component
 	var buildPipelineRun, testPipelinerun *pipeline.PipelineRun
 	var integrationTestScenarioPass *integrationv1beta2.IntegrationTestScenario
 	var applicationName, componentName, componentBaseBranchName, pacBranchName, testNamespace string
-	var mergeResult *forgejoapi.PullRequest
 	var mergeResultSha string
+
+	var gitClient git.Client
+	var forgejoGitClient *git.ForgejoClient
+	var reportingRepoURL, reportingRepository string
 
 	ginkgo.AfterEach(framework.ReportFailure(&f))
 
@@ -56,8 +60,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 
 			applicationName = createApp(*f, testNamespace)
 
-			// Wait for the Application to be available before creating integration test scenarios,
-			// matching the pattern used in the GitLab suite to avoid race conditions.
 			gomega.Eventually(func() error {
 				_, err := f.AsKubeAdmin.HasController.GetApplication(applicationName, testNamespace)
 				return err
@@ -71,52 +73,32 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 			pacBranchName = constants.PaCPullRequestBranchPrefix + componentName
 			componentBaseBranchName = fmt.Sprintf("base-forgejo-%s", util.GenerateRandomString(6))
 
-			projectID = forgejoProjectIDForStatusReporting
-
 			forgejoToken = utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
 			gomega.Expect(forgejoToken).ShouldNot(gomega.BeEmpty(), fmt.Sprintf("'%s' env var is not set", constants.CODEBERG_BOT_TOKEN_ENV))
 			gomega.Expect(f.AsKubeAdmin.CommonController.Forgejo).NotTo(gomega.BeNil())
 
-			exists, err := f.AsKubeAdmin.CommonController.Forgejo.ExistsBranch(projectID, componentDefaultBranch)
-			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-			if !exists {
-				err = f.AsKubeAdmin.CommonController.Forgejo.CreateBranch(projectID, componentDefaultBranch, fallbackBranchName)
-				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-			}
+			forgejoGitClient = git.NewForgejoClient(f.AsKubeAdmin.CommonController.Forgejo)
+			gitClient = forgejoGitClient
 
-			err = f.AsKubeAdmin.CommonController.Forgejo.CreateBranch(projectID, componentBaseBranchName, componentDefaultBranch)
+			reportingRepository = fmt.Sprintf("%s/%s", forgejoOrg, forgejoComponentRepoName+"-"+util.GenerateRandomString(6))
+			err = gitClient.ForkRepository(forgejoProjectIDForStatusReporting, reportingRepository)
 			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+			reportingRepoURL = fmt.Sprintf("https://codeberg.org/%s", reportingRepository)
 
 			err = build.CreateCodebergBuildSecret(f, "forgejo-build-secret", map[string]string{}, forgejoToken)
 			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-			// Pre-clean any stale webhooks left by a previous test run. When a webhook
-			// with the same URL already exists on the Codeberg repo, build-service
-			// detects it and skips re-registration — meaning pipelines-as-code-webhooks-secret
-			// retains the old HMAC secret while Codeberg keeps signing events with it, causing
-			// signature validation to fail for the entire new run.
-			// We delete both the cluster-domain hook (gosmee) and the PaC SaaS relay
-			// (hook.pipelinesascode.com) to cover all deployment topologies.
-			// Errors are ignored: if no stale webhook exists this is a no-op.
-			_ = f.AsKubeAdmin.CommonController.Forgejo.DeleteWebhooks(projectID, f.ClusterAppDomain)
-			_ = f.AsKubeAdmin.CommonController.Forgejo.DeleteWebhooks(projectID, "hook.pipelinesascode.com")
+			err = gitClient.CreateBranch(reportingRepository, componentDefaultBranch, "", componentBaseBranchName)
+			gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 
 		ginkgo.AfterAll(func() {
-			// Guard against mrID == 0: if the test failed before the PaC init PR was
-			// discovered, mrID is never set. Calling ClosePullRequest with ID 0 returns
-			// a 404 and panics here, preventing the webhook cleanup below from running
-			// and leaving a stale webhook that breaks the next test run.
 			if mrID != 0 {
-				gomega.Expect(f.AsKubeAdmin.CommonController.Forgejo.ClosePullRequest(projectID, int64(mrID))).To(gomega.Succeed())
+				_ = gitClient.DeleteBranchAndClosePullRequest(reportingRepository, mrID)
 			}
-			gomega.Expect(f.AsKubeAdmin.CommonController.Forgejo.DeleteBranch(projectID, componentBaseBranchName)).NotTo(gomega.HaveOccurred())
-			// Delete webhooks for both gosmee (cluster-domain URL) and the PaC SaaS
-			// relay (hook.pipelinesascode.com). On ROSA clusters the PaC relay is used
-			// instead of gosmee, so without the second deletion a stale webhook persists
-			// across runs and causes signature validation failures on the next run.
-			_ = f.AsKubeAdmin.CommonController.Forgejo.DeleteWebhooks(projectID, f.ClusterAppDomain)
-			_ = f.AsKubeAdmin.CommonController.Forgejo.DeleteWebhooks(projectID, "hook.pipelinesascode.com")
+
+			gomega.Expect(gitClient.DeleteRepositoryIfExists(reportingRepository)).To(gomega.Succeed())
 
 			if !ginkgo.CurrentSpecReport().Failed() {
 				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
@@ -132,7 +114,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 					Source: appstudioApi.ComponentSource{
 						ComponentSourceUnion: appstudioApi.ComponentSourceUnion{
 							GitSource: &appstudioApi.GitSource{
-								URL:           forgejoComponentGitSourceURLForStatusReporting,
+								URL:           reportingRepoURL,
 								Revision:      componentBaseBranchName,
 								DockerfileURL: "Dockerfile",
 							},
@@ -149,44 +131,30 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 					))
 				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-				// Wait for the PaC Repository CR to be created by build-service. This confirms
-				// that the PaC webhook has been registered and its secret written to
-				// pipelines-as-code-webhooks-secret.
 				gomega.Eventually(func() error {
 					_, getErr := f.AsKubeAdmin.TektonController.GetRepositoryParams(componentName, testNamespace)
 					return getErr
 				}, time.Minute*5, time.Second*5).Should(gomega.Succeed(),
 					fmt.Sprintf("timed out waiting for PaC Repository CR for component %s in namespace %s", componentName, testNamespace))
 
-				// Wait for build-service to open the PaC init PR. By the time the PR is
-				// visible, PaC's informer cache will have had time to refresh with the new
-				// webhook secret. The initial push and pull_request events fired by Codeberg
-				// arrive within seconds of webhook registration — before PaC's cache is
-				// updated — causing signature validation failures for those early events.
-				// Waiting here ensures the retrigger commit below is processed with a
-				// valid, up-to-date secret.
 				gomega.Eventually(func() bool {
-					prs, listErr := f.AsKubeAdmin.CommonController.Forgejo.GetPullRequests(projectID)
+					prs, listErr := git.ListPullRequestsWithRetry(gitClient, reportingRepository)
 					if listErr != nil {
 						ginkgo.GinkgoWriter.Printf("error listing pull requests while waiting for PaC init PR: %v\n", listErr)
 						return false
 					}
 					for _, pr := range prs {
-						if pr.Head != nil && pr.Head.Ref == pacBranchName {
-							mrID = int(pr.Index)
+						if pr.SourceBranch == pacBranchName {
+							mrID = pr.Number
 							return true
 						}
 					}
 					return false
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(),
-					fmt.Sprintf("timed out waiting for PaC init PR (branch %s) to be created in %s", pacBranchName, forgejoComponentRepoName))
+					fmt.Sprintf("timed out waiting for PaC init PR (branch %s) to be created in %s", pacBranchName, reportingRepository))
 
-				// Push a retrigger commit to the PaC init branch so PaC processes the
-				// pull_request event with its now-refreshed webhook secret cache. Without
-				// this, the test relies on the initial events which arrive before the cache
-				// is updated and are rejected with a signature validation failure.
-				_, err = f.AsKubeAdmin.CommonController.Forgejo.CreateFile(
-					projectID, "retrigger.txt",
+				_, err = gitClient.CreateFile(
+					reportingRepository, "retrigger.txt",
 					fmt.Sprintf("retrigger PaC build for component %s", componentName),
 					pacBranchName,
 				)
@@ -218,20 +186,19 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 
 			ginkgo.It("should have a related PaC init MR created", func() {
 				gomega.Eventually(func() bool {
-					prs, err := f.AsKubeAdmin.CommonController.Forgejo.GetPullRequests(projectID)
+					prs, err := git.ListPullRequestsWithRetry(gitClient, reportingRepository)
 					gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 					for _, pr := range prs {
-						if pr.Head != nil && pr.Head.Ref == pacBranchName {
-							mrID = int(pr.Index)
-							mrSha = pr.Head.Sha
+						if pr.SourceBranch == pacBranchName {
+							mrID = pr.Number
+							mrSha = pr.HeadSHA
 							return true
 						}
 					}
 					return false
-				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(), fmt.Sprintf("timed out when waiting for init PaC MR (branch name '%s') to be created in %s repository", pacBranchName, forgejoComponentRepoName))
+				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(), fmt.Sprintf("timed out when waiting for init PaC MR (branch name '%s') to be created in %s repository", pacBranchName, reportingRepository))
 
-				// In case the first pipelineRun attempt failed and was retried, refresh the variable.
 				buildPipelineRun, err = f.AsKubeAdmin.HasController.GetComponentPipelineRun(componentName, applicationName, testNamespace, mrSha)
 				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 			})
@@ -274,13 +241,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 
 			ginkgo.It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
 				gomega.Expect(
-					f.AsKubeAdmin.HasController.Forgejo.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, int64(mrID)),
+					forgejoGitClient.GetCommitStatusConclusion(integrationTestScenarioPass.Name, reportingRepository, mrSha, mrID),
 				).To(gomega.Equal(integrationPipelineRunCommitStatusSuccess))
 			})
 
 			ginkgo.It("validates at least one MR comment contains the final integration test result", func() {
 				gomega.Eventually(func() bool {
-					owner, repo, ok := strings.Cut(projectID, "/")
+					owner, repo, ok := strings.Cut(reportingRepository, "/")
 					if !ok {
 						return false
 					}
@@ -304,20 +271,20 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 					}
 					return false
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(),
-					fmt.Sprintf("no MR comment found containing integration test result for PR #%d in project %s", mrID, forgejoComponentRepoName))
+					fmt.Sprintf("no MR comment found containing integration test result for PR #%d in project %s", mrID, reportingRepository))
 			})
 
 			ginkgo.It("merging the PR should be successful", func() {
+				var mergeResult *git.PullRequest
 				gomega.Eventually(func() error {
-					mergeResult, err = f.AsKubeAdmin.CommonController.Forgejo.MergePullRequest(projectID, int64(mrID))
+					mergeResult, err = gitClient.MergePullRequest(reportingRepository, mrID)
 					return err
 				}, shortTimeout, constants.PipelineRunPollingInterval).ShouldNot(gomega.HaveOccurred(),
-					fmt.Sprintf("error when merging PaC merge request ID #%d in ProjectID %s", mrID, projectID))
+					fmt.Sprintf("error when merging PaC merge request ID #%d in repo %s", mrID, reportingRepository))
 
-				if mergeResult != nil && mergeResult.MergedCommitID != nil {
-					mergeResultSha = *mergeResult.MergedCommitID
-				} else if mergeResult != nil {
-					mergeResultSha = mergeResult.Head.Sha
+				mergeResultSha = mergeResult.MergeCommitSHA
+				if mergeResultSha == "" {
+					mergeResultSha = mergeResult.HeadSHA
 				}
 				ginkgo.GinkgoWriter.Printf("merged result sha: %s for MR #%d\n", mergeResultSha, mrID)
 			})
@@ -346,7 +313,7 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 
 			ginkgo.It("eventually leads to the integration test PipelineRun's Pass status reported at MR commit status", func() {
 				gomega.Expect(
-					f.AsKubeAdmin.HasController.Forgejo.GetCommitStatusConclusion(integrationTestScenarioPass.Name, projectID, mrSha, int64(mrID)),
+					forgejoGitClient.GetCommitStatusConclusion(integrationTestScenarioPass.Name, reportingRepository, mrSha, mrID),
 				).To(gomega.Equal(integrationPipelineRunCommitStatusSuccess))
 			})
 		})
