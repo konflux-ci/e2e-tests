@@ -152,13 +152,6 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 					return false
 				}, shortTimeout, constants.PipelineRunPollingInterval).Should(gomega.BeTrue(),
 					fmt.Sprintf("timed out waiting for PaC init PR (branch %s) to be created in %s", pacBranchName, reportingRepository))
-
-				_, err = gitClient.CreateFile(
-					reportingRepository, "retrigger.txt",
-					fmt.Sprintf("retrigger PaC build for component %s", componentName),
-					pacBranchName,
-				)
-				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 			})
 
 			ginkgo.It("triggers a Build PipelineRun", func() {
