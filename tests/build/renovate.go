@@ -184,7 +184,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				Expect(err).NotTo(HaveOccurred())
 
 				// get the build pipeline bundle annotation
-				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuild)
+				buildPipelineAnnotation = build.GetBuildPipelineBundleAnnotation(constants.DockerBuildOciTAMin)
 
 				if gitProvider == git.ForgejoProvider {
 					gitProviderAnnotation = map[string]string{"git-provider": "forgejo"}
