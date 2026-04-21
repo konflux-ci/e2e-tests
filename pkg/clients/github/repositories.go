@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/v85/github"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/google/go-github/v66/github"
 	"github.com/onsi/ginkgo/v2"
 )
 
@@ -209,7 +209,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 			return false, fmt.Errorf("error forking %s/%s: %v", sourceOrgName, sourceName, err)
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 1)
+	}, time.Second*10, time.Minute*1)
 	if err1 != nil {
 		return nil, fmt.Errorf("failed waiting for fork %s/%s: %v", sourceOrgName, sourceName, err1)
 	}
@@ -223,7 +223,7 @@ func (g *Github) ForkRepositoryWithOrgs(sourceOrgName, sourceName, targetOrgName
 			return false, nil
 		}
 		return true, nil
-	}, time.Second * 10, time.Minute * 1)
+	}, time.Second*10, time.Minute*1)
 	if err2 != nil {
 		return nil, fmt.Errorf("failed waiting for commits %s/%s: %v", targetOrgName, fork.GetName(), err2)
 	}

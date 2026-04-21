@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v85/github"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
 	"github.com/konflux-ci/build-service/controllers"
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/devfile/library/v2/pkg/util"
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v85/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/integration"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
