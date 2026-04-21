@@ -40,6 +40,8 @@ type Tenant struct {
 	ManagedNamespace string
 	AppName          string
 	BackupName       string
+	ForkRepoName     string // set at runtime by forkRepoForTenant
+	ForkRepoURL      string // set at runtime by forkRepoForTenant
 }
 
 // ComponentDef describes a MathWizz application component (microservice) and

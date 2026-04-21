@@ -50,6 +50,10 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 			fw, err = framework.NewFramework("dr-bc")
 			Expect(err).ShouldNot(HaveOccurred(), "failed to create framework for backwards-compat")
 			validateDREnvironment(fw)
+
+			for i := range bcTenants {
+				forkRepoForTenant(fw, &bcTenants[i])
+			}
 		})
 
 		// Phase 1: Create tenants on the old Konflux version and run initial pipelines.
@@ -69,6 +73,12 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 
 			It("should wait for all build PipelineRuns to succeed", func() {
 				waitForPipelineChains(fw, bcTenants, nil, nil)
+			})
+
+			It("should merge PaC configuration PRs on forked repos", func() {
+				for _, t := range bcTenants {
+					mergePaCConfigPRs(fw, t)
+				}
 			})
 		})
 
@@ -141,6 +151,7 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 		})
 
 		AfterAll(func() {
+			cleanupForks(fw, bcTenants)
 			if CurrentSpecReport().Failed() {
 				collectFailureArtifacts(fw, bcTenants)
 			} else {

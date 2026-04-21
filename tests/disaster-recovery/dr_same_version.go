@@ -36,6 +36,10 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Same-Version Backup/Restore"
 		Expect(err).ShouldNot(HaveOccurred(), "failed to create framework")
 
 		validateDREnvironment(fw)
+
+		for i := range svTenants {
+			forkRepoForTenant(fw, &svTenants[i])
+		}
 	})
 
 	// Phase 1: Tenant creation and initial pipeline execution.
@@ -55,6 +59,12 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Same-Version Backup/Restore"
 
 		It("should wait for all build PipelineRuns to succeed", func() {
 			waitForPipelineChains(fw, svTenants, nil, nil)
+		})
+
+		It("should merge PaC configuration PRs on forked repos", func() {
+			for _, t := range svTenants {
+				mergePaCConfigPRs(fw, t)
+			}
 		})
 	})
 
@@ -117,6 +127,7 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Same-Version Backup/Restore"
 	})
 
 	AfterAll(func() {
+		cleanupForks(fw, svTenants)
 		if CurrentSpecReport().Failed() {
 			collectFailureArtifacts(fw, svTenants)
 		} else {
