@@ -94,11 +94,13 @@ var _ = framework.IntegrationServiceSuiteDescribe("Forgejo Status Reporting of I
 		})
 
 		ginkgo.AfterAll(func() {
-			if mrID != 0 {
-				_ = gitClient.DeleteBranchAndClosePullRequest(reportingRepository, mrID)
-			}
+			if !ginkgo.CurrentSpecReport().Failed() {
+				if mrID != 0 {
+					_ = gitClient.DeleteBranchAndClosePullRequest(reportingRepository, mrID)
+				}
 
-			gomega.Expect(gitClient.DeleteRepositoryIfExists(reportingRepository)).To(gomega.Succeed())
+				gomega.Expect(gitClient.DeleteRepositoryIfExists(reportingRepository)).To(gomega.Succeed())
+			}
 
 			if !ginkgo.CurrentSpecReport().Failed() {
 				gomega.Expect(f.AsKubeAdmin.HasController.DeleteAllComponentsInASpecificNamespace(testNamespace, time.Minute*2)).To(gomega.Succeed())
