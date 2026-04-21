@@ -137,11 +137,6 @@ func IsMultiPlatformConfigRequired(rctx *rulesengine.RuleCtx) (bool, error) {
 	return rctx.RequiresMultiPlatformTests, nil
 }
 
-func IsLoadTestJob(rctx *rulesengine.RuleCtx) (bool, error) {
-
-	return strings.Contains(rctx.JobName, "-load-test"), nil
-}
-
 func IsSprayProxyHostSet(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	if rctx.DryRun {
