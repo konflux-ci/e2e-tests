@@ -89,7 +89,7 @@ func CleanupWebhooks(f *framework.Framework, repoName string) error {
 		return err
 	}
 	for _, h := range hooks {
-		hookUrl := h.Config["url"].(string)
+		hookUrl := h.Config.GetURL()
 		if strings.Contains(hookUrl, f.ClusterAppDomain) {
 			ginkgo.GinkgoWriter.Printf("removing webhook URL: %s\n", hookUrl)
 			err = f.AsKubeAdmin.CommonController.Github.DeleteWebhook(repoName, h.GetID())
