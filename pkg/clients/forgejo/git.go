@@ -390,6 +390,29 @@ func (fc *ForgejoClient) GetCommitStatusConclusion(statusName, projectID, commit
 	return ""
 }
 
+// GetAllRepositories lists all repositories in the configured organization with pagination
+func (fc *ForgejoClient) GetAllRepositories() ([]*forgejo.Repository, error) {
+	opts := forgejo.ListOrgReposOptions{
+		ListOptions: forgejo.ListOptions{
+			Page:     1,
+			PageSize: 50,
+		},
+	}
+	var allRepos []*forgejo.Repository
+	for {
+		repos, _, err := fc.client.ListOrgRepos(fc.org, opts)
+		if err != nil {
+			return allRepos, fmt.Errorf("failed to list org repos: %w", err)
+		}
+		allRepos = append(allRepos, repos...)
+		if len(repos) < opts.PageSize {
+			break
+		}
+		opts.Page++
+	}
+	return allRepos, nil
+}
+
 // splitProjectID splits a projectID in format "owner/repo" into owner and repo
 func splitProjectID(projectID string) (string, string) {
 	parts := strings.SplitN(projectID, "/", 2)

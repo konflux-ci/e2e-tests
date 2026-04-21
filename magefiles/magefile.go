@@ -29,6 +29,7 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
+	forgejoClient "github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/sprayproxy"
@@ -922,6 +923,62 @@ func CleanupGitLabRepos() error {
 	}
 	if dryRun {
 		klog.Info("If you really want to delete these projects, run `DRY_RUN=false ./mage CleanupGitLabRepos`")
+	}
+	return nil
+}
+
+// Remove all the repos which matches FORGEJO_REPO_REGEX or older than 1 day from Forgejo/Codeberg
+func CleanupForgejoRepos() error {
+	dryRun, err := strconv.ParseBool(utils.GetEnv("DRY_RUN", "true"))
+	if err != nil {
+		return err
+	}
+	token := utils.GetEnv(constants.CODEBERG_BOT_TOKEN_ENV, "")
+	if token == "" {
+		return fmt.Errorf("empty CODEBERG_BOT_TOKEN env variable")
+	}
+	apiURL := utils.GetEnv(constants.CODEBERG_API_URL_ENV, constants.DefaultCodebergAPIURL)
+	org := utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg)
+	fc, err := forgejoClient.NewForgejoClient(token, apiURL, org)
+	if err != nil {
+		return err
+	}
+	repos, err := fc.GetAllRepositories()
+	if err != nil {
+		return err
+	}
+	// Filter repos by regex
+	reposToBeDeletedRegexp := utils.GetEnv("FORGEJO_REPO_REGEX", "^devfile-sample-hello-world-\\S{6}$|^build-nudge-parent-\\S{6}$|^build-nudge-child-\\S{6}$|^konflux-test-integration-\\S{6}$")
+	r, err := regexp.Compile(reposToBeDeletedRegexp)
+	if err != nil {
+		return fmt.Errorf("unable to compile regex: %s", err)
+	}
+
+	reposToBeDeleted := []string{}
+	for _, repo := range repos {
+		dayDuration, _ := time.ParseDuration("24h")
+		if time.Since(repo.Created) > dayDuration {
+			if r.MatchString(repo.Name) {
+				reposToBeDeleted = append(reposToBeDeleted, repo.Name)
+			}
+		}
+	}
+	if dryRun {
+		klog.Info("Dry run enabled. Listing repositories that would be deleted:")
+	}
+
+	for _, repoName := range reposToBeDeleted {
+		if dryRun {
+			klog.Infof("\t%s", repoName)
+		} else {
+			err := fc.DeleteRepositoryIfExists(org + "/" + repoName)
+			if err != nil {
+				klog.Warningf("error deleting repository: %s\n", err)
+			}
+		}
+	}
+	if dryRun {
+		klog.Info("If you really want to delete these repositories, run `DRY_RUN=false ./mage CleanupForgejoRepos`")
 	}
 	return nil
 }
