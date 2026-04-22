@@ -15,7 +15,7 @@ require (
 	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
-	github.com/conforma/crds/api v0.1.7
+	github.com/conforma/crds/api v0.1.10
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v29.0.3+incompatible
 	github.com/go-git/go-git/v5 v5.16.5
@@ -44,7 +44,6 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/cli v0.43.0
 	github.com/tektoncd/pipeline v1.7.0
@@ -287,6 +286,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
