@@ -52,6 +52,34 @@ func countSucceededPRs(fw *framework.Framework, namespace, pipelineType, compone
 	return count
 }
 
+// logFailedTaskRuns lists TaskRuns belonging to a failed PipelineRun and logs
+// each failed TaskRun's pipeline task name and failure message.
+func logFailedTaskRuns(fw *framework.Framework, namespace, prName string) {
+	trList := &pipeline.TaskRunList{}
+	if err := fw.AsKubeAdmin.CommonController.KubeRest().List(
+		context.Background(), trList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{"tekton.dev/pipelineRun": prName},
+	); err != nil {
+		GinkgoWriter.Printf("  could not list TaskRuns for PipelineRun %s: %v\n", prName, err)
+		return
+	}
+
+	for i := range trList.Items {
+		tr := &trList.Items[i]
+		for _, c := range tr.Status.Conditions {
+			if c.Type == "Succeeded" {
+				if c.Status == "False" {
+					taskName := tr.Labels["tekton.dev/pipelineTask"]
+					GinkgoWriter.Printf("  FAILED TaskRun %s (task: %s) in PipelineRun %s: %s\n",
+						tr.Name, taskName, prName, c.Message)
+				}
+				break
+			}
+		}
+	}
+}
+
 // waitForSucceededPRCount polls until exactly expectedCount PipelineRuns with
 // Succeeded=True exist in the namespace. Any deviation from the expected count
 // (including exceeding it) is treated as a finding. Failed PipelineRuns are
@@ -69,6 +97,7 @@ func waitForSucceededPRCount(fw *framework.Framework, namespace, pipelineType, c
 	}
 
 	listOpts := buildListOpts(namespace, pipelineType, componentName)
+	loggedFailures := map[string]bool{}
 
 	Eventually(func() int {
 		prList := &pipeline.PipelineRunList{}
@@ -92,6 +121,10 @@ func waitForSucceededPRCount(fw *framework.Framework, namespace, pipelineType, c
 							"FAILED %s PipelineRun %s (component: %s) in %s: %s\n",
 							displayType, pr.Name, pr.Labels[componentLabel],
 							namespace, c.Message)
+						if !loggedFailures[pr.Name] {
+							loggedFailures[pr.Name] = true
+							logFailedTaskRuns(fw, namespace, pr.Name)
+						}
 					}
 					break
 				}
