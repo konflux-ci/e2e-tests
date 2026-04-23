@@ -127,7 +127,7 @@ func (g *GitHubClient) CleanupWebhooks(repository, clusterAppDomain string) erro
 		return err
 	}
 	for _, h := range hooks {
-		hookUrl := h.Config["url"].(string)
+		hookUrl := h.Config.GetURL()
 		if strings.Contains(hookUrl, clusterAppDomain) {
 			fmt.Printf("removing webhook URL: %s\n", hookUrl)
 			err = g.DeleteWebhook(repository, h.GetID())

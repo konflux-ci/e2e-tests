@@ -2,6 +2,7 @@ package imagecontroller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/konflux-ci/image-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,20 @@ func (i *ImageController) GetImageRepositoryCR(name, namespace string) (*v1alpha
 		return nil, err
 	}
 	return &imageRepository, nil
+}
+
+// GetImageRepositoryByComponent returns the ImageRepository CR for the component
+func (i *ImageController) GetImageRepositoryByComponent(namespace, componentName string) (*v1alpha1.ImageRepository, error) {
+	imageRepositoryList := &v1alpha1.ImageRepositoryList{}
+	imageRepoLabels := map[string]string{"appstudio.redhat.com/component": componentName}
+	err := i.KubeRest().List(context.Background(), imageRepositoryList, &rclient.ListOptions{LabelSelector: labels.SelectorFromSet(imageRepoLabels), Namespace: namespace})
+	if err != nil {
+		return nil, err
+	}
+	if len(imageRepositoryList.Items) == 0 {
+		return nil, fmt.Errorf("no image repository found for component %s in namespace %s", componentName, namespace)
+	}
+	return &imageRepositoryList.Items[0], nil
 }
 
 // ChangeVisibilityToPrivate changes ImageRepository visibility to private
