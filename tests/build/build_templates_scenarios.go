@@ -159,7 +159,7 @@ var componentScenarios = []ComponentScenarioSpec{
 	{
 		Name:                "prefetch-yarn-modern",
 		GitURL:              "https://github.com/konflux-qe-bd/nodejs-yarn-modern-sample-app",
-		Revision:            "7a4c4b1014e99c166bfdf33de7163c9ed6ca5bca",
+		Revision:            "6797f06d0eee55766929ba09361810803cafce42",
 		ContextDir:          ".",
 		DockerFilePath:      "Dockerfile",
 		PipelineBundleNames: []constants.BuildPipelineType{constants.DockerBuild},

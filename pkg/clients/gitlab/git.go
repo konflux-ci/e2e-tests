@@ -125,6 +125,15 @@ func (gc *GitlabClient) GetMergeRequests(projectId string) ([]*gitlab.MergeReque
 	return mergeRequests, nil
 }
 
+// GetMergeRequest returns a specific MergeRequest in a given project ID and MR IID
+func (gc *GitlabClient) GetMergeRequest(projectID string, mergeRequestIID int) (*gitlab.MergeRequest, error) {
+	mr, _, err := gc.client.MergeRequests.GetMergeRequest(projectID, mergeRequestIID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return mr, nil
+}
+
 // CloseMergeRequest closes merge request in Gitlab repo by given MR IID
 func (gc *GitlabClient) CloseMergeRequest(projectID string, mergeRequestIID int) error {
 
