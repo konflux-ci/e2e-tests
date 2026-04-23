@@ -7,7 +7,7 @@ require (
 	github.com/IBM/go-sdk-core/v5 v5.15.3
 	github.com/IBM/vpc-go-sdk v0.48.0
 	github.com/argoproj/argo-cd/v2 v2.14.21
-	github.com/avast/retry-go/v4 v4.3.3
+	github.com/avast/retry-go/v4 v4.7.0
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/config v1.31.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.143.0
@@ -44,7 +44,6 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/cli v0.43.0
 	github.com/tektoncd/pipeline v1.7.0
@@ -287,6 +286,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
