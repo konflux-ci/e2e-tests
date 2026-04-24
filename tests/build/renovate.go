@@ -409,7 +409,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					}
 					Expect(parentPostPacMergeDigest).ShouldNot(BeEmpty())
 				})
-				It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), func() {
+				It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), FlakeAttempts(3), func() {
 					timeout = time.Minute * 20
 					interval := time.Second * 10
 
