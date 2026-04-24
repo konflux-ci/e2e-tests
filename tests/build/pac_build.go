@@ -131,10 +131,25 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 
 					_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation), gitProviderAnnotation))
 					Expect(err).ShouldNot(HaveOccurred())
+
+					// Wait for image-controller to populate Spec.ContainerImage on the component.
+					// build-service will not start PaC setup (and therefore will not create the
+					// init PR) until this field is non-empty. Under cluster load, image-controller
+					// can take several minutes to link the push secret to the build service account
+					// and set ContainerImage. Waiting here ensures the subsequent PR poll only
+					// begins once build-service is unblocked, preventing false timeouts.
+					Eventually(func() (string, error) {
+						c, err := f.AsKubeAdmin.HasController.GetComponent(customDefaultComponentName, testNamespace)
+						if err != nil {
+							return "", err
+						}
+						return c.Spec.ContainerImage, nil
+					}, time.Minute*10, time.Second*5).ShouldNot(BeEmpty(),
+						fmt.Sprintf("timed out waiting for image-controller to set ContainerImage on component %s/%s", testNamespace, customDefaultComponentName))
 				})
 
 				It("correctly targets the default branch (that is not named 'main') with PaC", func() {
-					timeout = time.Second * 300
+					timeout = time.Minute * 10
 					interval = time.Second * 5
 					Eventually(func() bool {
 						prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
