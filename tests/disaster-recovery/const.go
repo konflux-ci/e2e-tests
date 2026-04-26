@@ -159,9 +159,9 @@ var SVTenant2 = Tenant{
 // services (database, message-queue) are omitted because they use stock images
 // and don't have source code builds.
 var Components = []ComponentDef{
-	{Name: CompWebServer, ContextDir: "web-server", DockerfileURL: "web-server/Dockerfile"},
-	{Name: CompHistoryWorker, ContextDir: "history-worker", DockerfileURL: "history-worker/Dockerfile"},
-	{Name: CompFrontend, ContextDir: "frontend", DockerfileURL: "frontend/Dockerfile"},
+	{Name: CompWebServer, ContextDir: "web-server", DockerfileURL: "Dockerfile"},
+	{Name: CompHistoryWorker, ContextDir: "history-worker", DockerfileURL: "Dockerfile"},
+	{Name: CompFrontend, ContextDir: "frontend", DockerfileURL: "Dockerfile"},
 }
 
 // ---------------------------------------------------------------------------
