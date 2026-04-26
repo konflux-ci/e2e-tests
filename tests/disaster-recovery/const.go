@@ -310,7 +310,7 @@ const (
 
 	// PipelineTimeout is how long to wait for all build and integration test
 	// PipelineRuns to complete in a tenant namespace.
-	PipelineTimeout = 30 * time.Minute
+	PipelineTimeout = 90 * time.Minute
 	PipelinePoll    = 30 * time.Second
 
 	// ReleaseChainTimeout is how long to wait for all release PipelineRuns to

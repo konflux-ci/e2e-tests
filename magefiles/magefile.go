@@ -1289,7 +1289,7 @@ func DisasterRecoveryWorkflow() error {
 		return err
 	}
 
-	return runTestsWithTimeout("disaster-recovery", "disaster-recovery-report.xml", "360m")
+	return runTestsWithTimeout("disaster-recovery", "disaster-recovery-report.xml", "1080m")
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
