@@ -12,7 +12,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
+	"github.com/devfile/library/v2/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -21,10 +24,91 @@ import (
 
 	ecp "github.com/conforma/crds/api/v1alpha1"
 	appservice "github.com/konflux-ci/application-api/api/v1alpha1"
+	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/framework"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
 )
+
+// forkRepoForTenant creates a unique GitHub fork of the MathWizz source repo
+// for this tenant. Each tenant gets its own fork so that PaC can configure
+// webhooks independently (avoids PaC error 53 when multiple namespaces target
+// the same repo). Sets the ForkRepoName and ForkRepoURL fields on the Tenant.
+func forkRepoForTenant(fw *framework.Framework, t *Tenant) {
+	GinkgoHelper()
+
+	forkName := fmt.Sprintf("DR-MathWizz-%s", util.GenerateRandomString(6))
+	By(fmt.Sprintf("Forking %s → %s for tenant %s", MathWizzRepoName, forkName, t.Namespace))
+
+	ghClient := fw.AsKubeAdmin.HasController.Github
+	_, err := ghClient.ForkRepository(MathWizzRepoName, forkName)
+	Expect(err).ShouldNot(HaveOccurred(),
+		"failed to fork %s to %s for tenant %s", MathWizzRepoName, forkName, t.Namespace)
+
+	org := utils.GetEnv(constants.GITHUB_E2E_ORGANIZATION_ENV, "redhat-appstudio-qe")
+	t.ForkRepoName = forkName
+	t.ForkRepoURL = fmt.Sprintf("https://github.com/%s/%s", org, forkName)
+}
+
+// cleanupForks deletes the forked GitHub repos for all tenants. Safe to call
+// even if a fork was never created (empty ForkRepoName is a no-op).
+func cleanupForks(fw *framework.Framework, tenants []Tenant) {
+	ghClient := fw.AsKubeAdmin.HasController.Github
+	for _, t := range tenants {
+		if t.ForkRepoName == "" {
+			continue
+		}
+		GinkgoWriter.Printf("Deleting fork repo %s for tenant %s\n", t.ForkRepoName, t.Namespace)
+		if err := ghClient.DeleteRepositoryIfExists(t.ForkRepoName); err != nil {
+			GinkgoWriter.Printf("WARNING: failed to delete fork %s: %v\n", t.ForkRepoName, err)
+		}
+	}
+}
+
+// mergePaCConfigPRs finds and merges all PaC configuration PRs on a tenant's
+// forked repo. Build-service opens one PR per Component (branch prefix
+// "konflux-"), so we expect ComponentsPerTenant PRs. Merging is required so
+// that subsequent PRs (e.g., from triggerBuildsAndVerify) trigger PipelineRuns
+// via the PaC pipeline definitions on the default branch.
+func mergePaCConfigPRs(fw *framework.Framework, t Tenant) {
+	GinkgoHelper()
+
+	Expect(t.ForkRepoName).ShouldNot(BeEmpty(), "ForkRepoName not set for tenant %s", t.Namespace)
+	ghClient := fw.AsKubeAdmin.HasController.Github
+
+	By(fmt.Sprintf("Waiting for %d PaC config PRs on %s", ComponentsPerTenant, t.ForkRepoName))
+
+	var pacPRNumbers []int
+	Eventually(func() int {
+		prs, err := ghClient.ListPullRequests(t.ForkRepoName)
+		if err != nil {
+			GinkgoWriter.Printf("error listing PRs on %s: %v\n", t.ForkRepoName, err)
+			return 0
+		}
+
+		pacPRNumbers = nil
+		for _, pr := range prs {
+			head := pr.GetHead().GetRef()
+			if strings.HasPrefix(head, constants.PaCPullRequestBranchPrefix) {
+				pacPRNumbers = append(pacPRNumbers, pr.GetNumber())
+			}
+		}
+		GinkgoWriter.Printf("found %d PaC config PRs on %s (need %d)\n",
+			len(pacPRNumbers), t.ForkRepoName, ComponentsPerTenant)
+		return len(pacPRNumbers)
+	}, 10*time.Minute, 15*time.Second).Should(Equal(ComponentsPerTenant),
+		"expected %d PaC config PRs on %s", ComponentsPerTenant, t.ForkRepoName)
+
+	By(fmt.Sprintf("Merging %d PaC config PRs on %s", len(pacPRNumbers), t.ForkRepoName))
+	for _, prNum := range pacPRNumbers {
+		Eventually(func() error {
+			_, err := ghClient.MergePullRequest(t.ForkRepoName, prNum)
+			return err
+		}, 2*time.Minute, 10*time.Second).Should(Succeed(),
+			"failed to merge PaC config PR #%d on %s", prNum, t.ForkRepoName)
+		GinkgoWriter.Printf("Merged PaC config PR #%d on %s\n", prNum, t.ForkRepoName)
+	}
+}
 
 // createTenant provisions a full tenant namespace with an Application and all
 // Components defined in the Components slice. After this function returns the
@@ -43,12 +127,16 @@ func createTenant(fw *framework.Framework, t Tenant) {
 	for _, comp := range Components {
 		By(fmt.Sprintf("Creating Component %s in namespace %s", comp.Name, t.Namespace))
 
+		repoURL := t.ForkRepoURL
+		Expect(repoURL).ShouldNot(BeEmpty(),
+			"ForkRepoURL not set for tenant %s — call forkRepoForTenant first", t.Namespace)
+
 		spec := appservice.ComponentSpec{
 			ComponentName: comp.Name,
 			Source: appservice.ComponentSource{
 				ComponentSourceUnion: appservice.ComponentSourceUnion{
 					GitSource: &appservice.GitSource{
-						URL:           MathWizzRepo,
+						URL:           repoURL,
 						Context:       comp.ContextDir,
 						DockerfileURL: comp.DockerfileURL,
 					},

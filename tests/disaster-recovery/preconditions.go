@@ -113,9 +113,10 @@ func validateGitHubRepo(fw *framework.Framework) {
 	By(fmt.Sprintf("Validating repo structure: %d component Dockerfiles exist", len(Components)))
 	ghClient := fw.AsKubeAdmin.HasController.Github
 	for _, comp := range Components {
-		_, err := ghClient.GetFile(MathWizzRepoName, comp.DockerfileURL, MathWizzDefaultBranch)
+		dockerfilePath := comp.ContextDir + "/" + comp.DockerfileURL
+		_, err := ghClient.GetFile(MathWizzRepoName, dockerfilePath, MathWizzDefaultBranch)
 		Expect(err).ShouldNot(HaveOccurred(),
 			"component %q Dockerfile not found at %s in repo %s — repo structure may have changed",
-			comp.Name, comp.DockerfileURL, MathWizzRepoName)
+			comp.Name, dockerfilePath, MathWizzRepoName)
 	}
 }
