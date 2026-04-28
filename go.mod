@@ -24,9 +24,9 @@ require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/google/go-github/v66 v66.0.0
 	github.com/h2non/gock v1.2.0
-	github.com/konflux-ci/application-api v0.0.0-20260213151620-9ac61f5d7ca0
+	github.com/konflux-ci/application-api v0.0.0-20260312190025-5154ad273e17
 	github.com/konflux-ci/build-service v0.0.0-20240611083846-2dee6cfe6fe4
-	github.com/konflux-ci/image-controller v0.0.0-20240530145826-3296e4996f6f
+	github.com/konflux-ci/image-controller v0.0.0-20260428123836-67cc74626bb7
 	github.com/konflux-ci/integration-service v0.0.0-20260327093127-2b0e36d45a91
 	github.com/konflux-ci/operator-toolkit v0.0.0-20251118152634-b4f41f073069
 	github.com/konflux-ci/release-service v0.0.0-20260127184035-c36c56a3c440
@@ -44,7 +44,6 @@ require (
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/cli v0.43.0
 	github.com/tektoncd/pipeline v1.7.0
@@ -287,6 +286,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
