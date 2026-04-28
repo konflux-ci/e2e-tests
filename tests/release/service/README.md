@@ -45,3 +45,12 @@ This test file includes two negative test cases.
 
    Checkpoints:
      - Ensure that Release CR fails on Validation and on Release, with a proper message printed out to the user.
+
+## Negative e2e-tests (pipeline_creation_error_surfaced.go)
+
+This test verifies that permanent failures during managed PipelineRun creation are surfaced on the Release status instead of being silently requeued forever. It uses a ResourceQuota in the managed namespace (`count/pipelineruns.tekton.dev: "0"`) to deterministically deny PipelineRun creation as a CI-safe proxy for admission failure.
+
+Checkpoints:
+  - Ensure that Release reaches a terminal failed state (not released).
+  - Ensure that Release status includes an error message indicating managed PipelineRun creation failure.
+
