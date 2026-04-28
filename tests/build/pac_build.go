@@ -129,26 +129,41 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						},
 					}
 
-					_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation), gitProviderAnnotation))
+				_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPrivateRepo), buildPipelineAnnotation), gitProviderAnnotation))
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Wait for image-controller to populate Spec.ContainerImage on the component.
+				// build-service will not start PaC setup (and therefore will not create the
+				// init PR) until this field is non-empty. Under cluster load, image-controller
+				// can take several minutes to link the push secret to the build service account
+				// and set ContainerImage. Waiting here ensures the subsequent PR poll only
+				// begins once build-service is unblocked, preventing false timeouts.
+				Eventually(func() (string, error) {
+					c, err := f.AsKubeAdmin.HasController.GetComponent(customDefaultComponentName, testNamespace)
+					if err != nil {
+						return "", err
+					}
+					return c.Spec.ContainerImage, nil
+				}, time.Minute*10, time.Second*5).ShouldNot(BeEmpty(),
+					fmt.Sprintf("timed out waiting for image-controller to set ContainerImage on component %s/%s", testNamespace, customDefaultComponentName))
+			})
+
+			It("correctly targets the default branch (that is not named 'main') with PaC", func() {
+				timeout = time.Minute * 10
+				interval = time.Second * 5
+				Eventually(func() bool {
+					prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
 					Expect(err).ShouldNot(HaveOccurred())
-				})
 
-				It("correctly targets the default branch (that is not named 'main') with PaC", func() {
-					timeout = time.Second * 300
-					interval = time.Second * 5
-					Eventually(func() bool {
-						prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
-						Expect(err).ShouldNot(HaveOccurred())
-
-						for _, pr := range prs {
-							if pr.SourceBranch == customDefaultComponentBranch {
-								Expect(pr.TargetBranch).To(Equal(helloWorldComponentDefaultBranch))
-								return true
-							}
+					for _, pr := range prs {
+						if pr.SourceBranch == customDefaultComponentBranch {
+							Expect(pr.TargetBranch).To(Equal(helloWorldComponentDefaultBranch))
+							return true
 						}
-						return false
-					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
-				})
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for init PaC PR to be created against %s branch in %s repository", helloWorldComponentDefaultBranch, helloWorldRepository))
+			})
 
 				It("workspace parameter is set correctly in PaC repository CR", func() {
 					nsObj, err := f.AsKubeAdmin.CommonController.GetNamespace(testNamespace)
