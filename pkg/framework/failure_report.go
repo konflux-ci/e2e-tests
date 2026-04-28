@@ -36,7 +36,7 @@ func ReportFailure(f **Framework) func() {
 			podList, err := fwk.AsKubeAdmin.CommonController.ListAllPods(namespace)
 			if err != nil {
 				ginkgo.GinkgoWriter.Printf("failed to list pods in namespace %s: %v\n", namespace, err)
-				return
+				continue
 			}
 
 			for _, pod := range podList.Items {

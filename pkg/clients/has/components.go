@@ -249,6 +249,13 @@ func (h *HasController) WaitForComponentPipelineToBeFinished(component *appservi
 			if prLogs, err = t.GetPipelineRunLogs(component.GetName(), pr.Name, pr.Namespace); err != nil {
 				ginkgo.GinkgoWriter.Printf("failed to get logs for PipelineRun %s:%s: %s\n", pr.GetNamespace(), pr.GetName(), err.Error())
 			}
+			if strings.TrimSpace(prLogs) == "" {
+				cond := pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded)
+				prLogs = cond.GetReason()
+				if msg := cond.GetMessage(); msg != "" {
+					prLogs = prLogs + ": " + msg
+				}
+			}
 			return false, fmt.Errorf("%s", prLogs)
 		})
 
@@ -498,6 +505,9 @@ func (h *HasController) RetriggerComponentPipelineRun(component *appservice.Comp
 			}
 			sha = file.CommitID
 		case "forgejo", "gitea":
+			if h.Forgejo == nil {
+				return "", fmt.Errorf("failed to retrigger PipelineRun %s in %s namespace: Forgejo client is not initialized", pr.GetName(), pr.GetNamespace())
+			}
 			forgejoOrg := utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg)
 			projectID := fmt.Sprintf("%s/%s", forgejoOrg, repoName)
 			fileResp, err := h.Forgejo.CreateFile(projectID, util.GenerateRandomString(5), "test", branchName)
