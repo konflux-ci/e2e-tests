@@ -41,11 +41,10 @@ func DoesImageRepoExistInQuay(quayImageRepoName string) (bool, error) {
 	exists, err := quayClient.DoesRepositoryExist(quayOrg, quayImageRepoName)
 	if exists {
 		return true, nil
-	} else if !exists && strings.Contains(err.Error(), "does not exist") {
+	} else if err != nil && strings.Contains(err.Error(), "does not exist") {
 		return false, nil
-	} else {
-		return false, err
 	}
+	return false, err
 }
 
 func DoesRobotAccountExistInQuay(robotAccountName string) (bool, error) {
@@ -111,9 +110,12 @@ func DoesQuayOrgSupportPrivateRepo() (bool, error) {
 	if err != nil {
 		if err.Error() == "payment required" {
 			return false, nil
-		} else {
-			return false, err
 		}
+		if strings.Contains(err.Error(), "Could not create repository") || strings.Contains(err.Error(), "already exists") {
+			_, _ = quayClient.DeleteRepository(quayOrg, privateRepoName)
+			return true, nil
+		}
+		return false, err
 	}
 	if repo == nil {
 		return false, fmt.Errorf("%v repository created is nil", repo)
