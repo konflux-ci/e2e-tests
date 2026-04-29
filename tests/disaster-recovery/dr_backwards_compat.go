@@ -1,8 +1,8 @@
 // dr_backwards_compat.go implements the backwards-compatibility DR test scenario.
 //
 // This scenario validates that backups taken on an OLDER Konflux version can be
-// successfully restored on a NEWER Konflux version. It runs as a single Ginkgo
-// describe block with seven phases:
+// successfully restored on a NEWER Konflux version. It runs as an Ordered
+// Ginkgo context (registered by dr_suite.go) with seven phases:
 //
 //  1. Create tenants on the OLD Konflux version (pre-upgrade).
 //  2. Back up tenant data before the upgrade.
@@ -36,8 +36,8 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 )
 
-var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
-	Label("disaster-recovery"), Serial, Ordered, func() {
+func defineBackwardsCompatSpecs() {
+	Context("DR Backwards-Compat", Ordered, func() {
 		defer GinkgoRecover()
 
 		var fw *framework.Framework
@@ -50,6 +50,10 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 			fw, err = framework.NewFramework("dr-bc")
 			Expect(err).ShouldNot(HaveOccurred(), "failed to create framework for backwards-compat")
 			validateDREnvironment(fw)
+
+			for i := range bcTenants {
+				forkRepoForTenant(fw, &bcTenants[i])
+			}
 		})
 
 		// Phase 1: Create tenants on the old Konflux version and run initial pipelines.
@@ -69,6 +73,12 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 
 			It("should wait for all build PipelineRuns to succeed", func() {
 				waitForPipelineChains(fw, bcTenants, nil, nil)
+			})
+
+			It("should merge PaC configuration PRs on forked repos", func() {
+				for _, t := range bcTenants {
+					mergePaCConfigPRs(fw, t)
+				}
 			})
 		})
 
@@ -141,6 +151,7 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 		})
 
 		AfterAll(func() {
+			cleanupForks(fw, bcTenants)
 			if CurrentSpecReport().Failed() {
 				collectFailureArtifacts(fw, bcTenants)
 			} else {
@@ -148,6 +159,7 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 			}
 		})
 	})
+}
 
 // performKonfluxUpgrade merges the PR branch into infra-deployments and waits
 // for ArgoCD to sync all applications to the new version, then verifies that

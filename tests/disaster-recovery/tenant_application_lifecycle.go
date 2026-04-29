@@ -52,6 +52,34 @@ func countSucceededPRs(fw *framework.Framework, namespace, pipelineType, compone
 	return count
 }
 
+// logFailedTaskRuns lists TaskRuns belonging to a failed PipelineRun and logs
+// each failed TaskRun's pipeline task name and failure message.
+func logFailedTaskRuns(fw *framework.Framework, namespace, prName string) {
+	trList := &pipeline.TaskRunList{}
+	if err := fw.AsKubeAdmin.CommonController.KubeRest().List(
+		context.Background(), trList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{"tekton.dev/pipelineRun": prName},
+	); err != nil {
+		GinkgoWriter.Printf("  could not list TaskRuns for PipelineRun %s: %v\n", prName, err)
+		return
+	}
+
+	for i := range trList.Items {
+		tr := &trList.Items[i]
+		for _, c := range tr.Status.Conditions {
+			if c.Type == "Succeeded" {
+				if c.Status == "False" {
+					taskName := tr.Labels["tekton.dev/pipelineTask"]
+					GinkgoWriter.Printf("  FAILED TaskRun %s (task: %s) in PipelineRun %s: %s\n",
+						tr.Name, taskName, prName, c.Message)
+				}
+				break
+			}
+		}
+	}
+}
+
 // waitForSucceededPRCount polls until exactly expectedCount PipelineRuns with
 // Succeeded=True exist in the namespace. Any deviation from the expected count
 // (including exceeding it) is treated as a finding. Failed PipelineRuns are
@@ -69,6 +97,7 @@ func waitForSucceededPRCount(fw *framework.Framework, namespace, pipelineType, c
 	}
 
 	listOpts := buildListOpts(namespace, pipelineType, componentName)
+	loggedFailures := map[string]bool{}
 
 	Eventually(func() int {
 		prList := &pipeline.PipelineRunList{}
@@ -92,6 +121,10 @@ func waitForSucceededPRCount(fw *framework.Framework, namespace, pipelineType, c
 							"FAILED %s PipelineRun %s (component: %s) in %s: %s\n",
 							displayType, pr.Name, pr.Labels[componentLabel],
 							namespace, c.Message)
+						if !loggedFailures[pr.Name] {
+							loggedFailures[pr.Name] = true
+							logFailedTaskRuns(fw, namespace, pr.Name)
+						}
 					}
 					break
 				}
@@ -186,21 +219,20 @@ func waitForPipelineChains(fw *framework.Framework, tenants []Tenant,
 	}
 }
 
-// triggerBuildsAndVerify creates a pull request against the MathWizz monorepo
-// to trigger new builds via PaC webhooks, then waits for the full pipeline
-// chain (build → integration test → release) to complete across all tenants.
-// This proves that PaC webhooks, Secrets, ServiceAccounts,
+// triggerBuildsAndVerify creates a pull request on each tenant's forked
+// MathWizz repo to trigger new builds via PaC webhooks, then waits for the
+// full pipeline chain (build → integration test → release) to complete across
+// all tenants. This proves that PaC webhooks, Secrets, ServiceAccounts,
 // IntegrationTestScenarios, ReleasePlans, and the full build/test/release
 // chain survived the backup/restore cycle.
 //
 // The method:
 //  1. Snapshots current per-component PipelineRun counts.
-//  2. Creates a branch from the default branch of the MathWizz repo.
-//  3. Appends a timestamp comment to README.md on the branch.
-//  4. Creates a PR from the branch to the default branch.
-//  5. Waits for new build and test PipelineRuns per component (parallel).
-//  6. Waits for new release PipelineRuns (aggregate).
-//  7. Cleans up the branch (which closes the PR).
+//  2. For each tenant: creates a branch, appends a timestamp to README.md,
+//     opens a PR on the tenant's fork repo.
+//  3. Waits for new build and test PipelineRuns per component (parallel).
+//  4. Waits for new release PipelineRuns (aggregate).
+//  5. Cleans up the branches (which closes the PRs).
 func triggerBuildsAndVerify(fw *framework.Framework, tenants []Tenant) {
 	GinkgoHelper()
 
@@ -224,46 +256,52 @@ func triggerBuildsAndVerify(fw *framework.Framework, tenants []Tenant) {
 			t.ManagedNamespace, initialRelease[t.ManagedNamespace])
 	}
 
-	By("Creating a pull request to the MathWizz monorepo to trigger new builds")
-
-	// Include the first tenant's app name for log traceability.
-	branchName := fmt.Sprintf("dr-test-trigger-%s-%d", tenants[0].AppName, time.Now().Unix())
 	ghClient := fw.AsKubeAdmin.HasController.Github
 
-	err := ghClient.CreateRef(MathWizzRepoName, MathWizzDefaultBranch, "", branchName)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create branch %s in %s", branchName, MathWizzRepoName)
+	for _, t := range tenants {
+		Expect(t.ForkRepoName).ShouldNot(BeEmpty(),
+			"ForkRepoName not set for tenant %s", t.Namespace)
 
-	// Ensure cleanup runs even if the test fails: delete the branch, which
-	// also closes the PR since GitHub auto-closes PRs when the head branch
-	// is deleted.
-	defer func() {
-		By(fmt.Sprintf("Cleaning up trigger branch %s", branchName))
-		if deleteErr := ghClient.DeleteRef(MathWizzRepoName, branchName); deleteErr != nil {
-			GinkgoWriter.Printf("WARNING: failed to delete trigger branch %s: %v\n",
-				branchName, deleteErr)
-		}
-	}()
+		branchName := fmt.Sprintf("dr-test-trigger-%s-%d", t.AppName, time.Now().Unix())
 
-	// Append a timestamp comment to README.md rather than replacing it.
-	// GetFile returns the current content and SHA needed for UpdateFile.
-	readmeFile, err := ghClient.GetFile(MathWizzRepoName, "README.md", branchName)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to get README.md from branch %s", branchName)
+		By(fmt.Sprintf("Creating trigger PR on fork %s for tenant %s", t.ForkRepoName, t.Namespace))
 
-	existingContent, err := readmeFile.GetContent()
-	Expect(err).ShouldNot(HaveOccurred(), "failed to decode README.md content")
+		err := ghClient.CreateRef(t.ForkRepoName, MathWizzDefaultBranch, "", branchName)
+		Expect(err).ShouldNot(HaveOccurred(),
+			"failed to create branch %s in %s", branchName, t.ForkRepoName)
 
-	updatedContent := existingContent + fmt.Sprintf("\n<!-- DR test trigger: %d -->\n", time.Now().Unix())
-	_, err = ghClient.UpdateFile(MathWizzRepoName, "README.md",
-		updatedContent, branchName, readmeFile.GetSHA())
-	Expect(err).ShouldNot(HaveOccurred(), "failed to update README.md on branch %s", branchName)
+		defer func(repo, branch string) {
+			By(fmt.Sprintf("Cleaning up trigger branch %s on %s", branch, repo))
+			if deleteErr := ghClient.DeleteRef(repo, branch); deleteErr != nil {
+				GinkgoWriter.Printf("WARNING: failed to delete trigger branch %s on %s: %v\n",
+					branch, repo, deleteErr)
+			}
+		}(t.ForkRepoName, branchName)
 
-	pr, err := ghClient.CreatePullRequest(MathWizzRepoName,
-		"DR test: trigger builds after backup/restore",
-		"Automated PR to verify the full build/test/release pipeline chain "+
-			"survives backup/restore. Created by the DR e2e test suite.",
-		branchName, MathWizzDefaultBranch)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create pull request")
-	GinkgoWriter.Printf("Created PR #%d to trigger builds\n", pr.GetNumber())
+		readmeFile, err := ghClient.GetFile(t.ForkRepoName, "README.md", branchName)
+		Expect(err).ShouldNot(HaveOccurred(),
+			"failed to get README.md from branch %s in %s", branchName, t.ForkRepoName)
+
+		existingContent, err := readmeFile.GetContent()
+		Expect(err).ShouldNot(HaveOccurred(), "failed to decode README.md content")
+
+		updatedContent := existingContent + fmt.Sprintf("\n<!-- DR test trigger %s: %d -->\n",
+			t.AppName, time.Now().Unix())
+		_, err = ghClient.UpdateFile(t.ForkRepoName, "README.md",
+			updatedContent, branchName, readmeFile.GetSHA())
+		Expect(err).ShouldNot(HaveOccurred(),
+			"failed to update README.md on branch %s in %s", branchName, t.ForkRepoName)
+
+		pr, err := ghClient.CreatePullRequest(t.ForkRepoName,
+			fmt.Sprintf("DR test: trigger builds for %s", t.AppName),
+			"Automated PR to verify the full build/test/release pipeline chain "+
+				"survives backup/restore. Created by the DR e2e test suite.",
+			branchName, MathWizzDefaultBranch)
+		Expect(err).ShouldNot(HaveOccurred(),
+			"failed to create pull request on %s", t.ForkRepoName)
+		GinkgoWriter.Printf("Created PR #%d on %s to trigger builds for tenant %s\n",
+			pr.GetNumber(), t.ForkRepoName, t.Namespace)
+	}
 
 	waitForPipelineChains(fw, tenants, initialPerComp, initialRelease)
 }
