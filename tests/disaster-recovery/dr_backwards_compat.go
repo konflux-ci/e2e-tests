@@ -1,8 +1,8 @@
 // dr_backwards_compat.go implements the backwards-compatibility DR test scenario.
 //
 // This scenario validates that backups taken on an OLDER Konflux version can be
-// successfully restored on a NEWER Konflux version. It runs as a single Ginkgo
-// describe block with seven phases:
+// successfully restored on a NEWER Konflux version. It runs as an Ordered
+// Ginkgo context (registered by dr_suite.go) with seven phases:
 //
 //  1. Create tenants on the OLD Konflux version (pre-upgrade).
 //  2. Back up tenant data before the upgrade.
@@ -36,8 +36,8 @@ import (
 	. "github.com/onsi/gomega"    //nolint:staticcheck
 )
 
-var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
-	Label("disaster-recovery"), Serial, Ordered, func() {
+func defineBackwardsCompatSpecs() {
+	Context("DR Backwards-Compat", Ordered, func() {
 		defer GinkgoRecover()
 
 		var fw *framework.Framework
@@ -159,6 +159,7 @@ var _ = framework.DisasterRecoverySuiteDescribe("DR Backwards-Compat",
 			}
 		})
 	})
+}
 
 // performKonfluxUpgrade merges the PR branch into infra-deployments and waits
 // for ArgoCD to sync all applications to the new version, then verifies that
