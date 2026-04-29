@@ -15,7 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
-	gh "github.com/google/go-github/v44/github"
+	gh "github.com/google/go-github/v66/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
@@ -135,11 +135,6 @@ func IsSprayProxyRequired(rctx *rulesengine.RuleCtx) (bool, error) {
 func IsMultiPlatformConfigRequired(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	return rctx.RequiresMultiPlatformTests, nil
-}
-
-func IsLoadTestJob(rctx *rulesengine.RuleCtx) (bool, error) {
-
-	return strings.Contains(rctx.JobName, "-load-test"), nil
 }
 
 func IsSprayProxyHostSet(rctx *rulesengine.RuleCtx) (bool, error) {

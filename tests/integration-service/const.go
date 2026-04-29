@@ -11,11 +11,12 @@ import (
 const (
 	EnvironmentName                = "development"
 	gitURL                         = "https://github.com/konflux-ci/integration-examples.git"
-	revision                       = "6a7c81802e785aa869f82301afe61f4e9775772b"
+	revision                       = "a1a70b0a1cfc96f5216d472fbd60f6b42780b3e5"
 	pathInRepoPass                 = "pipelines/integration_resolver_pipeline_pass.yaml"
 	pathInRepoPassPipelinerun      = "pipelineruns/integration_resolver_pipelinerun_pass.yaml"
 	pathIntegrationPipelineWithEnv = "pipelines/integration_resolver_pipeline_environment_pass.yaml"
 	pathInRepoFail                 = "pipelines/integration_resolver_pipeline_fail.yaml"
+	pathInRepoWarning              = "pipelines/integration_resolver_pipeline_warning.yaml"
 	pathInRepoTask                 = "tasks/integration_resolver_task_pass.yaml"
 	autoReleasePlan                = "auto-releaseplan"
 	targetReleaseNamespace         = "default"

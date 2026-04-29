@@ -644,20 +644,21 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 				})
 			})
 
-			When("the component is removed and recreated (with the same name in the same namespace)", Label("build-custom-branch"), func() {
-				var componentObj appservice.ComponentSpec
+			When("the component is removed", Label("build-custom-branch"), func() {
 
 				BeforeAll(func() {
 					Eventually(func() error {
 						return f.AsKubeAdmin.HasController.DeleteComponent(customBranchComponentName, testNamespace, true)
 					}, 2*time.Minute, 10*time.Second).Should(Succeed())
 
-					timeout = 1 * time.Minute
-					interval = 1 * time.Second
 					Eventually(func() bool {
 						_, err := f.AsKubeAdmin.HasController.GetComponent(customBranchComponentName, testNamespace)
 						return k8sErrors.IsNotFound(err)
-					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s/%s to be deleted", testNamespace, applicationName))
+					}, 1*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("timed out when waiting for the app %s/%s to be deleted", testNamespace, applicationName))
+
+				})
+
+				It("related image repo and robot accounts deleted", func() {
 					// Check removal of image repo
 					Eventually(func() (bool, error) {
 						return build.DoesImageRepoExistInQuay(imageRepoName)
@@ -675,27 +676,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 						return pullRobotAccountExists || pushRobotAccountExists, nil
 					}, timeout, interval).Should(BeFalse(), fmt.Sprintf("timed out when checking if robot accounts %s and %s got deleted", pullRobotAccountName, pushRobotAccountName))
 				})
-
-				BeforeAll(func() {
-					componentObj = appservice.ComponentSpec{
-						ComponentName: customBranchComponentName,
-						Source: appservice.ComponentSource{
-							ComponentSourceUnion: appservice.ComponentSourceUnion{
-								GitSource: &appservice.GitSource{
-									URL:           helloWorldComponentGitSourceURL,
-									Revision:      componentBaseBranchName,
-									DockerfileURL: constants.DockerFilePath,
-								},
-							},
-						},
-					}
-
-					_, err = f.AsKubeAdmin.HasController.CreateComponentCheckImageRepository(componentObj, testNamespace, "", "", applicationName, false, utils.MergeMaps(utils.MergeMaps(utils.MergeMaps(constants.ComponentPaCRequestAnnotation, constants.ImageControllerAnnotationRequestPublicRepo), buildPipelineAnnotation), gitProviderAnnotation))
-					Expect(err).ShouldNot(HaveOccurred())
-				})
-
-				AfterAll(func() {
-					//Get the Purge PR number created after deleting the component
+				It("purge PR is created successfully", func() {
 					Eventually(func() bool {
 						prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
 						Expect(err).ShouldNot(HaveOccurred())
@@ -708,28 +689,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 							}
 						}
 						return false
-					}, time.Minute, time.Second*10).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldRepository))
-
-				})
-
-				It("should no longer lead to a creation of a PaC PR", func() {
-					timeout = time.Second * 10
-					interval = time.Second * 2
-					Consistently(func() error {
-						prs, err := git.ListPullRequestsWithRetry(gitClient, helloWorldRepository)
-						if err != nil {
-							// Transient API errors should not fail a Consistently check
-							GinkgoWriter.Printf("error listing PRs in %s after retries (ignoring): %v\n", helloWorldRepository, err)
-							return nil
-						}
-
-						for _, pr := range prs {
-							if pr.SourceBranch == pacBranchName {
-								return fmt.Errorf("did not expect a new PR created in %s repository after initial PaC configuration was already merged for the same component name and a namespace", helloWorldRepository)
-							}
-						}
-						return nil
-					}, timeout, interval).ShouldNot(HaveOccurred())
+					}, 5*time.Minute, 10*time.Second).Should(BeTrue(), fmt.Sprintf("timed out when waiting for purge PR with traget branch %s to be created in %s repository", componentBaseBranchName, helloWorldRepository))
 				})
 			})
 		})

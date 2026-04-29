@@ -69,6 +69,9 @@ clean-gitlab-webhooks:
 clean-gitlab-repos:
 	DRY_RUN=false ./mage -v cleanupGitLabRepos
 
+clean-forgejo-repos:
+	DRY_RUN=false ./mage -v cleanupForgejoRepos
+
 clean-quay-repos-and-robots:
 	./mage -v local:cleanupQuayReposAndRobots
 

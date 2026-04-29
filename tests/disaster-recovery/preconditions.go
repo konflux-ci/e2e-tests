@@ -41,7 +41,7 @@ func validateOADPOperator(fw *framework.Framework) {
 
 	ctx := context.Background()
 	pods, err := fw.AsKubeAdmin.CommonController.KubeInterface().CoreV1().Pods(VeleroNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=openshift-adp-operator-controller-manager",
+		LabelSelector: "control-plane=controller-manager",
 	})
 	Expect(err).ShouldNot(HaveOccurred(), "failed to list pods in %s", VeleroNamespace)
 	Expect(pods.Items).ShouldNot(BeEmpty(), "no pods found in %s — OADP operator may not be installed", VeleroNamespace)

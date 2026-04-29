@@ -27,7 +27,7 @@ func (t *TektonController) GetRepositoryParams(componentName, namespace string) 
 		for _, ref := range repo.OwnerReferences {
 			if ref.Kind == "Component" && ref.Name == componentName {
 				if repo.Spec.Params == nil {
-					return []pacv1alpha1.Params{}, nil
+					return nil, fmt.Errorf("PaC Repository %s/%s has nil params", namespace, repo.Name)
 				}
 				return *repo.Spec.Params, nil
 			}
