@@ -26,7 +26,7 @@ const (
 
 	multiComponentGitSourceRepoName = "sample-multi-component"
 	multiComponentDefaultBranch     = "main"
-	multiComponentGitRevision       = "0d1835404efb8ab7bb1ab5b5b82cda1ebfda4b25"
+	multiComponentGitRevision       = "8eae0fb5b391476fea7a52c2c4d9a466da52b5f0"
 
 	secretLookupGitSourceRepoOneName = "secret-lookup-sample-repo-one"
 	secretLookupDefaultBranchOne     = "main"
