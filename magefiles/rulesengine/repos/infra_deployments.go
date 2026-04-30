@@ -7,16 +7,14 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 )
 
-// Default Rule of repo infra-deployments running konflux-demo suite.
+// InfraDeploymentsDefaultRule runs the default test suites for infra-deployments PRs.
 var InfraDeploymentsDefaultRule = rulesengine.Rule{Name: "Infra Deployments Default Test Execution",
-	Description: "Run the Konflux-demo suite tests when an Infra-deployments PR includes changes to files outside of the specified components.",
+	Description: "Run the default test suites when an Infra-deployments PR includes changes to files outside of the specified components.",
 	Condition: rulesengine.None{
-		&InfraDeploymentsIntegrationComponentChangeRule,
 		&InfraDeploymentsImageControllerComponentChangeRule,
 		&InfraDeploymentsMultiPlatformComponentChangeRule,
 		&InfraDeploymentsBuildTemplatesComponentChangeRule,
 		&InfraDeploymentsBuildServiceComponentChangeRule,
-		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule,
 		&InfraDeploymentsPipelineServiceComponentChangeRule,
@@ -34,12 +32,10 @@ func ExecuteInfraDeploymentsDefaultTestAction(rctx *rulesengine.RuleCtx) error {
 var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments PR Components File Diff Execution",
 	Description: "Runs specific tests of changed component by infra-deployments PR.",
 	Condition: rulesengine.Any{
-		&InfraDeploymentsIntegrationComponentChangeRule,
 		&InfraDeploymentsImageControllerComponentChangeRule,
 		&InfraDeploymentsMultiPlatformComponentChangeRule,
 		&InfraDeploymentsBuildTemplatesComponentChangeRule,
 		&InfraDeploymentsBuildServiceComponentChangeRule,
-		&InfraDeploymentsReleaseServiceComponentChangeRule,
 		&InfraDeploymentsEnterpriseControllerComponentChangeRule,
 		&InfraDeploymentsPipelineServiceComponentChangeRule,
 		&InfraDeploymentsJVMComponentChangeRule},
@@ -50,18 +46,6 @@ var InfraDeploymentsComponentsRule = rulesengine.Rule{Name: "Infra-deployments P
 
 	}),
 		rulesengine.ActionFunc(ExecuteTestAction)}}
-
-var InfraDeploymentsIntegrationComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Integration component File Change Rule",
-	Description: "Map Integration tests files when Integration component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-
-		return len(rctx.DiffFiles.FilterByDirGlob("components/integration/**/*")) != 0, nil
-
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "integration-service")
-		return nil
-	})}}
 
 var InfraDeploymentsEnterpriseControllerComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Enterprise Controller component File Change Rule",
 	Description: "Map Enterprise Controller tests files when EC component files are changed in the infra-deployments PR",
@@ -146,17 +130,6 @@ var InfraDeploymentsPipelineServiceComponentChangeRule = rulesengine.Rule{Name: 
 		}),
 	},
 }
-
-var InfraDeploymentsReleaseServiceComponentChangeRule = rulesengine.Rule{Name: "Infra-deployments PR Release service component File Change Rule",
-	Description: "Map release service tests files when Release service component files are changed in the infra-deployments PR",
-	Condition: rulesengine.ConditionFunc(func(rctx *rulesengine.RuleCtx) (bool, error) {
-
-		return len(rctx.DiffFiles.FilterByDirGlob("components/release/**/*")) != 0, nil
-	}),
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-		AddLabelToLabelFilter(rctx, "release-service")
-		return nil
-	})}}
 
 var InfraDeploymentsRulesCatalog = rulesengine.RuleCatalog{InfraDeploymentsDefaultRule, InfraDeploymentsComponentsRule}
 
