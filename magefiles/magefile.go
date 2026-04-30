@@ -12,20 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
 
-	"sigs.k8s.io/yaml"
-
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v66/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
-	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	forgejoClient "github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
@@ -35,11 +27,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/testspecs"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/build"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	"github.com/konflux-ci/image-controller/pkg/quay"
 	"github.com/magefile/mage/sh"
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	gl "github.com/xanzy/go-gitlab"
 )
 
@@ -62,9 +51,6 @@ var (
 	// determine whether CI will run tests that require to register SprayProxy
 	// in order to run tests that require PaC application
 	requiresSprayProxyRegistering bool
-
-	requiresMultiPlatformTests bool
-	platforms                  = []string{"linux/arm64", "linux/s390x", "linux/ppc64le"}
 
 	sprayProxyConfig       *sprayproxy.SprayProxyConfig
 	quayTokenNotFoundError = "DEFAULT_QUAY_ORG_TOKEN env var was not found"
@@ -127,9 +113,6 @@ func (ci CI) init() error {
 		if err != nil {
 			return fmt.Errorf("cannot get remote name and branch name for PR URL %q: %+v", prUrl, err)
 		}
-	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service-catalog" {
-		pr.RemoteName = "konflux-ci"
-		pr.BranchName = "staging"
 	}
 
 	rctx = rulesengine.NewRuleCtx()
@@ -184,9 +167,6 @@ func (Local) PrepareCluster() error {
 	}
 	if err := BootstrapCluster(); err != nil {
 		return fmt.Errorf("error when bootstrapping cluster: %v", err)
-	}
-	if err := SetupCustomBundle(); err != nil {
-		return fmt.Errorf("error while setting up custom bundle: %v", err)
 	}
 	return nil
 }
@@ -318,15 +298,7 @@ func (ci CI) TestE2E() error {
 		return fmt.Errorf("error when running ci init: %v", err)
 	}
 
-	// Eventually, when mage rules will be in place for all the repos, this functionality will be moved to individual repos where it is needed
-	if err := SetupCustomBundle(); err != nil {
-		return err
-	}
-
-	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" ||
-		pr.RepoName == "release-service" || pr.RepoName == "image-controller" ||
-		pr.RepoName == "build-service" || pr.RepoName == "release-service-catalog" {
+	if pr.RepoName == "e2e-tests" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
@@ -341,12 +313,6 @@ func (ci CI) TestE2E() error {
 	} else {
 		if err := setRequiredEnvVars(); err != nil {
 			return fmt.Errorf("error when setting up required env vars: %v", err)
-		}
-	}
-
-	if requiresMultiPlatformTests {
-		if err := SetupMultiPlatformTests(); err != nil {
-			return err
 		}
 	}
 
@@ -373,13 +339,10 @@ func RunE2ETests() error {
 		return err
 	}
 	switch rctx.RepoName {
-	case "release-service-catalog":
-		rctx.IsPaired = isPRPairingRequired("release-service")
-		return engine.MageEngine.RunRules(rctx, "tests", "release-service-catalog")
 	case "infra-deployments":
 		return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
 	default:
-		labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+		labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup")
 		return runTests(labelFilter, "e2e-report.xml")
 	}
 }
@@ -417,14 +380,13 @@ func PreflightChecks() error {
 func setRequiredEnvVars() error {
 	// Konflux Nightly E2E job
 	if strings.Contains(jobName, "-periodic") {
-		requiresMultiPlatformTests = true
 		requiresSprayProxyRegistering = true
 		return nil
 	}
 
 	if openshiftJobSpec.Refs.Repo != "e2e-tests" {
 
-		if strings.HasSuffix(jobName, "-service-e2e") || strings.Contains(jobName, "image-controller") {
+		if strings.HasSuffix(jobName, "-service-e2e") {
 			var envVarPrefix, imageTagSuffix, testSuiteLabel string
 			sp := strings.Split(os.Getenv("COMPONENT_IMAGE"), "@")
 
@@ -434,31 +396,6 @@ func setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "konflux"
-			case strings.Contains(jobName, "release-service"):
-				envVarPrefix = "RELEASE_SERVICE"
-				imageTagSuffix = "release-service-image"
-				testSuiteLabel = "release-service"
-				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), "development")
-			case strings.Contains(jobName, "integration-service"):
-				requiresSprayProxyRegistering = true
-				envVarPrefix = "INTEGRATION_SERVICE"
-				imageTagSuffix = "integration-service-image"
-				testSuiteLabel = "integration-service"
-			case strings.Contains(jobName, "build-service"):
-				requiresSprayProxyRegistering = true
-				envVarPrefix = "BUILD_SERVICE"
-				imageTagSuffix = "build-service-image"
-				testSuiteLabel = "build-service"
-			case strings.Contains(jobName, "image-controller"):
-				requiresSprayProxyRegistering = true
-				envVarPrefix = "IMAGE_CONTROLLER"
-				imageTagSuffix = "image-controller-image"
-				testSuiteLabel = "image-controller"
-			case strings.Contains(jobName, "multi-platform-controller"):
-				envVarPrefix = "MULTI_PLATFORM_CONTROLLER"
-				imageTagSuffix = "multi-platform-controller"
-				testSuiteLabel = "multi-platform"
-				requiresMultiPlatformTests = true
 			}
 
 			os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix), sp[0])
@@ -477,252 +414,16 @@ func setRequiredEnvVars() error {
 			os.Setenv("E2E_TEST_SUITE_LABEL", testSuiteLabel)
 
 		} else if openshiftJobSpec.Refs.Repo == "infra-deployments" {
-			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 			os.Setenv("INFRA_DEPLOYMENTS_ORG", pr.RemoteName)
 			os.Setenv("INFRA_DEPLOYMENTS_BRANCH", pr.BranchName)
-			/* Disabling "build tests" temporary due:
-			TODO: Enable when issues are done:
-			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
-			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
-			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,konflux,integration-service,ec,build-templates,multi-platform")
-		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
-			envVarPrefix := "RELEASE_SERVICE"
-			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
-			// "rehearse" jobs metadata are not relevant for testing
-			if !strings.Contains(jobName, "rehearse") {
-				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.RemoteName, pr.RepoName))
-				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
-				if isPRPairingRequired("release-service") {
-					os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix),
-						"quay.io/redhat-user-workloads/rhtap-release-2-tenant/release-service/release-service")
-					pairedSha := repos.GetPairedCommitSha("release-service", rctx)
-					if pairedSha != "" {
-						os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("on-pr-%s", pairedSha))
-					}
-					os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
-					os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pairedSha)
-					os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines && !fbc-tests")
-				}
-			}
-			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG") != "" {
-				os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG"))
-			}
-			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN") != "" {
-				os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN"))
-			}
+			os.Setenv("E2E_TEST_SUITE_LABEL", "konflux,ec")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
-			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true
 		}
 	}
 
 	return nil
-}
-
-func SetupCustomBundle() error {
-	klog.Infof("setting up new custom bundle for testing...")
-	customDockerBuildBundle, err := build.CreateCustomBuildBundle("docker-build")
-	if err != nil {
-		return err
-	}
-	// For running locally
-	klog.Infof("To use the custom docker bundle locally, run below cmd:\n\n export CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE=%s\n\n", customDockerBuildBundle)
-	// will be used in CI
-	err = os.Setenv(constants.CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE_ENV, customDockerBuildBundle)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func SetupMultiPlatformTests() error {
-	klog.Infof("going to create new Tekton bundle remote-build for the purpose of testing multi-platform-controller PR")
-	var err error
-	var defaultBundleRef string
-	var tektonObj runtime.Object
-	var authenticator authn.Authenticator
-
-	for _, platformType := range platforms {
-		tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-		quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
-		newMultiPlatformBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
-		var newRemotePipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newMultiPlatformBuilderPipelineImg, tag))
-		var newPipelineYaml []byte
-
-		if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
-			return fmt.Errorf("failed to create docker config file: %+v", err)
-		}
-		if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
-			return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
-		}
-		if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
-			return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
-		}
-		dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
-
-		var currentBuildahTaskRef string
-		for i := range dockerPipelineObject.PipelineSpec().Tasks {
-			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-			params := t.TaskRef.Params
-			var lastBundle *tektonapi.Param
-			var lastName *tektonapi.Param
-			buildahTask := false
-			for i, param := range params {
-				if param.Name == "bundle" {
-					lastBundle = &t.TaskRef.Params[i]
-				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
-					lastName = &t.TaskRef.Params[i]
-					buildahTask = true
-				}
-			}
-			if buildahTask {
-				currentBuildahTaskRef = lastBundle.Value.StringVal
-				klog.Infof("Found current task ref %s", currentBuildahTaskRef)
-				//TODO: current use pinned sha?
-				lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1-ac185e95bbd7a25c1c4acf86995cbaf30eebedc4")
-				lastName.Value = *tektonapi.NewStructuredValues("buildah-remote")
-				t.Params = append(t.Params, tektonapi.Param{Name: "PLATFORM", Value: *tektonapi.NewStructuredValues("$(params.PLATFORM)")})
-				dockerPipelineObject.Spec.Params = append(dockerPipelineObject.PipelineSpec().Params, tektonapi.ParamSpec{Name: "PLATFORM", Default: tektonapi.NewStructuredValues(platformType)})
-				dockerPipelineObject.Name = "buildah-remote-pipeline"
-				break
-			}
-		}
-		if currentBuildahTaskRef == "" {
-			return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
-		}
-		if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
-			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
-		}
-
-		if authenticator, err = utils.GetAuthenticatorForImageRef(newRemotePipeline, os.Getenv("QUAY_TOKEN")); err != nil {
-			return fmt.Errorf("error when getting authenticator: %v", err)
-		}
-		authOption := remoteimg.WithAuth(authenticator)
-
-		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
-			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
-		}
-		platform := strings.ToUpper(strings.Split(platformType, "/")[1])
-		klog.Infof("SETTING ENV VAR %s to value %s\n", constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV+"_"+platform, newRemotePipeline.String())
-		os.Setenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV+"_"+platform, newRemotePipeline.String())
-	}
-
-	return nil
-}
-
-func SetupBundleForBuildTasksDockerfilesRepo() {
-	var err error
-	var defaultBundleRef string
-	var tektonObj runtime.Object
-	var newPipelineYaml []byte
-	var sourceImage string
-	klog.Info("creating new tekton bundle for the purpose of testing build-task-dockerfiles group PR")
-
-	sourceImage = utils.GetEnv("SOURCE_BUILD_IMAGE", "")
-	if sourceImage == "" {
-		klog.Error("SOURCE_BUILD_IMAGE env is not set")
-		return
-	}
-
-	if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
-		klog.Errorf("failed to get the pipeline bundle ref: %+v", err)
-		return
-	}
-	if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
-		klog.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
-		return
-	}
-	dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
-
-	// Update build-source-image param value to true
-	for i := range dockerPipelineObject.PipelineSpec().Params {
-		if dockerPipelineObject.PipelineSpec().Params[i].Name == "build-source-image" {
-			dockerPipelineObject.PipelineSpec().Params[i].Default.StringVal = "true"
-		}
-	}
-	// Update the source-build task image reference to SOURCE_BUILD_IMAGE
-	var currentSourceTaskBundle string
-	for i := range dockerPipelineObject.PipelineSpec().Tasks {
-		t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-		params := t.TaskRef.Params
-		var lastBundle *tektonapi.Param
-		sourceTask := false
-		for i, param := range params {
-			if param.Name == "bundle" {
-				lastBundle = &t.TaskRef.Params[i]
-			} else if param.Name == "name" && param.Value.StringVal == "source-build" {
-				sourceTask = true
-			}
-		}
-		if sourceTask {
-			currentSourceTaskBundle = lastBundle.Value.StringVal
-			klog.Infof("found current source build task bundle: %s", currentSourceTaskBundle)
-			newSourceTaskBundle := createNewTaskBundleAndPush(currentSourceTaskBundle, "source-build", "build", sourceImage)
-			klog.Infof("created new source build task bundle: %s", newSourceTaskBundle)
-			lastBundle.Value = *tektonapi.NewStructuredValues(newSourceTaskBundle)
-			break
-		}
-	}
-	if currentSourceTaskBundle == "" {
-		klog.Errorf("failed to extract the Source Build Task from bundle: %+v", err)
-		return
-	}
-
-	if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
-		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
-		return
-	}
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
-
-	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
-	newSourceBuildPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
-	var newSourceBuildPipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newSourceBuildPipelineImg, tag))
-
-	if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newSourceBuildPipeline, authOption); err != nil {
-		klog.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
-		return
-	}
-	// This output is consumed by the integration pipeline of build-task-dockerfiles repo, not printing it will break the CI
-	fmt.Printf("custom_pipeline_bundle=%s\n", newSourceBuildPipeline.String())
-}
-
-func createNewTaskBundleAndPush(currentBuildahTaskBundle, taskName, stepName, stepImage string) string {
-	var newTaskYaml []byte
-	tektonObj, err := tekton.ExtractTektonObjectFromBundle(currentBuildahTaskBundle, "task", constants.BuildPipelineType(taskName))
-	if err != nil {
-		klog.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
-		return ""
-	}
-	taskObject := tektonObj.(*tektonapi.Task)
-	for i := range taskObject.Spec.Steps {
-		if taskObject.Spec.Steps[i].Name == stepName {
-			klog.Infof("current %q task in step %q has step image: %q", taskName, stepName, taskObject.Spec.Steps[i].Image)
-			taskObject.Spec.Steps[i].Image = stepImage
-		}
-	}
-
-	if newTaskYaml, err = yaml.Marshal(taskObject); err != nil {
-		klog.Errorf("error when marshalling a new pipeline to YAML: %v", err)
-		return ""
-	}
-
-	keychain := authn.NewMultiKeychain(authn.DefaultKeychain)
-	authOption := remoteimg.WithAuthFromKeychain(keychain)
-
-	tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-	quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
-	newTaskImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
-	var newTask, _ = name.ParseReference(fmt.Sprintf("%s:task-bundle-%s", newTaskImg, tag))
-
-	if err = tekton.BuildAndPushTektonBundle(newTaskYaml, newTask, authOption); err != nil {
-		klog.Errorf("error when building/pushing a tekton task bundle: %v", err)
-		return ""
-	}
-	return newTask.String()
 }
 
 func BootstrapCluster() error {
@@ -1209,12 +910,6 @@ func (ci CI) TestUpgrade() error {
 
 	if err := setRequiredEnvVars(); err != nil {
 		return fmt.Errorf("error when setting up required env vars: %v", err)
-	}
-
-	if requiresMultiPlatformTests {
-		if err := SetupMultiPlatformTests(); err != nil {
-			return err
-		}
 	}
 
 	if err := UpgradeTestsWorkflow(); err != nil {
