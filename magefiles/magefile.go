@@ -26,7 +26,6 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
-	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	forgejoClient "github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
@@ -128,9 +127,6 @@ func (ci CI) init() error {
 		if err != nil {
 			return fmt.Errorf("cannot get remote name and branch name for PR URL %q: %+v", prUrl, err)
 		}
-	} else if konfluxCiSpec.KonfluxGitRefs.EventType == "push" && konfluxCiSpec.KonfluxGitRefs.GitRepo == "release-service-catalog" {
-		pr.RemoteName = "konflux-ci"
-		pr.BranchName = "staging"
 	}
 
 	rctx = rulesengine.NewRuleCtx()
@@ -325,9 +321,8 @@ func (ci CI) TestE2E() error {
 	}
 
 	// Eventually we'll introduce mage rules for all repositories, so this condition won't be needed anymore
-	if pr.RepoName == "e2e-tests" || pr.RepoName == "integration-service" ||
-		pr.RepoName == "release-service" || pr.RepoName == "image-controller" ||
-		pr.RepoName == "build-service" || pr.RepoName == "release-service-catalog" {
+	if pr.RepoName == "e2e-tests" || pr.RepoName == "image-controller" ||
+		pr.RepoName == "build-service" {
 		return engine.MageEngine.RunRulesOfCategory("ci", rctx)
 	}
 
@@ -374,13 +369,10 @@ func RunE2ETests() error {
 		return err
 	}
 	switch rctx.RepoName {
-	case "release-service-catalog":
-		rctx.IsPaired = isPRPairingRequired("release-service")
-		return engine.MageEngine.RunRules(rctx, "tests", "release-service-catalog")
 	case "infra-deployments":
 		return engine.MageEngine.RunRules(rctx, "tests", "infra-deployments")
 	default:
-		labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup && !release-pipelines")
+		labelFilter := utils.GetEnv("E2E_TEST_SUITE_LABEL", "!upgrade-create && !upgrade-verify && !upgrade-cleanup")
 		return runTests(labelFilter, "e2e-report.xml")
 	}
 }
@@ -435,16 +427,6 @@ func setRequiredEnvVars() error {
 				envVarPrefix = "HAS"
 				imageTagSuffix = "has-image"
 				testSuiteLabel = "konflux"
-			case strings.Contains(jobName, "release-service"):
-				envVarPrefix = "RELEASE_SERVICE"
-				imageTagSuffix = "release-service-image"
-				testSuiteLabel = "release-service"
-				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), "development")
-			case strings.Contains(jobName, "integration-service"):
-				requiresSprayProxyRegistering = true
-				envVarPrefix = "INTEGRATION_SERVICE"
-				imageTagSuffix = "integration-service-image"
-				testSuiteLabel = "integration-service"
 			case strings.Contains(jobName, "build-service"):
 				requiresSprayProxyRegistering = true
 				envVarPrefix = "BUILD_SERVICE"
@@ -487,32 +469,7 @@ func setRequiredEnvVars() error {
 			https://issues.redhat.com/browse/RHTAPBUGS-992, https://issues.redhat.com/browse/RHTAPBUGS-991, https://issues.redhat.com/browse/RHTAPBUGS-989,
 			https://issues.redhat.com/browse/RHTAPBUGS-978,https://issues.redhat.com/browse/RHTAPBUGS-956
 			*/
-			os.Setenv("E2E_TEST_SUITE_LABEL", "e2e-demo,konflux,integration-service,ec,build-templates,multi-platform")
-		} else if strings.Contains(jobName, "release-service-catalog") { // release-service-catalog jobs (pull, rehearsal)
-			envVarPrefix := "RELEASE_SERVICE"
-			os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines")
-			// "rehearse" jobs metadata are not relevant for testing
-			if !strings.Contains(jobName, "rehearse") {
-				os.Setenv(fmt.Sprintf("%s_CATALOG_URL", envVarPrefix), fmt.Sprintf("https://github.com/%s/%s", pr.RemoteName, pr.RepoName))
-				os.Setenv(fmt.Sprintf("%s_CATALOG_REVISION", envVarPrefix), pr.CommitSHA)
-				if isPRPairingRequired("release-service") {
-					os.Setenv(fmt.Sprintf("%s_IMAGE_REPO", envVarPrefix),
-						"quay.io/redhat-user-workloads/rhtap-release-2-tenant/release-service/release-service")
-					pairedSha := repos.GetPairedCommitSha("release-service", rctx)
-					if pairedSha != "" {
-						os.Setenv(fmt.Sprintf("%s_IMAGE_TAG", envVarPrefix), fmt.Sprintf("on-pr-%s", pairedSha))
-					}
-					os.Setenv(fmt.Sprintf("%s_PR_OWNER", envVarPrefix), pr.RemoteName)
-					os.Setenv(fmt.Sprintf("%s_PR_SHA", envVarPrefix), pairedSha)
-					os.Setenv("E2E_TEST_SUITE_LABEL", "release-pipelines && !fbc-tests")
-				}
-			}
-			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG") != "" {
-				os.Setenv("IMAGE_CONTROLLER_QUAY_ORG", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_ORG"))
-			}
-			if os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN") != "" {
-				os.Setenv("IMAGE_CONTROLLER_QUAY_TOKEN", os.Getenv("REL_IMAGE_CONTROLLER_QUAY_TOKEN"))
-			}
+			os.Setenv("E2E_TEST_SUITE_LABEL", "konflux,ec,build-templates,multi-platform")
 		} else { // openshift/release rehearse job for e2e-tests/infra-deployments repos
 			requiresMultiPlatformTests = true
 			requiresSprayProxyRegistering = true

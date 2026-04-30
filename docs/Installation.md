@@ -48,7 +48,7 @@ $ go mod tidy
 <p>
 
    Some tests could require you have a Github App created in order to test Component builds via Pipelines as Code.
-Such tests are [konflux-demo](https://github.com/konflux-ci/e2e-tests/blob/main/tests/konflux-demo/konflux-demo.go), [build](https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go), and [status-reporting-to-pullrequest](https://github.com/konflux-ci/e2e-tests/blob/main/tests/integration-service/status-reporting-to-pullrequest.go).
+Such tests are [build](https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go).
 
 In this case, before you bootstrap a cluster, make sure you [created a Github App for your GitHub account](https://github.com/settings/apps). Fill in following details:
 </p>
@@ -69,7 +69,7 @@ export E2E_PAC_GITHUB_APP_PRIVATE_KEY=$(base64 < /PATH/TO/YOUR/DOWNLOADED/PRIVAT
 ```
 
 <p>
-Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/konflux-demo/konflux-demo.go)">konflux-demo</a> and <a href="(https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go">build tests</a>
+Navigate back to <a href="https://github.com/settings/apps">your GitHub App</a>, select Install App and select your GitHub org (the one that you're using in `MY_GITHUB_ORG` env var). Feel free to install it to all repositories of that organization or the forked repositories currently used by <a href="https://github.com/konflux-ci/e2e-tests/blob/main/tests/build/build.go">build tests</a>
 </p>
 
 </details>
@@ -91,12 +91,6 @@ In that case, before you run the test, make sure you have
   * also make sure that the docker config, that is encoded in the value of `QUAY_TOKEN` environment variable, contains a correct credentials required to push to `test-images` repo. And make sure the robot account or user account has the **write** permissions set for `test-images` repo which is required by the tests to push the generated artifacts.
 * forked following GitHub repositories to your org (specified in `MY_GITHUB_ORG` env var)
   * https://github.com/redhat-appstudio-qe/devfile-sample-hello-world (for running build-service tests)
-  * https://github.com/redhat-appstudio-qe/hacbs-test-project (for konflux-demo test)
-  * https://github.com/redhat-appstudio-qe/strategy-configs (for konflux-demo test)
-  * https://github.com/redhat-appstudio-qe/konflux-test-integration (for integration test)
-  * https://github.com/redhat-appstudio-qe/group-snapshot-multi-component (for group-snapshots-tests test)
-  * https://gitlab.com/konflux-qe/hacbs-test-project-integration (for gitlab-integration-reporting test)
-  * https://github.com/redhat-appstudio-qe/konflux-test-integration-status-report (for status-reporting-to-pullrequest test)
 * set the `CUSTOM_DOCKER_BUILD_PIPELINE_BUNDLE` environment variable
   * this should point to a bundle that utilizes [buildah-min](https://github.com/konflux-ci/build-definitions/tree/main/task/buildah-min) for building images locally on small-sized clusters.
   * The bundle is automatically created when you execute the `make local/cluster/prepare` command, and the corresponding command is displayed in the logs at the end.
@@ -126,7 +120,7 @@ The `e2e-appstudio` command is the root command that executes all test functiona
    ```
 **NOTE**: The binary must be updated by running `make build` every time there are new changes in the tests.
 
-The instructions for every test suite can be found in the [tests folder](/tests/), e.g. [konflux-demo README.md](/tests/konflux-demo/README.md).
+The instructions for every test suite can be found in the [tests folder](/tests/).
 You can also specify which tests you want to run using [labels](LabelsNaming.md) or [Ginkgo Focus](DeveloperFocus.md).
 
 
