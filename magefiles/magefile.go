@@ -14,8 +14,7 @@ import (
 
 	"github.com/devfile/library/v2/pkg/util"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 
 	"sigs.k8s.io/yaml"
 
@@ -1302,8 +1301,8 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 }
 
 func BootstrapClusterForDR(version string) (*installation.InstallAppStudio, error) {
-	os.Setenv("INFRA_DEPLOYMENTS_ORG", "redhat-appstudio")
-	os.Setenv("INFRA_DEPLOYMENTS_BRANCH", version)
+	os.Setenv("INFRA_DEPLOYMENTS_ORG", "redhat-appstudio") // #nosec G104
+	os.Setenv("INFRA_DEPLOYMENTS_BRANCH", version)         // #nosec G104
 	ic, err := installation.NewAppStudioInstallController()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
