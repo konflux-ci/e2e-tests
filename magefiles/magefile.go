@@ -28,8 +28,8 @@ import (
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/engine"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine/repos"
 	"github.com/konflux-ci/e2e-tests/magefiles/upgrade"
-	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	forgejoClient "github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
+	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/gitlab"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/slack"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/sprayproxy"
@@ -1301,6 +1301,17 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 	return ic, ic.InstallAppStudioPreviewMode()
 }
 
+func BootstrapClusterForDR(version string) (*installation.InstallAppStudio, error) {
+	os.Setenv("INFRA_DEPLOYMENTS_ORG", "redhat-appstudio")
+	os.Setenv("INFRA_DEPLOYMENTS_BRANCH", version)
+	ic, err := installation.NewAppStudioInstallController()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
+	}
+
+	return ic, ic.InstallAppStudioPreviewMode()
+}
+
 func UpgradeCluster() error {
 	return MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", "redhat-appstudio"), "./tmp/infra-deployments")
 }
@@ -1321,16 +1332,18 @@ func CleanWorkload() error {
 	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
 }
 
-// DisasterRecoveryWorkflow orchestrates the DR backup/restore e2e test
-// flow. It deploys an older Konflux version, runs the backwards-compatibility
-// test (which upgrades Konflux mid-test via performKonfluxUpgrade), then runs
-// the same-version test on the upgraded cluster.
-//
-// Both test scenarios run on a single ROSA cluster in sequence. The backwards-
-// compat test uses a 180m ginkgo timeout because it includes tenant creation,
-// pipeline execution, backup, cluster upgrade, restore, and verification.
+// DisasterRecoveryWorkflow orchestrates the DR backup/restore e2e test flow.
+// It bootstraps a Konflux cluster at the version specified by KONFLUX_BASE_VERSION
+// (defaults to "main" when unset), runs the disaster-recovery labelled tests which
+// cover both backwards-compatibility (with mid-test upgrade) and same-version
+// scenarios on a single ROSA cluster in sequence.
 func DisasterRecoveryWorkflow() error {
-	ic, err := BootstrapClusterForUpgrade()
+	version := os.Getenv("KONFLUX_BASE_VERSION")
+	if version == "" {
+		version = "main"
+	}
+
+	ic, err := BootstrapClusterForDR(version)
 	if err != nil {
 		klog.Errorf("failed to bootstrap cluster for disaster recovery tests: %s", err)
 		return err

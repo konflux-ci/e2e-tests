@@ -1,0 +1,422 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: konflux-dr-tests
+spec:
+  description: |-
+    This pipeline automates the process of running disaster recovery tests for Konflux
+    using a ROSA (Red Hat OpenShift Service on AWS) cluster. The pipeline provisions
+    the ROSA cluster, resolves a stable infra-deployments base version, installs Konflux,
+    runs the DR tests, collects artifacts, and finally deprovisions the ROSA cluster.
+  params:
+    - name: SNAPSHOT
+      description: 'The JSON string representing the snapshot of the application under test.'
+      default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
+      type: string
+    - name: test-name
+      description: 'The name of the test corresponding to a defined Konflux integration test.'
+      default: ''
+    - name: ocp-version
+      description: 'The OpenShift version to use for the ephemeral cluster deployment.'
+      type: string
+    - name: test-event-type
+      description: 'Indicates if the test is triggered by a Pull Request or Push event.'
+      default: 'none'
+    - name: konflux-test-infra-secret
+      description: The name of secret where testing infrastructures credentials are stored.
+      type: string
+    - name: cloud-credential-key
+      type: string
+      description: The key secret from konflux-test-infra-secret where all AWS ROSA configurations are stored.
+    - name: replicas
+      description: 'The number of replicas for the cluster nodes.'
+      type: string
+    - name: machine-type
+      description: 'The type of machine to use for the cluster nodes.'
+      type: string
+    - name: oci-container-repo
+      default: 'quay.io/konflux-test-storage/konflux-team/e2e-tests'
+      description: The ORAS container used to store all test artifacts.
+    - name: component-image
+      default: 'none'
+      description: 'Container image built from any konflux git repo.'
+    - name: container-image
+      default: 'quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:latest'
+      description: 'Konflux tests container. Contains the ginkgo binary to run tests in any Konflux component.'
+    - name: artifact-browser-url
+      description: "URL to the artifact browser deployment. If provided, a link will be added to PR comments."
+      default: ""
+      type: string
+    - name: konflux-base-version
+      description: "When 'auto', resolved dynamically from infra-deployments commit history. When set to a specific SHA, used directly."
+      default: "auto"
+      type: string
+    - name: min-streak-length
+      description: "Minimum consecutive e2e-tests successes required to consider an infra-deployments commit stable."
+      default: "5"
+      type: string
+  tasks:
+    - name: rosa-hcp-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/rosa/hosted-cp/rosa-hcp-metadata/0.1/rosa-hcp-metadata.yaml
+    - name: test-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/test-metadata/0.1/test-metadata.yaml
+      params:
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: test-name
+          value: $(context.pipelineRun.name)
+    - name: provision-rosa
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      runAfter:
+        - rosa-hcp-metadata
+        - test-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/rosa/hosted-cp/rosa-hcp-provision/0.2/rosa-hcp-provision.yaml
+      params:
+        - name: cluster-name
+          value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
+        - name: ocp-version
+          value: "$(params.ocp-version)"
+        - name: replicas
+          value: "$(params.replicas)"
+        - name: machine-type
+          value: "$(params.machine-type)"
+        - name: konflux-test-infra-secret
+          value: "$(params.konflux-test-infra-secret)"
+        - name: cloud-credential-key
+          value: "$(params.cloud-credential-key)"
+        - name: oci-container
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+    - name: resolve-base-version
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      runAfter:
+        - rosa-hcp-metadata
+        - test-metadata
+      params:
+        - name: konflux-base-version
+          value: "$(params.konflux-base-version)"
+        - name: min-streak-length
+          value: "$(params.min-streak-length)"
+        - name: container-image
+          value: "$(params.container-image)"
+      taskSpec:
+        params:
+          - name: konflux-base-version
+            type: string
+          - name: min-streak-length
+            type: string
+          - name: container-image
+            type: string
+        results:
+          - name: resolved-base-version
+            description: "The resolved infra-deployments SHA to use as the DR base version."
+        volumes:
+          - name: konflux-secret-volume
+            secret:
+              secretName: konflux-e2e-secrets
+        steps:
+          - name: resolve
+            image: "$(params.container-image)"
+            volumeMounts:
+              - name: konflux-secret-volume
+                mountPath: /usr/local/konflux-ci-secrets
+            script: |
+              #!/bin/bash
+              set -euo pipefail
+
+              KONFLUX_BASE_VERSION="$(params.konflux-base-version)"
+              MIN_STREAK="$(params.min-streak-length)"
+              FLOOR_SHA_PREFIX="d4a1eed"
+              FLOOR_DATE="2026-03-26"
+              REPO="redhat-appstudio/infra-deployments"
+
+              banner() {
+                  echo "════════════════════════════════════════════════════════════"
+                  echo "$1"
+                  echo "════════════════════════════════════════════════════════════"
+              }
+
+              # If not auto, pass through as-is
+              if [[ "$KONFLUX_BASE_VERSION" != "auto" ]]; then
+                  echo "Base version explicitly set to: $KONFLUX_BASE_VERSION"
+                  printf '%s' "$KONFLUX_BASE_VERSION" > "$(results.resolved-base-version.path)"
+                  exit 0
+              fi
+
+              # Extract GitHub token from secrets
+              GITHUB_TOKEN=$(cut -d',' -f1 /usr/local/konflux-ci-secrets/github_accounts | cut -d':' -f2)
+              export GITHUB_TOKEN
+
+              gh_api() {
+                  curl -s \
+                      -H "Authorization: Bearer $GITHUB_TOKEN" \
+                      -H "Accept: application/vnd.github+json" \
+                      "$@"
+              }
+
+              commit_has_e2e_success() {
+                  local sha=$1
+                  local count
+                  count=$(gh_api "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?per_page=100" \
+                      | jq '[.check_runs[] | select(.name | test("e2e")) | select(.conclusion == "success")] | length')
+                  [[ "$count" -gt 0 ]]
+              }
+
+              echo "Resolving DR base version from infra-deployments commit history..."
+              echo "Min streak length: $MIN_STREAK"
+              echo "Floor commit: $FLOOR_SHA_PREFIX ($FLOOR_DATE)"
+              echo ""
+
+              streak=0
+              streak_start_sha=""
+              streak_start_date=""
+              resolved_sha=""
+              commits_checked=0
+              page=1
+
+              while true; do
+                  commits_json=$(gh_api "https://api.github.com/repos/${REPO}/commits?sha=main&per_page=100&page=${page}")
+                  commit_count=$(echo "$commits_json" | jq 'length')
+
+                  if [[ "$commit_count" -eq 0 ]]; then
+                      break
+                  fi
+
+                  for idx in $(seq 0 $((commit_count - 1))); do
+                      sha=$(echo "$commits_json" | jq -r ".[$idx].sha")
+                      commit_date=$(echo "$commits_json" | jq -r ".[$idx].commit.committer.date" | cut -d'T' -f1)
+                      commits_checked=$((commits_checked + 1))
+
+                      # Check floor
+                      if [[ "$sha" == "${FLOOR_SHA_PREFIX}"* ]]; then
+                          echo "Reached floor commit $FLOOR_SHA_PREFIX — stopping search."
+                          break 2
+                      fi
+
+                      if commit_has_e2e_success "$sha"; then
+                          streak=$((streak + 1))
+                          if [[ $streak -eq 1 ]]; then
+                              streak_start_sha="$sha"
+                              streak_start_date="$commit_date"
+                          fi
+                          echo "  $sha ($commit_date): SUCCESS (streak: $streak)"
+
+                          if [[ $streak -ge $MIN_STREAK ]]; then
+                              resolved_sha="$streak_start_sha"
+                              break 2
+                          fi
+                      else
+                          if [[ $streak -gt 0 ]]; then
+                              echo "  $sha ($commit_date): FAIL (streak reset from $streak)"
+                          else
+                              echo "  $sha ($commit_date): FAIL"
+                          fi
+                          streak=0
+                          streak_start_sha=""
+                          streak_start_date=""
+                      fi
+                  done
+
+                  page=$((page + 1))
+              done
+
+              echo ""
+
+              if [[ -n "$resolved_sha" ]]; then
+                  head_sha=$(gh_api "https://api.github.com/repos/${REPO}/commits/main" | jq -r '.sha')
+                  commits_behind=$(gh_api "https://api.github.com/repos/${REPO}/compare/${resolved_sha}...${head_sha}" | jq '.ahead_by')
+
+                  banner "$(cat <<EOF
+                DR BASE VERSION RESOLVED
+                SHA:                 ${resolved_sha:0:12}
+                Commit date:         $streak_start_date
+                Commits behind HEAD: $commits_behind
+                Min streak required: $MIN_STREAK (met)
+              EOF
+              )"
+                  printf '%s' "$resolved_sha" > "$(results.resolved-base-version.path)"
+              else
+                  banner "$(cat <<EOF
+                DR BASE VERSION RESOLUTION FAILED
+                No streak of $MIN_STREAK consecutive e2e-tests successes found.
+                Searched from HEAD back to $FLOOR_SHA_PREFIX ($FLOOR_DATE)
+                which is the earliest commit with DR prerequisites.
+              EOF
+              )"
+                  exit 1
+              fi
+    - name: konflux-dr-tests
+      timeout: 5h
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      runAfter:
+        - provision-rosa
+        - resolve-base-version
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/e2e-tests.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: integration-tests/tasks/konflux-dr-tests/0.1/konflux-dr-tests.yaml
+      params:
+        - name: test-name
+          value: "$(context.pipelineRun.name)"
+        - name: git-repo
+          value: "$(tasks.test-metadata.results.git-repo)"
+        - name: git-url
+          value: "$(tasks.test-metadata.results.git-url)"
+        - name: git-revision
+          value: "$(tasks.test-metadata.results.git-revision)"
+        - name: oras-container
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: job-spec
+          value: "$(tasks.test-metadata.results.job-spec)"
+        - name: ocp-login-command
+          value: "$(tasks.provision-rosa.results.ocp-login-command)"
+        - name: component-image
+          value: "$(tasks.test-metadata.results.container-image)"
+        - name: container-image
+          value: "$(tasks.test-metadata.results.container-image)"
+        - name: dr-timeout
+          value: "300m"
+        - name: konflux-base-version
+          value: "$(tasks.resolve-base-version.results.resolved-base-version)"
+  finally:
+    - name: store-pipeline-status
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/store-pipeline-status/0.1/store-pipeline-status.yaml
+      params:
+        - name: oci-ref
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: credentials-secret-name
+          value: "$(params.konflux-test-infra-secret)"
+        - name: pipelinerun-name
+          value: $(context.pipelineRun.name)
+        - name: pipeline-aggregate-status
+          value: $(tasks.status)
+    - name: deprovision-rosa-collect-artifacts
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/rosa/hosted-cp/rosa-hcp-deprovision/0.2/rosa-hcp-deprovision.yaml
+      params:
+        - name: test-name
+          value: "$(context.pipelineRun.name)"
+        - name: ocp-login-command
+          value: "$(tasks.provision-rosa.results.ocp-login-command)"
+        - name: oci-container
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: pull-request-author
+          value: "$(tasks.test-metadata.results.pull-request-author)"
+        - name: git-revision
+          value: "$(tasks.test-metadata.results.git-revision)"
+        - name: pull-request-number
+          value: "$(tasks.test-metadata.results.pull-request-number)"
+        - name: git-repo
+          value: "$(tasks.test-metadata.results.git-repo)"
+        - name: git-org
+          value: "$(tasks.test-metadata.results.git-org)"
+        - name: cluster-name
+          value: "$(tasks.rosa-hcp-metadata.results.cluster-name)"
+        - name: konflux-test-infra-secret
+          value: "$(params.konflux-test-infra-secret)"
+        - name: cloud-credential-key
+          value: "$(params.cloud-credential-key)"
+        - name: pipeline-aggregate-status
+          value: "$(tasks.status)"
+    - name: pull-request-status-message
+      when:
+        - input: "$(tasks.test-metadata.results.test-event-type)"
+          operator: in
+          values: ["pull_request"]
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/pull-request-comment/0.1/pull-request-comment.yaml
+      params:
+        - name: test-name
+          value: "$(context.pipelineRun.name)"
+        - name: oci-container
+          value: "$(params.oci-container-repo):$(context.pipelineRun.name)"
+        - name: pipeline-aggregate-status
+          value: "$(tasks.status)"
+        - name: pull-request-author
+          value: "$(tasks.test-metadata.results.pull-request-author)"
+        - name: pull-request-number
+          value: "$(tasks.test-metadata.results.pull-request-number)"
+        - name: git-repo
+          value: "$(tasks.test-metadata.results.git-repo)"
+        - name: git-org
+          value: "$(tasks.test-metadata.results.git-org)"
+        - name: git-revision
+          value: "$(tasks.test-metadata.results.git-revision)"
+        - name: junit-report-name
+          value: disaster-recovery-report.xml
+        - name: e2e-log-name
+          value: dr-tests.log
+        - name: cluster-provision-log-name
+          value: cluster-provision.log
+        - name: enable-test-results-analysis
+          value: "true"
+        - name: artifact-browser-url
+          value: $(params.artifact-browser-url)
