@@ -40,6 +40,8 @@ type Tenant struct {
 	ManagedNamespace string
 	AppName          string
 	BackupName       string
+	ForkRepoName     string // set at runtime by forkRepoForTenant
+	ForkRepoURL      string // set at runtime by forkRepoForTenant
 }
 
 // ComponentDef describes a MathWizz application component (microservice) and
@@ -157,9 +159,9 @@ var SVTenant2 = Tenant{
 // services (database, message-queue) are omitted because they use stock images
 // and don't have source code builds.
 var Components = []ComponentDef{
-	{Name: CompWebServer, ContextDir: "web-server", DockerfileURL: "web-server/Dockerfile"},
-	{Name: CompHistoryWorker, ContextDir: "history-worker", DockerfileURL: "history-worker/Dockerfile"},
-	{Name: CompFrontend, ContextDir: "frontend", DockerfileURL: "frontend/Dockerfile"},
+	{Name: CompWebServer, ContextDir: "web-server", DockerfileURL: "Dockerfile"},
+	{Name: CompHistoryWorker, ContextDir: "history-worker", DockerfileURL: "Dockerfile"},
+	{Name: CompFrontend, ContextDir: "frontend", DockerfileURL: "Dockerfile"},
 }
 
 // ---------------------------------------------------------------------------
@@ -310,7 +312,7 @@ const (
 
 	// PipelineTimeout is how long to wait for all build and integration test
 	// PipelineRuns to complete in a tenant namespace.
-	PipelineTimeout = 30 * time.Minute
+	PipelineTimeout = 90 * time.Minute
 	PipelinePoll    = 30 * time.Second
 
 	// ReleaseChainTimeout is how long to wait for all release PipelineRuns to

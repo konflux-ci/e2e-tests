@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	"strings"
@@ -91,6 +92,12 @@ type InstallAppStudio struct {
 
 	// If set to "true", e2e-tests installer will mark master/control plane nodes as schedulable
 	EnableSchedulingOnMasterNodes string
+}
+
+var shaPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+func isSHA(s string) bool {
+	return shaPattern.MatchString(s)
 }
 
 func NewAppStudioInstallController() (*InstallAppStudio, error) {
@@ -183,32 +190,80 @@ func (i *InstallAppStudio) cloneInfraDeployments() error {
 		}
 	}
 
+	if isSHA(i.InfraDeploymentsBranch) {
+		return i.cloneInfraDeploymentsBySHA()
+	}
+
+	ref := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch))
+	if _, err := i.cloneInfraDeploymentsRepo(ref); err != nil {
+		return err
+	}
+
+	if err := utils.ExecuteCommandInASpecificDirectory("git", []string{"pull", "--rebase", "upstream", "main"}, i.InfraDeploymentsCloneDir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *InstallAppStudio) cloneInfraDeploymentsRepo(ref plumbing.ReferenceName) (*git.Repository, error) {
 	url := fmt.Sprintf("https://github.com/%s/infra-deployments", i.InfraDeploymentsOrganizationName)
-	refName := fmt.Sprintf("refs/heads/%s", i.InfraDeploymentsBranch)
-	klog.Infof("cloning '%s' with git ref '%s'", url, refName)
 
 	remoteName := "fork"
 	if i.InfraDeploymentsOrganizationName == "redhat-appstudio" {
 		remoteName = "upstream"
 	}
-	repo, _ := git.PlainClone(i.InfraDeploymentsCloneDir, false, &git.CloneOptions{
-		URL:           url,
-		ReferenceName: plumbing.ReferenceName(refName),
-		Progress:      os.Stdout,
-		RemoteName:    remoteName,
-	})
 
+	opts := &git.CloneOptions{
+		URL:        url,
+		Progress:   os.Stdout,
+		RemoteName: remoteName,
+	}
+	if ref != "" {
+		opts.ReferenceName = ref
+	}
+
+	klog.Infof("cloning '%s' (ref: '%s', remote: '%s')", url, ref, remoteName)
+
+	repo, err := git.PlainClone(i.InfraDeploymentsCloneDir, false, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clone infra-deployments: %w", err)
+	}
+
+	if err := i.setupInfraDeploymentsRemotes(repo); err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}
+
+func (i *InstallAppStudio) setupInfraDeploymentsRemotes(repo *git.Repository) error {
 	if i.InfraDeploymentsOrganizationName != "redhat-appstudio" {
 		if _, err := repo.CreateRemote(&config.RemoteConfig{Name: "upstream", URLs: []string{"https://github.com/redhat-appstudio/infra-deployments.git"}}); err != nil {
 			return err
 		}
 	}
-
 	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: i.LocalForkName, URLs: []string{fmt.Sprintf("https://github.com/%s/infra-deployments.git", i.LocalGithubForkOrganization)}}); err != nil {
 		return err
 	}
-	if err := utils.ExecuteCommandInASpecificDirectory("git", []string{"pull", "--rebase", "upstream", "main"}, i.InfraDeploymentsCloneDir); err != nil {
+	return nil
+}
+
+func (i *InstallAppStudio) cloneInfraDeploymentsBySHA() error {
+	repo, err := i.cloneInfraDeploymentsRepo("")
+	if err != nil {
 		return err
+	}
+
+	w, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	if err := w.Checkout(&git.CheckoutOptions{
+		Hash: plumbing.NewHash(i.InfraDeploymentsBranch),
+	}); err != nil {
+		return fmt.Errorf("failed to checkout SHA %s: %w", i.InfraDeploymentsBranch, err)
 	}
 
 	return nil
