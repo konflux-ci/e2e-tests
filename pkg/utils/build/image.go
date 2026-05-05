@@ -140,7 +140,9 @@ func extractTar(reader io.Reader, destDir string) error {
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return err
 			}
-			os.Symlink(header.Linkname, target)
+			if err := os.Symlink(header.Linkname, target); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
