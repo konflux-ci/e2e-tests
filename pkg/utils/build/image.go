@@ -1,49 +1,54 @@
 package build
 
 import (
-	"context"
+	"archive/tar"
 	"fmt"
+	"io"
 	"os"
-	"time"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ginkgo "github.com/onsi/ginkgo/v2"
-
-	"github.com/openshift/library-go/pkg/image/reference"
-	"github.com/openshift/oc/pkg/cli/image/extract"
-	"github.com/openshift/oc/pkg/cli/image/imagesource"
-	imageInfo "github.com/openshift/oc/pkg/cli/image/info"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
+// ExtractImage pulls a container image and extracts its flattened filesystem to a temp directory.
 func ExtractImage(image string) (string, error) {
-	dockerImageRef, err := reference.Parse(image)
+	ref, err := name.ParseReference(image)
 	if err != nil {
-		return "", fmt.Errorf("cannot parse docker pull spec (image) %s, error: %+v", image, err)
+		return "", fmt.Errorf("cannot parse image reference %s: %w", image, err)
 	}
+
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return "", fmt.Errorf("cannot pull image %s: %w", image, err)
+	}
+
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "eimage")
 	if err != nil {
-		return "", fmt.Errorf("error when creating a temp directory for extracting files: %+v", err)
+		return "", fmt.Errorf("error creating temp directory: %w", err)
 	}
-	ginkgo.GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
-	eMapping := extract.Mapping{
-		ImageRef: imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef},
-		To:       tmpDir,
-	}
-	e := extract.NewExtractOptions(genericclioptions.IOStreams{Out: os.Stdout, ErrOut: os.Stderr})
-	e.Mappings = []extract.Mapping{eMapping}
 
-	if err := e.Run(); err != nil {
-		return "", fmt.Errorf("error: %+v", err)
+	ginkgo.GinkgoWriter.Printf("extracting contents of container image %s to dir: %s\n", image, tmpDir)
+
+	reader := mutate.Extract(img)
+	defer reader.Close()
+
+	if err := extractTar(reader, tmpDir); err != nil {
+		os.RemoveAll(tmpDir)
+		return "", fmt.Errorf("error extracting image %s: %w", image, err)
 	}
+
 	return tmpDir, nil
 }
 
-func ImageFromPipelineRun(pipelineRun *pipeline.PipelineRun) (*imageInfo.Image, error) {
+// ImageFromPipelineRun extracts the output-image from a PipelineRun and fetches its config.
+func ImageFromPipelineRun(pipelineRun *pipeline.PipelineRun) (*v1.ConfigFile, error) {
 	var outputImage string
 	for _, parameter := range pipelineRun.Spec.Params {
 		if parameter.Name == "output-image" {
@@ -54,20 +59,7 @@ func ImageFromPipelineRun(pipelineRun *pipeline.PipelineRun) (*imageInfo.Image, 
 		return nil, fmt.Errorf("output-image in PipelineRun not found")
 	}
 
-	dockerImageRef, err := reference.Parse(outputImage)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing outputImage to dockerImageRef, %w", err)
-	}
-
-	imageRetriever := imageInfo.ImageRetriever{}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	image, err := imageRetriever.Image(ctx, imagesource.TypedImageReference{Type: "docker", Ref: dockerImageRef})
-	if err != nil {
-		return nil, fmt.Errorf("error getting image from imageRetriver, %w", err)
-	}
-	return image, nil
+	return FetchImageConfig(outputImage)
 }
 
 // FetchImageConfig fetches image config from remote registry.
@@ -80,7 +72,6 @@ func FetchImageConfig(imagePullspec string) (*v1.ConfigFile, error) {
 	if err != nil {
 		return nil, wrapErr(err)
 	}
-	// Fetch the manifest using default credentials.
 	descriptor, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, wrapErr(err)
@@ -104,10 +95,55 @@ func FetchImageDigest(imagePullspec string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Fetch the manifest using default credentials.
 	descriptor, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return "", err
 	}
 	return descriptor.Digest.Hex, nil
+}
+
+func extractTar(reader io.Reader, destDir string) error {
+	tr := tar.NewReader(reader)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		target := filepath.Join(destDir, header.Name)
+		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(destDir)+string(os.PathSeparator)) {
+			continue
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			f.Close()
+		case tar.TypeSymlink:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			if err := os.Symlink(header.Linkname, target); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

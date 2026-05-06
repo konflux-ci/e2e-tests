@@ -429,7 +429,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					image, err := build.ImageFromPipelineRun(plr)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					labels := image.Config.Config.Labels
+					labels := image.Config.Labels
 					Expect(labels).ToNot(BeEmpty())
 
 					expiration, ok := labels["quay.expires-after"]
@@ -553,7 +553,7 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					image, err := build.ImageFromPipelineRun(plr)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					labels := image.Config.Config.Labels
+					labels := image.Config.Labels
 					Expect(labels).ToNot(BeEmpty())
 
 					expiration, ok := labels["quay.expires-after"]
