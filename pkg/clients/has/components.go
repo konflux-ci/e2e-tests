@@ -335,6 +335,24 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	return componentObject, nil
 }
 
+// CreateComponentFromGitSource creates a component from a git repository.
+func (h *HasController) CreateComponentFromGitSource(name, namespace, appName, gitURL, revision, context, dockerfileURL string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
+	spec := appservice.ComponentSpec{
+		ComponentName: name,
+		Source: appservice.ComponentSource{
+			ComponentSourceUnion: appservice.ComponentSourceUnion{
+				GitSource: &appservice.GitSource{
+					URL:           gitURL,
+					Revision:      revision,
+					Context:       context,
+					DockerfileURL: dockerfileURL,
+				},
+			},
+		},
+	}
+	return h.CreateComponent(spec, namespace, "", "", appName, skipInitialChecks, annotations)
+}
+
 // Create a component and check image repository gets created.
 func (h *HasController) CreateComponentCheckImageRepository(componentSpec appservice.ComponentSpec, namespace string, outputContainerImage string, secret string, applicationName string, skipInitialChecks bool, annotations map[string]string) (*appservice.Component, error) {
 	componentObject, err := h.CreateComponent(componentSpec, namespace, outputContainerImage, secret, applicationName, skipInitialChecks, annotations)
