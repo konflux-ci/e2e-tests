@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	tektonutils "github.com/konflux-ci/release-service/tekton/utils"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	releaseApi "github.com/konflux-ci/release-service/api/v1alpha1"
@@ -69,6 +70,20 @@ func (r *ReleaseController) CreateReleasePlanAdmission(name, namespace, environm
 	return releasePlanAdmission, r.KubeRest().Create(context.Background(), releasePlanAdmission)
 }
 
+// CreateReleasePlanAdmissionWithGitPipeline creates a ReleasePlanAdmission with a git-resolver based pipeline.
+func (r *ReleaseController) CreateReleasePlanAdmissionWithGitPipeline(name, namespace, origin, policy, serviceAccountName string, applications []string, blockReleases bool, pipelineURL, pipelineRevision, pipelinePath, ociStorage string, data *runtime.RawExtension) (*releaseApi.ReleasePlanAdmission, error) {
+	pipelineRef := &tektonutils.PipelineRef{
+		Resolver: "git",
+		Params: []tektonutils.Param{
+			{Name: "url", Value: pipelineURL},
+			{Name: "revision", Value: pipelineRevision},
+			{Name: "pathInRepo", Value: pipelinePath},
+		},
+		OciStorage: ociStorage,
+	}
+	return r.CreateReleasePlanAdmission(name, namespace, "", origin, policy, serviceAccountName, applications, blockReleases, pipelineRef, data)
+}
+
 // GetReleasePlan returns the ReleasePlan with the given name in the given namespace.
 func (r *ReleaseController) GetReleasePlan(name, namespace string) (*releaseApi.ReleasePlan, error) {
 	releasePlan := &releaseApi.ReleasePlan{}
@@ -123,4 +138,30 @@ func (r *ReleaseController) DeleteReleasePlanAdmission(name, namespace string, f
 		err = nil
 	}
 	return err
+}
+
+// IsReleasePlanMatched returns true when the ReleasePlan has a Matched condition with status True and reason Matched.
+func (r *ReleaseController) IsReleasePlanMatched(releasePlan *releaseApi.ReleasePlan) bool {
+	condition := meta.FindStatusCondition(releasePlan.Status.Conditions, releaseApi.MatchedConditionType.String())
+	return condition != nil &&
+		condition.Status == metav1.ConditionTrue &&
+		condition.Reason == releaseApi.MatchedReason.String()
+}
+
+// IsReleasePlanAdmissionMatched returns true when the ReleasePlanAdmission has a Matched condition with status True and reason Matched.
+func (r *ReleaseController) IsReleasePlanAdmissionMatched(rpa *releaseApi.ReleasePlanAdmission) bool {
+	condition := meta.FindStatusCondition(rpa.Status.Conditions, releaseApi.MatchedConditionType.String())
+	return condition != nil &&
+		condition.Status == metav1.ConditionTrue &&
+		condition.Reason == releaseApi.MatchedReason.String()
+}
+
+// GetReleasePlanMatchedCondition returns the Matched condition from a ReleasePlan, or nil if not yet set.
+func (r *ReleaseController) GetReleasePlanMatchedCondition(releasePlan *releaseApi.ReleasePlan) *metav1.Condition {
+	return meta.FindStatusCondition(releasePlan.Status.Conditions, releaseApi.MatchedConditionType.String())
+}
+
+// GetReleasePlanAdmissionMatchedCondition returns the Matched condition from a ReleasePlanAdmission, or nil if not yet set.
+func (r *ReleaseController) GetReleasePlanAdmissionMatchedCondition(rpa *releaseApi.ReleasePlanAdmission) *metav1.Condition {
+	return meta.FindStatusCondition(rpa.Status.Conditions, releaseApi.MatchedConditionType.String())
 }
