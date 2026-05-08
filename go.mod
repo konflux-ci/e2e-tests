@@ -50,7 +50,7 @@ require (
 	github.com/vmware-tanzu/velero v1.17.2
 	github.com/xanzy/go-gitlab v0.114.0
 	golang.org/x/crypto v0.48.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/tools v0.42.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.35.2
