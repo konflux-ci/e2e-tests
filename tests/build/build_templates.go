@@ -552,21 +552,19 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 						imageWithDigest, err = getImageWithDigest(f.AsKubeAdmin, componentName, applicationName, testNamespace)
 						gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					})
-					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
-					// ginkgo.AfterAll(func() {
-					// 	if !ginkgo.CurrentSpecReport().Failed() {
-					//		err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
-					//		if err != nil {
-					//			ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
-					//		}
-					// 		err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
-					// 		if err != nil {
-					// 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
-					// 		}
-					// 	}
-					// })
-					// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
-					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
+					ginkgo.AfterAll(func() {
+						if !ginkgo.CurrentSpecReport().Failed() {
+							err = f.AsKubeAdmin.TektonController.RemoveFinalizerFromPipelineRun(pr, constants.E2ETestFinalizerName)
+							if err != nil {
+								ginkgo.GinkgoWriter.Printf("error removing e2e test finalizer from %s : %v\n", pr.GetName(), err)
+							}
+							err = f.AsKubeAdmin.TektonController.DeletePipelineRun(pr.GetName(), pr.GetNamespace())
+							if err != nil {
+								gomega.Expect(err.Error()).To(gomega.ContainSubstring("not found"))
+							}
+						}
+					})
+					ginkgo.It("verify-enterprise-contract check should pass", ginkgo.Label(buildTemplatesTestLabel), func() {
 						// If the Tekton Chains controller is busy, it may take longer than usual for it
 						// to sign and attest the image built in BeforeAll.
 						err = f.AsKubeAdmin.TektonController.AwaitAttestationAndSignature(imageWithDigest, constants.ChainsAttestationTimeout)
@@ -696,8 +694,7 @@ var _ = framework.BuildSuiteDescribe("Build templates E2E test", ginkgo.Label("b
 					})
 				})
 
-				// Skipping due to https://redhat.atlassian.net/browse/KONFLUX-12708
-				ginkgo.Context("build-definitions ec pipelines", ginkgo.Pending, ginkgo.Label(buildTemplatesTestLabel), func() {
+				ginkgo.Context("build-definitions ec pipelines", ginkgo.Label(buildTemplatesTestLabel), func() {
 					ecPipelines := []string{
 						"pipelines/enterprise-contract.yaml",
 					}
