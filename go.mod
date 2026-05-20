@@ -59,9 +59,9 @@ require (
 	k8s.io/cli-runtime v0.34.2
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	knative.dev/pkg v0.0.0-20250424013628-d5e74d29daa3
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/controller-runtime v0.22.4
@@ -309,7 +309,7 @@ require (
 	k8s.io/component-helpers v0.34.2 // indirect
 	k8s.io/controller-manager v0.34.0 // indirect
 	k8s.io/kube-aggregator v0.34.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
+	k8s.io/kube-openapi v0.0.0-20260520065146-aa012df4f4af // indirect
 	k8s.io/kubectl v0.34.0 // indirect
 	k8s.io/kubernetes v1.34.2 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
