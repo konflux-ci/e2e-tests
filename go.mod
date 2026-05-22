@@ -46,7 +46,7 @@ require (
 	github.com/slack-go/slack v0.12.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/cli v0.44.1
-	github.com/tektoncd/pipeline v1.9.2
+	github.com/tektoncd/pipeline v1.9.3
 	github.com/vmware-tanzu/velero v1.17.2
 	github.com/xanzy/go-gitlab v0.114.0
 	golang.org/x/crypto v0.48.0
