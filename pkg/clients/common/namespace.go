@@ -116,9 +116,10 @@ func (s *SuiteController) CreateTestNamespace(name string) (*corev1.Namespace, e
 	// Check if the E2E test namespace already exists
 	ns, err := s.KubeInterface().CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{})
 	requiredLabels := map[string]string{
-		constants.ArgoCDLabelKey:    constants.ArgoCDLabelValue,
-		constants.TenantLabelKey:    constants.TenantLabelValue,
-		constants.WorkspaceLabelKey: name,
+		constants.ArgoCDLabelKey:     constants.ArgoCDLabelValue,
+		constants.TenantLabelKey:     constants.TenantLabelValue,
+		constants.CostCenterLabelKey: constants.CostCenterLabelValue,
+		constants.WorkspaceLabelKey:  name,
 	}
 
 	if err != nil {
