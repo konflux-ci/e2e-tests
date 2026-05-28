@@ -15,7 +15,7 @@ require (
 	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
-	github.com/conforma/crds/api v0.1.7
+	github.com/conforma/crds/api v0.1.11
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
 	github.com/docker/cli v29.2.1+incompatible
 	github.com/go-git/go-git/v5 v5.16.5
