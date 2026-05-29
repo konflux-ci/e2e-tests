@@ -12,8 +12,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.5
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.143.0
 	github.com/bmatcuk/doublestar/v4 v4.7.1
-	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
+	github.com/codeready-toolchain/api v0.0.0-20260529071923-8f3b54022740
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20260529075345-a459d007c226
 	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20220525131508-60876bfb99d3
 	github.com/conforma/crds/api v0.1.7
 	github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd
@@ -40,7 +40,7 @@ require (
 	github.com/openshift-pipelines/pipelines-as-code v0.34.0
 	github.com/openshift/api v0.0.0-20260112161841-5b45879294d5
 	github.com/openshift/client-go v0.0.0-20260108185524-48f4ccfc4e13
-	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
+	github.com/openshift/library-go v0.0.0-20251110200504-2685cf1242fc
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
