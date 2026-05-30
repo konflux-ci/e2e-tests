@@ -20,7 +20,7 @@ require (
 	github.com/docker/cli v29.2.1+incompatible
 	github.com/go-git/go-git/v5 v5.16.5
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
-	github.com/gofri/go-github-ratelimit v1.0.3-0.20230428184158-a500e14de53f
+	github.com/gofri/go-github-ratelimit/v2 v2.0.2
 	github.com/google/go-containerregistry v0.21.0
 	github.com/google/go-github/v66 v66.0.0
 	github.com/h2non/gock v1.2.0
