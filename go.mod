@@ -3,7 +3,7 @@ module github.com/konflux-ci/e2e-tests
 go 1.25.6
 
 require (
-	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0
+	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3 v3.0.0
 	github.com/IBM/go-sdk-core/v5 v5.15.3
 	github.com/IBM/vpc-go-sdk v0.48.0
 	github.com/argoproj/argo-cd/v2 v2.14.21
