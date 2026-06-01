@@ -38,9 +38,9 @@ require (
 	github.com/onsi/gomega v1.39.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openshift-pipelines/pipelines-as-code v0.34.0
-	github.com/openshift/api v0.0.0-20260112161841-5b45879294d5
-	github.com/openshift/client-go v0.0.0-20260108185524-48f4ccfc4e13
-	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
+	github.com/openshift/api v0.0.0-20260521125114-09730f85d883
+	github.com/openshift/client-go v0.0.0-20260512113608-deb4dc54551a
+	github.com/openshift/library-go v0.0.0-20260601085205-dd8108fa7369
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220614012638-35c7eeb5274e
 	github.com/redhat-appstudio/jvm-build-service v0.0.0-20240126122210-0e2ee7e2e5b0
 	github.com/slack-go/slack v0.12.3
@@ -308,7 +308,7 @@ require (
 	k8s.io/component-base v0.35.2 // indirect
 	k8s.io/component-helpers v0.34.2 // indirect
 	k8s.io/controller-manager v0.34.0 // indirect
-	k8s.io/kube-aggregator v0.34.0 // indirect
+	k8s.io/kube-aggregator v0.35.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	k8s.io/kubectl v0.34.0 // indirect
 	k8s.io/kubernetes v1.34.2 // indirect
