@@ -61,7 +61,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/test-infra v0.0.0-20231004164548-dee1fe445410
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 	knative.dev/pkg v0.0.0-20250424013628-d5e74d29daa3
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/controller-runtime v0.22.4
