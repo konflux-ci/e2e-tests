@@ -56,7 +56,7 @@ func recursiveNodeStringBuilder(nodes TestOutline, printWidth int) string {
 			nodeString := fmt.Sprintf("\n%*s%s: %+v %+v", printWidth, "", n.Name, n.Text, labels)
 			b.WriteString(nodeString)
 		} else {
-			b.WriteString(fmt.Sprintf("\n%*s%s: %+v", printWidth, "", n.Name, n.Text))
+			fmt.Fprintf(&b, "\n%*s%s: %+v", printWidth, "", n.Name, n.Text)
 		}
 
 		if len(n.Nodes) != 0 {
