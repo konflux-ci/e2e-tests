@@ -409,23 +409,29 @@ var _ = framework.BuildSuiteDescribe("Build service E2E tests", Label("build-ser
 					}
 					Expect(parentPostPacMergeDigest).ShouldNot(BeEmpty())
 				})
-				It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), func() {
-					timeout = time.Minute * 20
-					interval := time.Second * 10
+			// FlakeAttempts(3): the nudge PR depends on the Renovate PipelineRun
+			// completing successfully. A transient image pull failure on the
+			// mintmaker-renovate-image causes the PLR to fail immediately and no
+			// nudge PR is created. Re-running the polling loop gives additional
+			// windows for Tekton to retry the task or for mintmaker to schedule
+			// a new Renovate run after the transient Quay.io issue clears.
+			It(fmt.Sprintf("should lead to a nudge PR creation for child component %s", ChildComponentDef.componentName), FlakeAttempts(3), func() {
+				timeout = time.Minute * 20
+				interval := time.Second * 10
 
-					Eventually(func() bool {
-						prs, err := git.ListPullRequestsWithRetry(gitClient, componentDependenciesChildRepository)
-						Expect(err).ShouldNot(HaveOccurred())
+				Eventually(func() bool {
+					prs, err := git.ListPullRequestsWithRetry(gitClient, componentDependenciesChildRepository)
+					Expect(err).ShouldNot(HaveOccurred())
 
-						for _, pr := range prs {
-							if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
-								prNumber = pr.Number
-								return true
-							}
+					for _, pr := range prs {
+						if strings.Contains(pr.SourceBranch, ParentComponentDef.componentName) {
+							prNumber = pr.Number
+							return true
 						}
-						return false
-					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
-				})
+					}
+					return false
+				}, timeout, interval).Should(BeTrue(), fmt.Sprintf("timed out when waiting for component nudge PR to be created in %s repository", targetChildRepoName))
+			})
 				It(fmt.Sprintf("merging the PR should be successful for child component %s", ChildComponentDef.componentName), func() {
 					Eventually(func() error {
 						mergeResult, err = gitClient.MergePullRequest(componentDependenciesChildRepository, prNumber)
