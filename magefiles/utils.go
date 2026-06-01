@@ -301,7 +301,7 @@ func cleanupQuayTags(quayService quay.QuayService, organization, repository stri
 
 	var errBuilder strings.Builder
 	for _, err := range errors {
-		errBuilder.WriteString(fmt.Sprintf("%s\n", err))
+		fmt.Fprintf(&errBuilder, "%s\n", err)
 	}
 	return fmt.Errorf("encountered errors during CleanupQuayTags: %s", errBuilder.String())
 }
@@ -343,7 +343,7 @@ func cleanupPrivateRepos(quayService quay.QuayService, quayOrg string, repoNameP
 	if foundError {
 		var errBuilder strings.Builder
 		for _, err := range errors {
-			errBuilder.WriteString(fmt.Sprintf("%s\n", err))
+			fmt.Fprintf(&errBuilder, "%s\n", err)
 		}
 		return fmt.Errorf("encountered errors during cleanup of private repos: %s", errBuilder.String())
 	}
