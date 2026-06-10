@@ -232,7 +232,7 @@ const (
 
 	// Expiration for image tags
 	IMAGE_TAG_EXPIRATION_ENV  string = "IMAGE_TAG_EXPIRATION"
-	DefaultImageTagExpiration string = "6h"
+	DefaultImageTagExpiration string = "5d"
 
 	PipelineRunPollingInterval = 20 * time.Second
 
