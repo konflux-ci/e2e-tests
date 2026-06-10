@@ -20,6 +20,8 @@ To develop new tests in Konflux consider first to reading some tips for a better
 * Basic tips to write readable tests. [Documentation](docs/Guidelines.md).
 * How to auto generate tests. [Documentation](docs/DeveloperGenerateTest.md).
 
+> **Important:** This repository serves as a shared testing *library and framework* for Konflux components — not as a place to host tests. Please do not add tests here. Tests belong in the repository of the component they cover.
+
 ## Start debugging CI
 
 To onboard a new component in Openshift CI follow this [Documentation](docs/OpenShiftCI.md).
