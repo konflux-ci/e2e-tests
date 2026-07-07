@@ -2,10 +2,11 @@ package common
 
 import (
 	"context"
+	"fmt"
 
+	ginkgo "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ginkgo "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -36,6 +37,23 @@ func (s *SuiteController) CreateServiceAccount(name, namespace string, serviceAc
 		Secrets: serviceAccountSecretList,
 	}
 	return s.KubeInterface().CoreV1().ServiceAccounts(namespace).Create(context.Background(), serviceAccount, metav1.CreateOptions{})
+}
+
+// IsSecretLinkedToServiceAccount checks whether a secret is linked to a service account
+func (s *SuiteController) IsSecretLinkedToServiceAccount(serviceAccountName, namespace, secretName string) (bool, error) {
+	serviceAccount, err := s.GetServiceAccount(serviceAccountName, namespace)
+	if err != nil {
+		return false, err
+	}
+	secretLinked := false
+	for _, secretRef := range serviceAccount.Secrets {
+		if secretRef.Name == secretName {
+			fmt.Printf("found secret %s is linked to service account %s\n", secretName, serviceAccountName)
+			secretLinked = true
+			break
+		}
+	}
+	return secretLinked, nil
 }
 
 // DeleteAllServiceAccountsInASpecificNamespace deletes all ServiceAccount from a given namespace

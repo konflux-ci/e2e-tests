@@ -38,7 +38,7 @@ type ImageInspectInfo struct {
 }
 
 func DoesImageRepoExistInQuay(quayImageRepoName string) (bool, error) {
-	exists, err := quayClient.DoesRepositoryExist(quayOrg, quayImageRepoName)
+	exists, err := quayClient.RepositoryExists(quayOrg, quayImageRepoName)
 	if exists {
 		return true, nil
 	} else if err != nil && strings.Contains(err.Error(), "does not exist") {

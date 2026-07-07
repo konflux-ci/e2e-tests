@@ -78,6 +78,58 @@ func (m *QuayClientMock) AddWritePermissionsToRobotAccount(organization, imageRe
 	return nil
 }
 
+func (m *QuayClientMock) AddPermissionsForRepositoryToAccount(organization, imageRepository, accountName string, isRobot, isWrite bool) error {
+	return nil
+}
+
+func (m *QuayClientMock) AddReadPermissionsForRepositoryToTeam(organization, imageRepository, teamName string) error {
+	return nil
+}
+
+func (m *QuayClientMock) AddUserToTeam(organization, teamName, userName string) (bool, error) {
+	return false, nil
+}
+
+func (m *QuayClientMock) DeleteNotification(organization, repository string, notificationUuid string) (bool, error) {
+	return false, nil
+}
+
+func (m *QuayClientMock) DeleteTeam(organization, teamName string) error {
+	return nil
+}
+
+func (m *QuayClientMock) EnsureTeam(organization, teamName string) ([]quay.Member, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) GetTeamMembers(organization, teamName string) ([]quay.Member, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) ListPermissionsForRepository(organization, imageRepository string) (map[string]quay.UserAccount, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) ListRepositoryPermissionsForTeam(organization, teamName string) ([]quay.TeamPermission, error) {
+	return nil, nil
+}
+
+func (m *QuayClientMock) RemovePermissionsForRepositoryFromAccount(organization, imageRepository, accountName string, isRobot bool) error {
+	return nil
+}
+
+func (m *QuayClientMock) RemoveUserFromTeam(organization, teamName, userName string) error {
+	return nil
+}
+
+func (m *QuayClientMock) RepositoryExists(organization, imageRepository string) (bool, error) {
+	return false, nil
+}
+
+func (m *QuayClientMock) UpdateNotification(organization, repository string, notificationUuid string, notification quay.Notification) (*quay.Notification, error) {
+	return nil, nil
+}
+
 func (m *QuayClientMock) CreateRepository(r quay.RepositoryRequest) (*quay.Repository, error) {
 	return nil, nil
 }

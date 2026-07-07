@@ -321,9 +321,6 @@ func (h *HasController) CreateComponent(componentSpec appservice.ComponentSpec, 
 	}
 	if outputContainerImage != "" {
 		componentObject.Spec.ContainerImage = outputContainerImage
-	} else if componentObject.Annotations["image.redhat.com/generate"] == "" {
-		// Generate default public image repo since nothing is mentioned specifically
-		componentObject.Annotations = utils.MergeMaps(componentObject.Annotations, constants.ImageControllerAnnotationRequestPublicRepo)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
