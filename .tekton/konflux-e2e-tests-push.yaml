@@ -27,12 +27,6 @@ spec:
     value: quay.io/redhat-user-workloads/konflux-qe-team-tenant/konflux-e2e/konflux-e2e-tests:{{revision}}
   - name: dockerfile
     value: Dockerfile
-  - name: build-definitions-update-script
-    value: |
-      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' .tekton/tasks/e2e-test.yaml
-  - name: update-build-tasks-dockerfiles-script
-    value: |
-      sed -i -E 's/[0-9a-f]{40}/{{ revision }}/g' integration-tests/tasks/e2e-test.yaml
   - name: build-platforms
     value:
       - "linux/x86_64"
@@ -138,10 +132,6 @@ spec:
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
       type: array
-    - default: ""
-      name: build-definitions-update-script
-    - default: ""
-      name: update-build-tasks-dockerfiles-script
     results:
     - description: ""
       name: IMAGE_URL
@@ -470,54 +460,6 @@ spec:
       workspaces:
       - name: workspace
         workspace: workspace
-    - name: update-build-definitions-repo
-      runAfter:
-      - build-image-index
-      params:
-        - name: ORIGIN_REPO
-          value: $(params.git-url)
-        - name: REVISION
-          value: $(params.revision)
-        - name: SCRIPT
-          value: $(params.build-definitions-update-script)
-        - name: TARGET_GH_REPO
-          value: konflux-ci/build-definitions
-        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
-        - name: GITHUB_APP_INSTALLATION_ID
-          value: "51073377"
-      taskRef:
-        params:
-        - name: name
-          value: update-infra-deployments
-        - name: bundle
-          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
-        - name: kind
-          value: task
-        resolver: bundles
-    - name: update-build-tasks-dockerfiles-repo
-      runAfter:
-      - build-image-index
-      params:
-        - name: ORIGIN_REPO
-          value: $(params.git-url)
-        - name: REVISION
-          value: $(params.revision)
-        - name: SCRIPT
-          value: $(params.update-build-tasks-dockerfiles-script)
-        - name: TARGET_GH_REPO
-          value: konflux-ci/build-tasks-dockerfiles
-        # https://github.com/apps/rh-tap-build-team in https://github.com/konflux-ci
-        - name: GITHUB_APP_INSTALLATION_ID
-          value: "51073377"
-      taskRef:
-        params:
-        - name: name
-          value: update-infra-deployments
-        - name: bundle
-          value: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
-        - name: kind
-          value: task
-        resolver: bundles
     workspaces:
     - name: workspace
     - name: git-auth
