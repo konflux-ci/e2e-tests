@@ -1,7 +1,7 @@
 package forgejo
 
 import (
-	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2"
+	"codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
 )
 
 // ForgejoClient wraps the Forgejo SDK client
