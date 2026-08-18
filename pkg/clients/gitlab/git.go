@@ -486,27 +486,26 @@ func (gc *GitlabClient) EnsureBranchExists(projectID, branchName, fallbackBranch
 }
 
 func (gc *GitlabClient) GetAllProjects() ([]*gitlab.Project, error) {
-	listProjectsOptions := &gitlab.ListProjectsOptions{
-		Membership: gitlab.Ptr(true),
+	if gc.groupID == "" {
+		return nil, fmt.Errorf("gitlab group ID is empty")
+	}
+	listProjectsOptions := &gitlab.ListGroupProjectsOptions{
 		ListOptions: gitlab.ListOptions{
 			Page:    1,
 			PerPage: 100,
 		},
+		WithShared: gitlab.Ptr(false),
 	}
 	var allProjects []*gitlab.Project
 	for {
-		// Get the current page of projects
-		projects, resp, err := gc.client.Projects.ListProjects(listProjectsOptions)
+		projects, resp, err := gc.client.Groups.ListGroupProjects(gc.groupID, listProjectsOptions)
 		if err != nil {
-			return allProjects, fmt.Errorf("failed to list projects: %v", err)
+			return allProjects, fmt.Errorf("failed to list projects in group %s: %v", gc.groupID, err)
 		}
 		allProjects = append(allProjects, projects...)
-		// Check if there are more pages. If not, break the loop.
 		if resp.NextPage == 0 {
 			break
 		}
-
-		// Update the page number to fetch the next page in the next iteration
 		listProjectsOptions.Page = resp.NextPage
 	}
 

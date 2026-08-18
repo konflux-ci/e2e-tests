@@ -884,7 +884,7 @@ func CleanupGitLabRepos() error {
 		return err
 	}
 	// Filter repos by regex
-	projectsToBeDeletedRegexp := "^devfile-sample-hello-world-\\S{6}$|^build-nudge-parent-\\S{6}$|^build-nudge-child-\\S{6}$"
+	projectsToBeDeletedRegexp := "^devfile-sample-hello-world-\\S{6}(-deletion_scheduled-\\d+|-deleted-\\d+)?$|^build-nudge-parent-\\S{6}(-deletion_scheduled-\\d+|-deleted-\\d+)?$|^build-nudge-child-\\S{6}(-deletion_scheduled-\\d+|-deleted-\\d+)?$"
 	r, err := regexp.Compile(projectsToBeDeletedRegexp)
 	if err != nil {
 		return fmt.Errorf("unable to compile regex: %s", err)
@@ -897,7 +897,7 @@ func CleanupGitLabRepos() error {
 		if time.Since(*project.CreatedAt) > dayDuration {
 			// Add only repos matching the regex
 			if r.MatchString(project.Name) {
-				projectsToBeDeleted = append(projectsToBeDeleted, project.Name)
+				projectsToBeDeleted = append(projectsToBeDeleted, project.PathWithNamespace)
 			}
 		}
 	}
@@ -906,11 +906,16 @@ func CleanupGitLabRepos() error {
 	}
 
 	// Delete projects
-	for _, projectName := range projectsToBeDeleted {
+	for _, projectPath := range projectsToBeDeleted {
 		if dryRun {
-			klog.Infof("\t%s", projectName)
+			klog.Infof("\t%s", projectPath)
+		} else if strings.Contains(projectPath, "-deletion_scheduled-") || strings.Contains(projectPath, "-deleted-") {
+			err := gc.DeleteRepositoryReally(projectPath)
+			if err != nil {
+				klog.Warningf("error deleting project: %s\n", err)
+			}
 		} else {
-			err := gc.DeleteRepositoryOnlyIfExists(projectName)
+			err := gc.DeleteRepositoryIfExists(projectPath)
 			if err != nil {
 				klog.Warningf("error deleting project: %s\n", err)
 			}
