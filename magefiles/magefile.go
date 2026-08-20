@@ -910,11 +910,13 @@ func CleanupGitLabRepos() error {
 		if dryRun {
 			klog.Infof("\t%s", projectPath)
 		} else if strings.Contains(projectPath, "-deletion_scheduled-") || strings.Contains(projectPath, "-deleted-") {
+			klog.Infof("deleting project %s", projectPath)
 			err := gc.DeleteRepositoryReally(projectPath)
 			if err != nil {
 				klog.Warningf("error deleting project: %s\n", err)
 			}
 		} else {
+			klog.Infof("deleting project %s", projectPath)
 			err := gc.DeleteRepositoryIfExists(projectPath)
 			if err != nil {
 				klog.Warningf("error deleting project: %s\n", err)

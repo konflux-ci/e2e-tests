@@ -60,7 +60,7 @@ local/template/generate-test-spec:
 clean-github-repos:
 	DRY_RUN=false ./mage -v local:cleanupGithubOrg
 
-# Deprecated alias; Prow still calls this name.
+# Deprecated alias - Prow still calls this name.
 clean-gitops-repositories: clean-github-repos
 
 clean-github-webhooks:

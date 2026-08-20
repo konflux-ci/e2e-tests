@@ -498,14 +498,18 @@ func (gc *GitlabClient) GetAllProjects() ([]*gitlab.Project, error) {
 	}
 	var allProjects []*gitlab.Project
 	for {
+		// Get the current page of projects
 		projects, resp, err := gc.client.Groups.ListGroupProjects(gc.groupID, listProjectsOptions)
 		if err != nil {
 			return allProjects, fmt.Errorf("failed to list projects in group %s: %v", gc.groupID, err)
 		}
 		allProjects = append(allProjects, projects...)
+		// Check if there are more pages. If not, break the loop.
 		if resp.NextPage == 0 {
 			break
 		}
+
+		// Update the page number to fetch the next page in the next iteration
 		listProjectsOptions.Page = resp.NextPage
 	}
 
