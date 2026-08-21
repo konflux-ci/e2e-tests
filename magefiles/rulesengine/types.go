@@ -449,7 +449,6 @@ type RuleCtx struct {
 	PrBranchName                  string
 	PrNum                         int
 	TektonEventType               string
-	RequiresMultiPlatformTests    bool
 	RequiresSprayProxyRegistering bool
 }
 
@@ -479,7 +478,6 @@ func NewRuleCtx() *RuleCtx {
 		"",
 		0,
 		"",
-		false,
 		false}
 
 	//init defaults we've used so far

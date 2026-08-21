@@ -11,10 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/library/v2/pkg/util"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	remoteimg "github.com/google/go-containerregistry/pkg/v1/remote"
 	gh "github.com/google/go-github/v66/github"
 	"github.com/konflux-ci/e2e-tests/magefiles/installation"
 	"github.com/konflux-ci/e2e-tests/magefiles/rulesengine"
@@ -22,14 +18,9 @@ import (
 	"github.com/konflux-ci/e2e-tests/pkg/clients/sprayproxy"
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
-	"github.com/konflux-ci/e2e-tests/pkg/utils/tekton"
 	"github.com/magefile/mage/sh"
 	gtypes "github.com/onsi/ginkgo/v2/types"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
-	"sigs.k8s.io/yaml"
-
-	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 func ExecuteTestAction(rctx *rulesengine.RuleCtx) error {
@@ -130,11 +121,6 @@ func IsRehearseJob(rctx *rulesengine.RuleCtx) (bool, error) {
 func IsSprayProxyRequired(rctx *rulesengine.RuleCtx) (bool, error) {
 
 	return rctx.RequiresSprayProxyRegistering, nil
-}
-
-func IsMultiPlatformConfigRequired(rctx *rulesengine.RuleCtx) (bool, error) {
-
-	return rctx.RequiresMultiPlatformTests, nil
 }
 
 func IsSprayProxyHostSet(rctx *rulesengine.RuleCtx) (bool, error) {
@@ -382,27 +368,9 @@ var RegisterKonfluxToSprayProxyRule = rulesengine.Rule{Name: "Register SprayProx
 	},
 }
 
-var SetupMultiPlatformTestsRule = rulesengine.Rule{Name: "Setup multi-platform tests",
-	Description: "Configure tekton tasks for multi-platform tests",
-	Condition: rulesengine.Any{
-		rulesengine.ConditionFunc(IsMultiPlatformConfigRequired),
-	},
-	Actions: []rulesengine.Action{rulesengine.ActionFunc(func(rctx *rulesengine.RuleCtx) error {
-
-		if rctx.DryRun {
-			klog.Info("Setting up multi platform tests.")
-			klog.Info("Multi platform tests configured.")
-			return nil
-		}
-
-		return SetupMultiPlatformTests()
-	}),
-	},
-}
-
 var BootstrapClusterRuleChain = rulesengine.Rule{Name: "BoostrapCluster RuleChain",
-	Description: "Rule Chain that installs Konflux in preview mode and when required, registers it with a SprayProxy and sets up MP tests",
-	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule, &SetupMultiPlatformTestsRule},
+	Description: "Rule Chain that installs Konflux in preview mode and when required, registers it with a SprayProxy",
+	Condition:   rulesengine.All{&InstallKonfluxRule, &RegisterKonfluxToSprayProxyRule},
 }
 
 var BootstrapClusterWithSprayProxyRuleChain = rulesengine.Rule{Name: "BoostrapCluster with SprayProxy RuleChain",
@@ -461,83 +429,6 @@ func HandleErrorWithAlert(err error, errLevel slack.ErrorSeverityLevel) error {
 	if slackErr := slack.ReportIssue(err.Error(), errLevel); slackErr != nil {
 		return fmt.Errorf("failed report an error (%s) to a Slack channel: %s", err, slackErr)
 	}
-	return nil
-}
-
-func SetupMultiPlatformTests() error {
-	var platforms = []string{"linux/arm64", "linux/s390x", "linux/ppc64le"}
-
-	klog.Infof("going to create new Tekton bundle remote-build for the purpose of testing multi-platform-controller PR")
-	var err error
-	var defaultBundleRef string
-	var tektonObj runtime.Object
-	var authenticator authn.Authenticator
-
-	for _, platformType := range platforms {
-		tag := fmt.Sprintf("%d-%s", time.Now().Unix(), util.GenerateRandomString(4))
-		quayOrg := utils.GetEnv(constants.DEFAULT_QUAY_ORG_ENV, constants.DefaultQuayOrg)
-		newMultiPlatformBuilderPipelineImg := strings.ReplaceAll(constants.DefaultImagePushRepo, constants.DefaultQuayOrg, quayOrg)
-		var newRemotePipeline, _ = name.ParseReference(fmt.Sprintf("%s:pipeline-bundle-%s", newMultiPlatformBuilderPipelineImg, tag))
-		var newPipelineYaml []byte
-
-		if err = utils.CreateDockerConfigFile(os.Getenv("QUAY_TOKEN")); err != nil {
-			return fmt.Errorf("failed to create docker config file: %+v", err)
-		}
-		if defaultBundleRef, err = tekton.GetDefaultPipelineBundleRef(constants.BuildPipelineConfigConfigMapYamlURL, "docker-build"); err != nil {
-			return fmt.Errorf("failed to get the pipeline bundle ref: %+v", err)
-		}
-		if tektonObj, err = tekton.ExtractTektonObjectFromBundle(defaultBundleRef, "pipeline", "docker-build"); err != nil {
-			return fmt.Errorf("failed to extract the Tekton Pipeline from bundle: %+v", err)
-		}
-		dockerPipelineObject := tektonObj.(*tektonapi.Pipeline)
-
-		var currentBuildahTaskRef string
-		for i := range dockerPipelineObject.PipelineSpec().Tasks {
-			t := &dockerPipelineObject.PipelineSpec().Tasks[i]
-			params := t.TaskRef.Params
-			var lastBundle *tektonapi.Param
-			var lastName *tektonapi.Param
-			buildahTask := false
-			for i, param := range params {
-				if param.Name == "bundle" {
-					lastBundle = &t.TaskRef.Params[i]
-				} else if param.Name == "name" && param.Value.StringVal == "buildah" {
-					lastName = &t.TaskRef.Params[i]
-					buildahTask = true
-				}
-			}
-			if buildahTask {
-				currentBuildahTaskRef = lastBundle.Value.StringVal
-				klog.Infof("Found current task ref %s", currentBuildahTaskRef)
-				//TODO: current use pinned sha?
-				lastBundle.Value = *tektonapi.NewStructuredValues("quay.io/redhat-appstudio-tekton-catalog/task-buildah-remote:0.1-ac185e95bbd7a25c1c4acf86995cbaf30eebedc4")
-				lastName.Value = *tektonapi.NewStructuredValues("buildah-remote")
-				t.Params = append(t.Params, tektonapi.Param{Name: "PLATFORM", Value: *tektonapi.NewStructuredValues("$(params.PLATFORM)")})
-				dockerPipelineObject.Spec.Params = append(dockerPipelineObject.PipelineSpec().Params, tektonapi.ParamSpec{Name: "PLATFORM", Default: tektonapi.NewStructuredValues(platformType)})
-				dockerPipelineObject.Name = "buildah-remote-pipeline"
-				break
-			}
-		}
-		if currentBuildahTaskRef == "" {
-			return fmt.Errorf("failed to extract the Tekton Task from bundle: %+v", err)
-		}
-		if newPipelineYaml, err = yaml.Marshal(dockerPipelineObject); err != nil {
-			return fmt.Errorf("error when marshalling a new pipeline to YAML: %v", err)
-		}
-
-		if authenticator, err = utils.GetAuthenticatorForImageRef(newRemotePipeline, os.Getenv("QUAY_TOKEN")); err != nil {
-			return fmt.Errorf("error when getting authenticator: %v", err)
-		}
-		authOption := remoteimg.WithAuth(authenticator)
-
-		if err = tekton.BuildAndPushTektonBundle(newPipelineYaml, newRemotePipeline, authOption); err != nil {
-			return fmt.Errorf("error when building/pushing a tekton pipeline bundle: %v", err)
-		}
-		platform := strings.ToUpper(strings.Split(platformType, "/")[1])
-		klog.Infof("SETTING ENV VAR %s to value %s\n", constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV+"_"+platform, newRemotePipeline.String())
-		os.Setenv(constants.CUSTOM_BUILDAH_REMOTE_PIPELINE_BUILD_BUNDLE_ENV+"_"+platform, newRemotePipeline.String())
-	}
-
 	return nil
 }
 

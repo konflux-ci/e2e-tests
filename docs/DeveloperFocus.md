@@ -12,6 +12,6 @@ Of interest to a developer are the `--ginkgo.focus` and `--ginkgo.focus-file` fl
 
 `--ginkgo.focus` accepts a regular expression string to match against for any of the strings used in a test "descriptors" (such as Context, It, When, etc). Multiple `--ginkgo.focus` flags can be provided on the command line. When run with the focus flags the suite will OR the flags and only run the matching tests, skipping the rest.
 
-`--ginkgo.focus-file` can be used to specify a specific .go file (such as `tests/build/build.go`). Multiple `--ginkgo.focus-file` flags can be provided on the command line. When run with these flags the suite will OR the flags and only run the tests specified in those files, skipping the rest.
+`--ginkgo.focus-file` can be used to specify a specific .go file (such as `tests/enterprise-contract/contract.go`). Multiple `--ginkgo.focus-file` flags can be provided on the command line. When run with these flags the suite will OR the flags and only run the tests specified in those files, skipping the rest.
 
 By using these or the other flags that Ginkgo provides you can run e2e-appstudio (after rebuilding to include your changes) focused on the changes that you have made to ensure they are working before you commit your code.
