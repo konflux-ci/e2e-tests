@@ -352,7 +352,7 @@ func (fc *ForgejoClient) ForkRepositoryUsingLocalClone(sourceProjectID, targetPr
 	pushCmd := exec.Command("git", "push", "--mirror", targetURL)
 	pushCmd.Dir = clonePath // Run the push from inside the bare clone directory
 	if output, err := pushCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to push to the target repo %q with: %s\n", targetRepo, string(output))
+		return fmt.Errorf("failed to push to the target repo %q with: %s", targetRepo, string(output))
 	}
 	return nil
 }

@@ -127,7 +127,7 @@ func (f *ForgejoClient) DeleteBranchAndClosePullRequest(repository string, prNum
 }
 
 func (f *ForgejoClient) ForkRepository(sourceRepoName, targetRepoName string) error {
-	err := f.ForgejoClient.ForkRepositoryUsingLocalClone(sourceRepoName, targetRepoName)
+	err := f.ForkRepositoryUsingLocalClone(sourceRepoName, targetRepoName)
 	return err
 }
 
