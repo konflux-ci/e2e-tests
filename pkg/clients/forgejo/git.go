@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -305,6 +308,53 @@ func (fc *ForgejoClient) ForkRepository(sourceProjectID, targetProjectID string)
 	}
 
 	return migratedRepo, nil
+}
+
+// ForkRepositoryUsingLocalClone clones the source repository locally under a temp direcotry and pushes it to the target repo
+func (fc *ForgejoClient) ForkRepositoryUsingLocalClone(sourceProjectID, targetProjectID string) error {
+	sourceOrg, sourceRepo := splitProjectID(sourceProjectID)
+	targetOrg, targetRepo := splitProjectID(targetProjectID)
+	// Using the token directly in the HTTPS URL guarantees authentication
+	sourceURL := fmt.Sprintf("https://oauth2:%s@codeberg.org/%s/%s.git", fc.token, sourceOrg, sourceRepo)
+	targetURL := fmt.Sprintf("https://oauth2:%s@codeberg.org/%s/%s.git", fc.token, targetOrg, targetRepo)
+
+	// Create a temporary directory for the bare clone
+	tmpDir, err := os.MkdirTemp("", "forgejo-fork-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir) // Clean up when finished
+
+	clonePath := filepath.Join(tmpDir, "repo.git")
+
+	fmt.Println("downloading source repository...")
+	cloneCmd := exec.Command("git", "clone", "--bare", sourceURL, clonePath)
+	if output, err := cloneCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("cloning source repo failed with: %s", string(output))
+	}
+
+	fmt.Printf("creating empty repository %q in org %q...\n", targetRepo, targetOrg)
+	opts := forgejo.CreateRepoOption{
+		Name:          targetRepo,
+		Description:   "Repository created using Golang SDK.",
+		Private:       false,
+		AutoInit:      false, // CRITICAL: Ensures no README or .gitignore is generated
+		DefaultBranch: "main",
+	}
+	repo, _, err := fc.client.CreateOrgRepo(targetOrg, opts)
+	if err != nil {
+		return fmt.Errorf("failed to create empty target repository: %v", err)
+	}
+	fmt.Printf("Successfully created empty target repository! Clone URL: %s\n", repo.CloneURL)
+
+	//Mirror-push to the new repository destination
+	fmt.Println("pushing to target repository...")
+	pushCmd := exec.Command("git", "push", "--mirror", targetURL)
+	pushCmd.Dir = clonePath // Run the push from inside the bare clone directory
+	if output, err := pushCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to push to the target repo %q with: %s", targetRepo, string(output))
+	}
+	return nil
 }
 
 // DeleteRepository deletes a repository if it exists
