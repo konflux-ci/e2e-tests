@@ -1235,23 +1235,6 @@ func (ci CI) TestUpgrade() error {
 	return nil
 }
 
-// TestDisasterRecovery runs the DR backup/restore e2e suite in CI.
-func (ci CI) TestDisasterRecovery() error {
-	if err := ci.init(); err != nil {
-		return fmt.Errorf("error when running ci init: %v", err)
-	}
-
-	if err := PreflightChecks(); err != nil {
-		return fmt.Errorf("error when running preflight checks: %v", err)
-	}
-
-	if err := setRequiredEnvVars(); err != nil {
-		return fmt.Errorf("error when setting up required env vars: %v", err)
-	}
-
-	return DisasterRecoveryWorkflow()
-}
-
 // Run upgrade tests locally(bootstrap cluster, create workload, upgrade, verify)
 func (Local) TestUpgrade() error {
 	if err := PreflightChecks(); err != nil {
@@ -1307,17 +1290,6 @@ func BootstrapClusterForUpgrade() (*installation.InstallAppStudio, error) {
 	return ic, ic.InstallAppStudioPreviewMode()
 }
 
-func BootstrapClusterForDR(version string) (*installation.InstallAppStudio, error) {
-	os.Setenv("INFRA_DEPLOYMENTS_ORG", "redhat-appstudio") // #nosec G104
-	os.Setenv("INFRA_DEPLOYMENTS_BRANCH", version)         // #nosec G104
-	ic, err := installation.NewAppStudioInstallController()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize installation controller: %+v", err)
-	}
-
-	return ic, ic.InstallAppStudioPreviewMode()
-}
-
 func UpgradeCluster() error {
 	return MergePRInRemote(utils.GetEnv("UPGRADE_BRANCH", ""), utils.GetEnv("UPGRADE_FORK_ORGANIZATION", "redhat-appstudio"), "./tmp/infra-deployments")
 }
@@ -1336,32 +1308,6 @@ func VerifyWorkload() error {
 
 func CleanWorkload() error {
 	return runTests("upgrade-cleanup", "upgrade-verify-report.xml")
-}
-
-// DisasterRecoveryWorkflow orchestrates the DR backup/restore e2e test flow.
-// It bootstraps a Konflux cluster at the version specified by KONFLUX_BASE_VERSION
-// (defaults to "main" when unset), runs the disaster-recovery labelled tests which
-// cover both backwards-compatibility (with mid-test upgrade) and same-version
-// scenarios on a single ROSA cluster in sequence.
-func DisasterRecoveryWorkflow() error {
-	version := os.Getenv("KONFLUX_BASE_VERSION")
-	if version == "" {
-		version = "main"
-	}
-
-	ic, err := BootstrapClusterForDR(version)
-	if err != nil {
-		klog.Errorf("failed to bootstrap cluster for disaster recovery tests: %s", err)
-		return err
-	}
-
-	err = CheckClusterAfterUpgrade(ic)
-	if err != nil {
-		klog.Errorf("cluster not ready after bootstrap: %s", err)
-		return err
-	}
-
-	return runTestsWithTimeout("disaster-recovery", "disaster-recovery-report.xml", "1080m")
 }
 
 func runTests(labelsToRun string, junitReportFile string) error {
