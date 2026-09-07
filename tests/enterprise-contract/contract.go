@@ -144,10 +144,7 @@ var _ = framework.EnterpriseContractSuiteDescribe("Conforma E2E tests", ginkgo.L
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				ginkgo.GinkgoWriter.Printf("Configured Rekor host: %s\n", rekorHost)
 
-				cm, err := fwk.AsKubeAdmin.CommonController.GetConfigMap("ec-defaults", "enterprise-contract-service")
-				gomega.Expect(err).ToNot(gomega.HaveOccurred())
-				verifyECTaskBundle = cm.Data["verify_ec_task_bundle"]
-				gomega.Expect(verifyECTaskBundle).ToNot(gomega.BeEmpty())
+				verifyECTaskBundle = constants.VERIFY_EC_TASK_BUNDLE
 				ginkgo.GinkgoWriter.Printf("Using verify EC task bundle: %s\n", verifyECTaskBundle)
 			})
 
