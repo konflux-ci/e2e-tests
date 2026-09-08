@@ -109,7 +109,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/argoproj/gitops-engine v0.7.1-0.20251217140045-5baed5604d2d // indirect
-	github.com/argoproj/pkg v0.13.7-0.20230626144333-d56162821bd1 // indirect
+	github.com/argoproj/pkg/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
