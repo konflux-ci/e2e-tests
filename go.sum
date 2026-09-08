@@ -1573,8 +1573,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davidmz/go-pageant v1.0.2 h1:bPblRCh5jGU+Uptpz6LgMZGD5hJoOt7otgT454WvHn0=
 github.com/davidmz/go-pageant v1.0.2/go.mod h1:P2EDDnMqIwG5Rrp05dTRITj9z2zpGcD9efWSkTNKLIE=
-github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd h1:YHSwUdfWsG9Qk7Vn+NfafELv6+G6a43RRE/NjS0TfK0=
-github.com/devfile/library/v2 v2.2.1-0.20230418160146-e75481b7eebd/go.mod h1:jXIVOBkEqh7YJddFcZ+vak47rlbCW//f+qqG5hUozhM=
+github.com/devfile/library/v2 v2.4.0 h1:c4dFpR/4Onb/4D8vL6zHXILHD8GS+Z5oT6T0piZl834=
+github.com/devfile/library/v2 v2.4.0/go.mod h1:kiuiFsLEl//2WraHesWXj2Z2QLTLpzn2mTT9g8I3qMI=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 h1:CaO/zOnF8VvUfEbhRatPcwKVWamvbYd8tQGRWacE9kU=
 github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1/go.mod h1:+hnT3ywWDTAFrW5aE+u2Sa/wT555ZqwoCS+pk3p6ry4=
