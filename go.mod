@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0
-	github.com/argoproj/argo-cd/v2 v2.14.21
+	github.com/argoproj/argo-cd/v3 v3.5.2
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/codeready-toolchain/api v0.0.0-20231217224957-34f7cb3fcbf7
