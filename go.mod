@@ -1,6 +1,6 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.26
+go 1.26.0
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0
