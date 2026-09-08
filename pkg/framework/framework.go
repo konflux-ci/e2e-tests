@@ -12,7 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/common"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/has"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/imagecontroller"
