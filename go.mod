@@ -1,6 +1,6 @@
 module github.com/konflux-ci/e2e-tests
 
-go 1.26
+go 1.26.0
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0
@@ -42,7 +42,7 @@ require (
 	github.com/tektoncd/pipeline v1.9.2
 	github.com/vmware-tanzu/velero v1.17.2
 	github.com/xanzy/go-gitlab v0.114.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.37.0
 	golang.org/x/tools v0.42.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.35.2
