@@ -48,15 +48,14 @@ func DoesImageRepoExistInQuay(quayImageRepoName string) (bool, error) {
 }
 
 func DoesRobotAccountExistInQuay(robotAccountName string) (bool, error) {
-	_, err := quayClient.GetRobotAccount(quayOrg, robotAccountName)
-	if err != nil {
-		if err.Error() == "Could not find robot with specified username" {
-			return false, nil
-		} else {
-			return false, err
-		}
+	response, err := quayClient.GetRobotAccount(quayOrg, robotAccountName)
+	if response == nil && err == nil {
+		return false, nil
+	} else if response != nil && err == nil {
+		return true, nil
+	} else {
+		return false, err
 	}
-	return true, nil
 }
 
 func DeleteImageRepo(imageName string) (bool, error) {
