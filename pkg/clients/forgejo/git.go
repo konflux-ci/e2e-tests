@@ -357,6 +357,37 @@ func (fc *ForgejoClient) ForkRepositoryUsingLocalClone(sourceProjectID, targetPr
 	if output, err := pushCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to push to the target repo %q with: %s", targetRepo, string(output))
 	}
+	// Forgejo processes the push asynchronously. Until it does, the repository is still
+	// flagged as empty in the database and every API call touching its git content
+	// (branch creation, file creation, ...) fails with "Git Repository is empty.".
+	return fc.waitForRepositoryNotEmpty(targetOrg, targetRepo)
+}
+
+// waitForRepositoryNotEmpty waits until Forgejo processed the push to the given repository,
+// i.e. until the repository is no longer reported as empty.
+func (fc *ForgejoClient) waitForRepositoryNotEmpty(owner, repo string) error {
+	var lastErr error
+	err := utils.WaitUntilWithInterval(func() (done bool, err error) {
+		repository, _, err := fc.client.GetRepo(owner, repo)
+		if err != nil {
+			lastErr = err
+			fmt.Printf("Failed to get repository %s/%s: %v\n", owner, repo, err)
+			return false, nil
+		}
+		lastErr = nil
+		if repository.Empty {
+			fmt.Printf("Repository %s/%s is still reported as empty, waiting for the push to be processed...\n", owner, repo)
+			return false, nil
+		}
+		return true, nil
+	}, time.Second*5, time.Minute*5)
+
+	if err != nil {
+		if lastErr != nil {
+			return fmt.Errorf("timed out waiting for repository %s/%s to be processed after the push (last error: %v): %w", owner, repo, lastErr, err)
+		}
+		return fmt.Errorf("timed out waiting for repository %s/%s to be processed after the push: %w", owner, repo, err)
+	}
 	return nil
 }
 
