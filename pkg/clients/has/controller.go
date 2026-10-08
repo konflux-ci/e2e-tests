@@ -3,6 +3,7 @@ package has
 import (
 	"github.com/konflux-ci/e2e-tests/pkg/constants"
 	"github.com/konflux-ci/e2e-tests/pkg/utils"
+	"k8s.io/klog"
 
 	"github.com/konflux-ci/e2e-tests/pkg/clients/forgejo"
 	"github.com/konflux-ci/e2e-tests/pkg/clients/github"
@@ -50,7 +51,9 @@ func NewSuiteController(kube *kubeCl.CustomClient) (*HasController, error) {
 			utils.GetEnv(constants.CODEBERG_QE_ORG_ENV, constants.DefaultCodebergQEOrg),
 		)
 		if err != nil {
-			return nil, err
+			// a Codeberg outage/IP block must not fail, framework init for suites that never talk to Codeberg
+			klog.Warningf("failed to authenticate with Forgejo/Codeberg, Forgejo client will be unavailable: %v", err)
+			fj = nil
 		}
 	}
 
