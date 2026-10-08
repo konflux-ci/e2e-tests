@@ -14,7 +14,17 @@ type ForgejoClient struct {
 
 // NewForgejoClient creates a new Forgejo client
 func NewForgejoClient(accessToken, baseURL, org string) (*ForgejoClient, error) {
-	client, err := forgejo.NewClient(baseURL, forgejo.SetToken(accessToken))
+	client, err := forgejo.NewClient(baseURL,
+		forgejo.SetToken(accessToken),
+		// forgejo.NewClient otherwise probes "GET /api/v1/version" while constructing the
+		// client. Codeberg answers that probe with HTTP 429 for IPs it has blocked (CI
+		// egress IPs frequently are), which turns a Codeberg-only problem into a failure
+		// of every single test, including the ones that never touch Codeberg.
+		// Passing an empty version skips the probe and all SDK-side version gating.
+		forgejo.SetForgejoVersion(""),
+		// The Go default user agent is a common trigger for Codeberg's anti-abuse filter.
+		forgejo.SetUserAgent("konflux-ci-e2e-tests"),
+	)
 	if err != nil {
 		return nil, err
 	}
