@@ -198,7 +198,7 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 					fmt.Printf("repository %s has already been deleted, skipping\n", repo.Name)
 				}
 				fmt.Printf("[DEBUG] DELETED REPOSITORY: %s\n", repo.Name)
-				time.Sleep(1 * time.Second)
+				time.Sleep(deletionStagger)
 				repoDeleteCount++
 			}
 		}
@@ -245,7 +245,7 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 					fmt.Printf("robot account %s has already been deleted, skipping\n", robot.Name)
 				}
 				fmt.Printf("[DEBUG] DELETED ROBOT ACCOUNT: %s\n", robot.Name)
-				time.Sleep(1 * time.Second)
+				time.Sleep(deletionStagger)
 				robotDeleteCount++
 			}
 		}
