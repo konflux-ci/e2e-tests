@@ -290,7 +290,7 @@ func (Local) CleanupPrivateRepos() error {
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
+	quayClient := quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayOrgToken, quayApiUrl)
 	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
 }
 
