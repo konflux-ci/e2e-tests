@@ -29,6 +29,8 @@ import (
 
 const quayPrefixesToDeleteRegexp = "rhtap[-_]demo|happy[-_]path|multi[-_]platform|ex[-_]registry|gitlab|build[-_]e2e|build[-_]templates|byoc|user1|spi|release[-_]|integration|stat[-_]rep|nbe|stack|rs[-_]demos|push[-_]pyxis|group|resolution|konflux|jvm[-_]build|e2e[-_]hac|user[-_]ns1|user[-_]ns2|tenant[-_]dev"
 
+var deletionStagger = 1 * time.Second
+
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
 	if err := sendHttpRequestAndParseResponse(url, "GET", ghRes); err != nil {
@@ -189,7 +191,8 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 			if timeDiffInEpoch > 24*3600 {
 				deleted, err := quayService.DeleteRepository(quayOrg, repo.Name)
 				if err != nil {
-					return fmt.Errorf("failed to delete repository %s, error: %s", repo.Name, err)
+					fmt.Printf("failed to delete repository %s, error: %s\n", repo.Name, err)
+					continue
 				}
 				if !deleted {
 					fmt.Printf("repository %s has already been deleted, skipping\n", repo.Name)
@@ -235,7 +238,8 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 				// DeleteRobotAccount uses robot shortname, so e2e-demos instead of redhat-appstudio-qe+e2e-demos
 				deleted, err := quayService.DeleteRobotAccount(quayOrg, splitRobotName[1])
 				if err != nil {
-					return fmt.Errorf("failed to delete robot account %s, error: %s", robot.Name, err)
+					fmt.Printf("failed to delete robot account %s, error: %s\n", robot.Name, err)
+					continue
 				}
 				if !deleted {
 					fmt.Printf("robot account %s has already been deleted, skipping\n", robot.Name)
