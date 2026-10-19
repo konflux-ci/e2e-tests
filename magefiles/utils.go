@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -183,6 +184,7 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 
 	fmt.Printf("[DEBUG] GOT TOTAL REPOS: %v\n", len(repos))
 	repoDeleteCount := 0
+	var errs []error
 
 	for _, repo := range repos {
 		if r.MatchString(repo.Name) {
@@ -191,7 +193,7 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 			if timeDiffInEpoch > 24*3600 {
 				deleted, err := quayService.DeleteRepository(quayOrg, repo.Name)
 				if err != nil {
-					fmt.Printf("failed to delete repository %s, error: %s\n", repo.Name, err)
+					errs = append(errs, fmt.Errorf("failed to delete repository %s, error: %s", repo.Name, err))
 					continue
 				}
 				if !deleted {
@@ -226,19 +228,21 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 		if r.MatchString(robot.Name) {
 			parsed, err := time.Parse(timeFormat, robot.Created)
 			if err != nil {
-				return err
+				errs = append(errs, fmt.Errorf("failed to parse creation time of robot account %s, error: %s", robot.Name, err))
+				continue
 			}
 			if time.Since(parsed) > 24*time.Hour {
 				// Robot name without the name of org which is the same as previous sanitizedRepoName
 				// redhat-appstudio-qe+e2e-demos turns to e2e-demos
 				splitRobotName := strings.Split(robot.Name, "+")
 				if len(splitRobotName) != 2 {
-					return fmt.Errorf("failed to split robot name into 2 parts, got %d parts", len(splitRobotName))
+					errs = append(errs, fmt.Errorf("failed to split robot name %s into 2 parts, got %d parts", robot.Name, len(splitRobotName)))
+					continue
 				}
 				// DeleteRobotAccount uses robot shortname, so e2e-demos instead of redhat-appstudio-qe+e2e-demos
 				deleted, err := quayService.DeleteRobotAccount(quayOrg, splitRobotName[1])
 				if err != nil {
-					fmt.Printf("failed to delete robot account %s, error: %s\n", robot.Name, err)
+					errs = append(errs, fmt.Errorf("failed to delete robot account %s, error: %s", robot.Name, err))
 					continue
 				}
 				if !deleted {
@@ -251,7 +255,7 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 		}
 	}
 	fmt.Printf("[DEBUG] TOTAL ROBOT ACCOUNT DELETED: %v\n", robotDeleteCount)
-	return nil
+	return errors.Join(errs...)
 }
 
 func cleanupQuayTags(quayService quay.QuayService, organization, repository string) error {
