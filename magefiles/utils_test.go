@@ -164,6 +164,7 @@ func (m *QuayClientMock) CreateNotification(organization, repository string, not
 
 func TestCleanupQuayReposAndRobots(t *testing.T) {
 	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
+	deletionStagger = 1 * time.Millisecond
 
 	deletedRepos := []quay.Repository{
 		{Name: "rhtap-demo/test-old", LastModified: int(time.Now().Unix()) - 25*3600},
@@ -217,6 +218,66 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 		if quayClientMock.DeleteRobotAccountCalls[shortName] {
 			t.Errorf("DeleteRobotAccount() should not have been called for '%s'", shortName)
 		}
+	}
+}
+
+func TestCleanupQuayReposAndRobots502Error(t *testing.T) {
+	timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700"
+	deletionStagger = 1 * time.Millisecond
+
+	// Both repos match a delete prefix and are old enough to be deleted.
+	// The first one will have the server respond with a 502 Bad Gateway.
+	failingRepo := quay.Repository{Name: "rhtap-demo/test-old", LastModified: int(time.Now().Unix()) - 25*3600}
+	okRepo := quay.Repository{Name: "multi-platform/test-old", LastModified: int(time.Now().Unix()) - 25*3600}
+
+	// Both robots match a delete prefix and are old enough to be deleted.
+	// The first one will have the server respond with a 502 Bad Gateway.
+	failingRobot := quay.RobotAccount{Name: "test-org+rhtap-demotest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)}
+	okRobot := quay.RobotAccount{Name: "test-org+multi-platformtest-old", Created: time.Now().Add(-25 * time.Hour).Format(timeFormat)}
+
+	// Robot error injection is keyed by the robot shortname (part after '+'),
+	// which is what cleanupQuayReposAndRobots passes to DeleteRobotAccount.
+	failingRobotShortName := strings.Split(failingRobot.Name, "+")[1]
+
+	repo502Err := fmt.Errorf("failed to delete repository, got status code 502: 502 Bad Gateway")
+	robot502Err := fmt.Errorf("failed to delete robot account, got status code 502: 502 Bad Gateway")
+
+	quayClientMock := QuayClientMock{
+		AllRepositories:         []quay.Repository{failingRepo, okRepo},
+		AllRobotAccounts:        []quay.RobotAccount{failingRobot, okRobot},
+		DeleteRepositoryCalls:   make(map[string]bool),
+		DeleteRobotAccountCalls: make(map[string]bool),
+		DeleteRepositoryErrors:  map[string]error{failingRepo.Name: repo502Err},
+		DeleteRobotErrors:       map[string]error{failingRobotShortName: robot502Err},
+	}
+
+	err := cleanupQuayReposAndRobots(&quayClientMock, "test-org")
+
+	// The 502 failures must be surfaced as a returned error.
+	if err == nil {
+		t.Fatal("expected an error to be returned when the server responds with 502, got nil")
+	}
+	for _, want := range []string{"502", failingRepo.Name, failingRobot.Name} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("returned error %q should mention %q", err.Error(), want)
+		}
+	}
+
+	// Deletion must have been attempted for all matching entries, including the failing ones.
+	if !quayClientMock.DeleteRepositoryCalls[failingRepo.Name] {
+		t.Errorf("DeleteRepository() should have been attempted for '%s'", failingRepo.Name)
+	}
+	if !quayClientMock.DeleteRobotAccountCalls[failingRobotShortName] {
+		t.Errorf("DeleteRobotAccount() should have been attempted for '%s'", failingRobotShortName)
+	}
+
+	// Cleanup must continue after a 502: the other matching entries are still deleted.
+	if !quayClientMock.DeleteRepositoryCalls[okRepo.Name] {
+		t.Errorf("DeleteRepository() should still have been called for '%s' after a 502 on another repo", okRepo.Name)
+	}
+	okRobotShortName := strings.Split(okRobot.Name, "+")[1]
+	if !quayClientMock.DeleteRobotAccountCalls[okRobotShortName] {
+		t.Errorf("DeleteRobotAccount() should still have been called for '%s' after a 502 on another robot", okRobotShortName)
 	}
 }
 
