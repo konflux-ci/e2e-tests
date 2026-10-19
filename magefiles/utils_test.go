@@ -18,6 +18,8 @@ type QuayClientMock struct {
 	DeleteRepositoryCalls   map[string]bool
 	DeleteRobotAccountCalls map[string]bool
 	DeleteTagCalls          map[string]bool
+	DeleteRepositoryErrors  map[string]error
+	DeleteRobotErrors       map[string]error
 	TagsOnPage              int
 	TagPages                int
 	Benchmark               bool
@@ -43,11 +45,17 @@ func (m *QuayClientMock) GetAllRobotAccounts(organization string) ([]quay.RobotA
 
 func (m *QuayClientMock) DeleteRepository(organization, repoName string) (bool, error) {
 	m.DeleteRepositoryCalls[repoName] = true
+	if err := m.DeleteRepositoryErrors[repoName]; err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
 func (m *QuayClientMock) DeleteRobotAccount(organization, robotName string) (bool, error) {
 	m.DeleteRobotAccountCalls[robotName] = true
+	if err := m.DeleteRobotErrors[robotName]; err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -206,7 +214,7 @@ func TestCleanupQuayReposAndRobots(t *testing.T) {
 	}
 	for _, robot := range preservedRobots {
 		shortName := strings.Split(robot.Name, "+")[1]
-		if quayClientMock.DeleteRepositoryCalls[shortName] {
+		if quayClientMock.DeleteRobotAccountCalls[shortName] {
 			t.Errorf("DeleteRobotAccount() should not have been called for '%s'", shortName)
 		}
 	}

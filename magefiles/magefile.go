@@ -265,7 +265,7 @@ func (Local) CleanupQuayReposAndRobots() error {
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
+	quayClient := quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayOrgToken, quayApiUrl)
 	return cleanupQuayReposAndRobots(quayClient, quayOrg)
 }
 
@@ -277,7 +277,7 @@ func (Local) CleanupQuayTags() error {
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
 
-	quayClient := quay.NewQuayClient(&http.Client{Transport: &http.Transport{}}, quayOrgToken, quayApiUrl)
+	quayClient := quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayOrgToken, quayApiUrl)
 	return cleanupQuayTags(quayClient, quayOrg, "test-images")
 }
 
@@ -289,7 +289,6 @@ func (Local) CleanupPrivateRepos() error {
 		return fmt.Errorf("%s", quayTokenNotFoundError)
 	}
 	quayOrg := utils.GetEnv("DEFAULT_QUAY_ORG", "redhat-appstudio-qe")
-
 	quayClient := quay.NewQuayClient(&http.Client{Transport: utils.NewRetryTransport(&http.Transport{})}, quayOrgToken, quayApiUrl)
 	return cleanupPrivateRepos(quayClient, quayOrg, repoNamePrefixes)
 }
