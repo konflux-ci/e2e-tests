@@ -28,9 +28,15 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-const quayPrefixesToDeleteRegexp = "rhtap[-_]demo|happy[-_]path|multi[-_]platform|ex[-_]registry|gitlab|build[-_]e2e|build[-_]templates|byoc|user1|spi|release[-_]|integration|stat[-_]rep|nbe|stack|rs[-_]demos|push[-_]pyxis|group|resolution|konflux|jvm[-_]build|e2e[-_]hac|user[-_]ns1|user[-_]ns2|tenant[-_]dev"
+const quayPrefixesToDeleteRegexp = "rhtap[-_]demo|happy[-_]path|multi[-_]platform|ex[-_]registry|gitlab|build[-_]e2e|build[-_]templates|byoc|user1|spi|release[-_]|integration|stat[-_]rep|nbe|stack|rs[-_]demos|push[-_]pyxis|group|resolution|konflux|jvm[-_]build|e2e[-_]hac|user[-_]ns1|user[-_]ns2|tenant[-_]dev|default[-_]managed[-_]tenant|default[-_]tenant|konflux[-_]ci[-_]upstream|test[-_]comp[-_]pac[-_]forgejo|appstudio_registry_exporter_|image_controller_e2e_|forgejo_rep_|dr_test_"
 
-var deletionStagger = 1 * time.Second
+var deletionStagger = 100 * time.Millisecond
+
+func debugLogf(format string, args ...interface{}) {
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	message := fmt.Sprintf(format, args...)
+	fmt.Printf("[DEBUG] %s %s", timestamp, message)
+}
 
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
@@ -172,89 +178,125 @@ func renderTemplate(destination, templatePath string, templateData interface{}, 
 }
 
 func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) error {
-	r, err := regexp.Compile(fmt.Sprintf(`^(%s)`, quayPrefixesToDeleteRegexp))
+	repositoryFilter := fmt.Sprintf(`^(%s)`, quayPrefixesToDeleteRegexp)
+	r, err := regexp.Compile(repositoryFilter)
 	if err != nil {
 		return err
 	}
-
 	repos, err := quayService.GetAllRepositories(quayOrg)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("[DEBUG] GOT TOTAL REPOS: %v\n", len(repos))
-	repoDeleteCount := 0
+	repoIgnoredByFilter := 0
+	repoIgnoredNotOldEnough := 0
+	repoDeletedCount := 0
+	repoAlreadyAbsentCount := 0
+	repoDeleteErrorCount := 0
 	var errs []error
 
 	for _, repo := range repos {
-		if r.MatchString(repo.Name) {
-			timeDiffInEpoch := time.Now().Unix() - int64(repo.LastModified)
-			// Delete repos older than 24 hours
-			if timeDiffInEpoch > 24*3600 {
-				deleted, err := quayService.DeleteRepository(quayOrg, repo.Name)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to delete repository %s, error: %s", repo.Name, err))
-					continue
-				}
-				if !deleted {
-					fmt.Printf("repository %s has already been deleted, skipping\n", repo.Name)
-				}
-				fmt.Printf("[DEBUG] DELETED REPOSITORY: %s\n", repo.Name)
-				time.Sleep(deletionStagger)
-				repoDeleteCount++
-			}
+		if !r.MatchString(repo.Name) {
+			repoIgnoredByFilter++
+			continue
 		}
+		timeDiffInEpoch := time.Now().Unix() - int64(repo.LastModified)
+		// Delete repos older than 24 hours
+		if timeDiffInEpoch <= 24*3600 {
+			repoIgnoredNotOldEnough++
+			continue
+		}
+
+		deleted, err := quayService.DeleteRepository(quayOrg, repo.Name)
+		if err != nil {
+			repoDeleteErrorCount++
+			errs = append(errs, fmt.Errorf("failed to delete repository %s, error: %s", repo.Name, err))
+			continue
+		}
+		if !deleted {
+			repoAlreadyAbsentCount++
+			fmt.Printf("repository %s has already been deleted, skipping\n", repo.Name)
+		} else {
+			repoDeletedCount++
+			debugLogf("DELETED REPOSITORY: %s\n", repo.Name)
+		}
+		time.Sleep(deletionStagger)
 	}
-	fmt.Printf("[DEBUG] TOTAL REPOS DELETED: %v\n", repoDeleteCount)
+	debugLogf("QUAY REPOSITORY CLEANUP REPORT:\n")
+	debugLogf("  organization=%q\n", quayOrg)
+	debugLogf("  filter=%q\n", repositoryFilter)
+	debugLogf("  total=%d ignored_by_filter=%d\n", len(repos), repoIgnoredByFilter)
+	debugLogf("  deleted=%d already_absent=%d ignored_not_old_enough=%d delete_errors=%d\n",
+		repoDeletedCount, repoAlreadyAbsentCount, repoIgnoredNotOldEnough, repoDeleteErrorCount)
 
 	robots, err := quayService.GetAllRobotAccounts(quayOrg)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("[DEBUG] GOT TOTAL ROBOT ACCOUNTS: %v\n", len(robots))
-
-	r, err = regexp.Compile(fmt.Sprintf(`^%s\+(%s)`, quayOrg, quayPrefixesToDeleteRegexp))
+	robotFilter := fmt.Sprintf(`^%s\+(%s)`, quayOrg, quayPrefixesToDeleteRegexp)
+	r, err = regexp.Compile(robotFilter)
 	if err != nil {
 		return err
 	}
-
 	const timeFormat = "Mon, 02 Jan 2006 15:04:05 -0700"
-	robotDeleteCount := 0
+	robotIgnoredByFilter := 0
+	robotIgnoredNotOldEnough := 0
+	robotInvalidCreatedCount := 0
+	robotInvalidNameCount := 0
+	robotDeletedCount := 0
+	robotAlreadyAbsentCount := 0
+	robotDeleteErrorCount := 0
 
 	// Deletes robots and their repos with correct prefix if created more than 24 hours ago
 	for _, robot := range robots {
-		// If robot.Name has correct prefix and was created more than 24 hours ago
-		if r.MatchString(robot.Name) {
-			parsed, err := time.Parse(timeFormat, robot.Created)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("failed to parse creation time of robot account %s, error: %s", robot.Name, err))
-				continue
-			}
-			if time.Since(parsed) > 24*time.Hour {
-				// Robot name without the name of org which is the same as previous sanitizedRepoName
-				// redhat-appstudio-qe+e2e-demos turns to e2e-demos
-				splitRobotName := strings.Split(robot.Name, "+")
-				if len(splitRobotName) != 2 {
-					errs = append(errs, fmt.Errorf("failed to split robot name %s into 2 parts, got %d parts", robot.Name, len(splitRobotName)))
-					continue
-				}
-				// DeleteRobotAccount uses robot shortname, so e2e-demos instead of redhat-appstudio-qe+e2e-demos
-				deleted, err := quayService.DeleteRobotAccount(quayOrg, splitRobotName[1])
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to delete robot account %s, error: %s", robot.Name, err))
-					continue
-				}
-				if !deleted {
-					fmt.Printf("robot account %s has already been deleted, skipping\n", robot.Name)
-				}
-				fmt.Printf("[DEBUG] DELETED ROBOT ACCOUNT: %s\n", robot.Name)
-				time.Sleep(deletionStagger)
-				robotDeleteCount++
-			}
+		if !r.MatchString(robot.Name) {
+			robotIgnoredByFilter++
+			continue
 		}
+		parsed, err := time.Parse(timeFormat, robot.Created)
+		if err != nil {
+			robotInvalidCreatedCount++
+			errs = append(errs, fmt.Errorf("failed to parse creation time of robot account %s, error: %s", robot.Name, err))
+			continue
+		}
+		if time.Since(parsed) <= 24*time.Hour {
+			robotIgnoredNotOldEnough++
+			continue
+		}
+
+		// Robot name without the name of org which is the same as previous sanitizedRepoName
+		// redhat-appstudio-qe+e2e-demos turns to e2e-demos
+		splitRobotName := strings.Split(robot.Name, "+")
+		if len(splitRobotName) != 2 {
+			robotInvalidNameCount++
+			errs = append(errs, fmt.Errorf("failed to split robot name %s into 2 parts, got %d parts", robot.Name, len(splitRobotName)))
+			continue
+		}
+		// DeleteRobotAccount uses robot shortname, so e2e-demos instead of redhat-appstudio-qe+e2e-demos
+		deleted, err := quayService.DeleteRobotAccount(quayOrg, splitRobotName[1])
+		if err != nil {
+			robotDeleteErrorCount++
+			errs = append(errs, fmt.Errorf("failed to delete robot account %s, error: %s", robot.Name, err))
+			continue
+		}
+		if !deleted {
+			robotAlreadyAbsentCount++
+			fmt.Printf("robot account %s has already been deleted, skipping\n", robot.Name)
+		} else {
+			robotDeletedCount++
+			debugLogf("DELETED ROBOT ACCOUNT: %s\n", robot.Name)
+		}
+		time.Sleep(deletionStagger)
 	}
-	fmt.Printf("[DEBUG] TOTAL ROBOT ACCOUNT DELETED: %v\n", robotDeleteCount)
+	debugLogf("QUAY ROBOT CLEANUP REPORT:\n")
+	debugLogf("  organization=%q\n", quayOrg)
+	debugLogf("  filter=%q\n", robotFilter)
+	debugLogf("  total=%d ignored_by_filter=%d\n", len(robots), robotIgnoredByFilter)
+	debugLogf("  deleted=%d already_absent=%d ignored_not_old_enough=%d\n",
+		robotDeletedCount, robotAlreadyAbsentCount, robotIgnoredNotOldEnough)
+	debugLogf("  invalid_created=%d invalid_name=%d delete_errors=%d\n",
+		robotInvalidCreatedCount, robotInvalidNameCount, robotDeleteErrorCount)
 	return errors.Join(errs...)
 }
 
