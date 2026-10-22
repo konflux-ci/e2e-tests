@@ -38,6 +38,20 @@ func debugLogf(format string, args ...interface{}) {
 	fmt.Printf("[DEBUG] %s %s", timestamp, message)
 }
 
+func logCleanupProgress(processed, total int, resourceType string, lastPercent *int) {
+	if total == 0 {
+		return
+	}
+
+	percent := processed * 100 / total
+	if percent == *lastPercent {
+		return
+	}
+
+	*lastPercent = percent
+	debugLogf("Processing %d/%d %s ... %d%%\n", processed, total, resourceType, percent)
+}
+
 func getRemoteAndBranchNameFromPRLink(url string) (remote, branchName string, err error) {
 	ghRes := &GithubPRInfo{}
 	if err := sendHttpRequestAndParseResponse(url, "GET", ghRes); err != nil {
@@ -194,8 +208,10 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 	repoAlreadyAbsentCount := 0
 	repoDeleteErrorCount := 0
 	var errs []error
+	lastRepoProgressPercent := 0
 
-	for _, repo := range repos {
+	for i, repo := range repos {
+		logCleanupProgress(i+1, len(repos), "repositories", &lastRepoProgressPercent)
 		if !r.MatchString(repo.Name) {
 			repoIgnoredByFilter++
 			continue
@@ -247,9 +263,11 @@ func cleanupQuayReposAndRobots(quayService quay.QuayService, quayOrg string) err
 	robotDeletedCount := 0
 	robotAlreadyAbsentCount := 0
 	robotDeleteErrorCount := 0
+	lastRobotProgressPercent := 0
 
 	// Deletes robots and their repos with correct prefix if created more than 24 hours ago
-	for _, robot := range robots {
+	for i, robot := range robots {
+		logCleanupProgress(i+1, len(robots), "robot accounts", &lastRobotProgressPercent)
 		if !r.MatchString(robot.Name) {
 			robotIgnoredByFilter++
 			continue
