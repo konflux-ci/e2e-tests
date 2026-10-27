@@ -39,6 +39,9 @@ const (
 	// The private devfile sample git repository to use in certain HAS e2e tests
 	PRIVATE_DEVFILE_SAMPLE string = "PRIVATE_DEVFILE_SAMPLE" // #nosec
 
+	// OCI bundle reference for the verify-enterprise-contract Tekton task
+	VERIFY_EC_TASK_BUNDLE string = "quay.io/conforma/tekton-task:konflux@sha256:13375ed6d012614f030d36fa6485c16db1ab1e82d6077d5055c0eb1bfb90b644"
+
 	// User for running the end-to-end Tekton Chains tests
 	TEKTON_CHAINS_E2E_USER string = "chains-e2e"
 
