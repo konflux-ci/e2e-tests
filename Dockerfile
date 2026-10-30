@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.26.10@sha256:c51f0f31cbaa7e91dede6013f636d54fe10dd7d581cfc4cda014ba9d62bcd779 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26.10-1793294290@sha256:cab9089469c52029e4d8a4e9f717e87c51ab22eed448ebcada101b811f97dfe7 AS builder
 ENV GOBIN=$HOME/bin
 
 USER root
@@ -83,7 +83,7 @@ RUN ARCH=${TARGETARCH} && \
     rm -rf oras_${ORAS_VERSION}_*.tar.gz oras-install/ && \
     oras version
 
-FROM registry.access.redhat.com/ubi9/go-toolset:1.26.10@sha256:c51f0f31cbaa7e91dede6013f636d54fe10dd7d581cfc4cda014ba9d62bcd779
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26.10-1793294290@sha256:cab9089469c52029e4d8a4e9f717e87c51ab22eed448ebcada101b811f97dfe7
 USER root
 
 WORKDIR /konflux-e2e
