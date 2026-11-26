@@ -208,7 +208,7 @@ const (
 	QuayRepositorySecretName      = "quay-repository"
 	QuayRepositorySecretNamespace = "e2e-secrets"
 
-	BuildPipelineConfigConfigMapYamlURL = "https://raw.githubusercontent.com/redhat-appstudio/infra-deployments/main/components/build-service/base/build-pipeline-config/build-pipeline-config.yaml"
+	BuildPipelineConfigConfigMapYamlURL = "https://raw.githubusercontent.com/konflux-ci/konflux-ci/main/operator/upstream-kustomizations/build-service/core/build-pipeline-config.yaml"
 
 	DefaultImagePushRepo         = "quay.io/" + DefaultQuayOrg + "/test-images"
 	DefaultReleasedImagePushRepo = "quay.io/" + DefaultQuayOrg + "/test-release-images"
